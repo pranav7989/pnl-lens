@@ -1,0 +1,1038 @@
+{
+ "case": {
+  "id": "groww_pnl_doc",
+  "files": [
+   "groww_pnl.doc"
+  ]
+ },
+ "rawSha256": "327459254a6ebf286ae608b5a75237cb7a25a82b8efc2e2627e2a4851c7ea18f",
+ "report": {
+  "version": 1,
+  "generatedAt": "<normalised>",
+  "m": {
+   "from": "2025-03-28",
+   "to": "2025-03-28",
+   "clientId": null,
+   "source": "statement",
+   "hasDates": true,
+   "market": null,
+   "markets": [
+    {
+     "market": "Unclassified equities",
+     "n": 5
+    }
+   ],
+   "currency": "INR",
+   "n": 5,
+   "wins": 0,
+   "losses": 5,
+   "winRate": 0,
+   "grossProfit": 0,
+   "grossLoss": 10221.420000000002,
+   "profitFactor": 0,
+   "avgWin": 0,
+   "avgLoss": 2044.2840000000003,
+   "payoff": 0,
+   "avgWinPct": 0,
+   "avgLossPct": 5.771331852322295,
+   "medWinPct": 0,
+   "expectancy": -2044.2840000000003,
+   "realized": -10221.420000000002,
+   "charges": 0,
+   "other": 0,
+   "net": -10221.420000000002,
+   "unrealized": 0,
+   "turnover": 511778.86,
+   "costPct": 0,
+   "largestWin": 0,
+   "largestLoss": -4093.86,
+   "maxDD": -10221.420000000002,
+   "optShare": 0,
+   "openPositions": []
+  },
+  "trades": [
+   {
+    "symbol": "RELIANCE",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "RELIANCE",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": "2025-03-12",
+    "exitDate": "2025-03-28",
+    "entryHour": null,
+    "holdDays": 16,
+    "qty": 43,
+    "avgBuy": 728.07,
+    "buy": 31307.01,
+    "sell": 28852.57,
+    "pct": -7.84,
+    "pnl": -2454.44,
+    "netEst": -2454.44,
+    "style": "Delivery",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Document",
+    "mult": 1
+   },
+   {
+    "symbol": "INFY",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "INFY",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": "2025-03-12",
+    "exitDate": "2025-03-28",
+    "entryHour": null,
+    "holdDays": 16,
+    "qty": 71,
+    "avgBuy": 924.52,
+    "buy": 65640.92,
+    "sell": 63560.62,
+    "pct": -3.17,
+    "pnl": -2080.3,
+    "netEst": -2080.3,
+    "style": "Delivery",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Document",
+    "mult": 1
+   },
+   {
+    "symbol": "TCS",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "TCS",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": "2025-03-12",
+    "exitDate": "2025-03-28",
+    "entryHour": null,
+    "holdDays": 16,
+    "qty": 31,
+    "avgBuy": 1036.17,
+    "buy": 32121.27,
+    "sell": 28027.41,
+    "pct": -12.75,
+    "pnl": -4093.86,
+    "netEst": -4093.86,
+    "style": "Delivery",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Document",
+    "mult": 1
+   },
+   {
+    "symbol": "ITC",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "ITC",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": "2025-03-12",
+    "exitDate": "2025-03-28",
+    "entryHour": null,
+    "holdDays": 16,
+    "qty": 74,
+    "avgBuy": 1377.75,
+    "buy": 101953.5,
+    "sell": 101863.96,
+    "pct": -0.09,
+    "pnl": -89.54,
+    "netEst": -89.54,
+    "style": "Delivery",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Document",
+    "mult": 1
+   },
+   {
+    "symbol": "SBIN",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "SBIN",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": "2025-03-12",
+    "exitDate": "2025-03-28",
+    "entryHour": null,
+    "holdDays": 16,
+    "qty": 38,
+    "avgBuy": 788.88,
+    "buy": 29977.44,
+    "sell": 28474.16,
+    "pct": -5.01,
+    "pnl": -1503.28,
+    "netEst": -1503.28,
+    "style": "Delivery",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Document",
+    "mult": 1
+   }
+  ],
+  "b": {
+   "group": [
+    {
+     "key": "Equity / cash",
+     "n": 5,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -10221.42,
+     "turnover": 511778.86,
+     "avgPct": -5.77
+    }
+   ],
+   "weekday": [],
+   "premium": [],
+   "expiryType": [],
+   "callPut": [],
+   "year": [],
+   "size": [
+    {
+     "key": "₹10,000–₹50,000",
+     "n": 3,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -8051.58,
+     "turnover": 178759.86,
+     "avgPct": -8.53
+    },
+    {
+     "key": "₹50,000–₹2.00L",
+     "n": 2,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -2169.84,
+     "turnover": 333019,
+     "avgPct": -1.63
+    }
+   ],
+   "style": [
+    {
+     "key": "Delivery",
+     "n": 5,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -10221.42,
+     "turnover": 511778.86,
+     "avgPct": -5.77
+    }
+   ],
+   "lossDepth": [
+    {
+     "key": "0–1%",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -89.54,
+     "turnover": 203817.46,
+     "avgPct": -0.09
+    },
+    {
+     "key": "3–5%",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -2080.3,
+     "turnover": 129201.54,
+     "avgPct": -3.17
+    },
+    {
+     "key": "5–10%",
+     "n": 2,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -3957.72,
+     "turnover": 118611.18,
+     "avgPct": -6.43
+    },
+    {
+     "key": "10–25%",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -4093.86,
+     "turnover": 60148.68,
+     "avgPct": -12.75
+    }
+   ],
+   "underlying": [
+    {
+     "key": "TCS",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -4093.86,
+     "turnover": 60148.68,
+     "avgPct": -12.75
+    },
+    {
+     "key": "RELIANCE",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -2454.44,
+     "turnover": 60159.58,
+     "avgPct": -7.84
+    },
+    {
+     "key": "INFY",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -2080.3,
+     "turnover": 129201.54,
+     "avgPct": -3.17
+    },
+    {
+     "key": "SBIN",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -1503.28,
+     "turnover": 58451.6,
+     "avgPct": -5.01
+    },
+    {
+     "key": "ITC",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -89.54,
+     "turnover": 203817.46,
+     "avgPct": -0.09
+    }
+   ],
+   "entryDow": [
+    {
+     "key": "Wednesday",
+     "n": 5,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -10221.42,
+     "turnover": 511778.86,
+     "avgPct": -5.77
+    }
+   ],
+   "hold": [
+    {
+     "key": "1–4 weeks",
+     "n": 5,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -10221.42,
+     "turnover": 511778.86,
+     "avgPct": -5.77
+    }
+   ],
+   "entryHour": [],
+   "busyDay": [],
+   "month": [
+    {
+     "key": "2025-03",
+     "n": 5,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -10221.42,
+     "turnover": 511778.86,
+     "avgPct": -5.77
+    }
+   ],
+   "direction": []
+  },
+  "stops": {
+   "opt": null,
+   "lin": {
+    "rows": [
+     {
+      "stop": 1,
+      "hit": 4,
+      "saved": 8541.4136,
+      "net": -1680.006400000002
+     },
+     {
+      "stop": 2,
+      "hit": 4,
+      "saved": 6950.9472000000005,
+      "net": -3270.4728000000014
+     },
+     {
+      "stop": 3,
+      "hit": 4,
+      "saved": 5360.4808,
+      "net": -4860.939200000002
+     },
+     {
+      "stop": 5,
+      "hit": 3,
+      "saved": 3381.2939999999994,
+      "net": -6840.126000000002
+     },
+     {
+      "stop": 8,
+      "hit": 1,
+      "saved": 1524.1583999999998,
+      "net": -8697.261600000002
+     }
+    ],
+    "rec": 2,
+    "label": "Futures & stocks (stop as % of position value)"
+   }
+  },
+  "dropWorst": [
+   {
+    "k": 1,
+    "net": -6127.560000000001
+   },
+   {
+    "k": 3,
+    "net": -1592.8200000000015
+   },
+   {
+    "k": 5,
+    "net": 0
+   }
+  ],
+  "heads": {},
+  "debitSummary": {},
+  "patterns": [
+   {
+    "dim": "Underlying",
+    "impact": 8628.6,
+    "text": "TCS, RELIANCE, INFY are behind 84% of everything you lost (−₹8,629). A ban list of three names changes the whole picture."
+   }
+  ],
+  "leaks": [
+   {
+    "level": "High",
+    "title": "Three positions carry 84% of all losses",
+    "impact": 8628.6,
+    "evidence": "TCS −₹4,094 (−12.7%) · RELIANCE −₹2,454 (−7.8%) · INFY −₹2,080 (−3.2%).",
+    "fix": "Set a hard cash ceiling per position — ₹500, the size of one average win — and work quantity backwards from it so no single idea can do this again."
+   },
+   {
+    "level": "High",
+    "title": "Losers run, winners get cut short",
+    "impact": 6950.9472000000005,
+    "evidence": "An average winner books ₹0 (0.0%) while an average loser gives back ₹2,044 (−5.8%). 5 of 5 positions ended red.",
+    "fix": "Decide the exit before the entry: −2% of position value on futures and stocks. Applied across this period that holds back roughly ₹6,951."
+   }
+  ],
+  "strengths": [],
+  "rules": [
+   {
+    "rule": "Stop futures and stock positions at −2% of position value",
+    "why": "Worth roughly ₹6,951 on the same trades."
+   },
+   {
+    "rule": "Cap any single loss at ₹500",
+    "why": "One average win. Work the quantity backwards from this number, not from available margin."
+   },
+   {
+    "rule": "Write entry, stop and target before the order goes in",
+    "why": "Every leak above traces back to an exit that was never decided in advance."
+   }
+  ],
+  "seq": null,
+  "curve": [
+   {
+    "date": "2025-03-28",
+    "eq": -2454.44
+   },
+   {
+    "date": "2025-03-28",
+    "eq": -4534.74
+   },
+   {
+    "date": "2025-03-28",
+    "eq": -8628.6
+   },
+   {
+    "date": "2025-03-28",
+    "eq": -8718.14
+   },
+   {
+    "date": "2025-03-28",
+    "eq": -10221.42
+   }
+  ],
+  "diagnosis": "Not one position in this file closed green. Before sizing or stops, the setup itself needs to change — paper-trade the next twenty and see what the win rate actually is.",
+  "mapping": [
+   {
+    "kind": "aggregate",
+    "sheet": "Document",
+    "cols": {
+     "symbol": "Stock name",
+     "qty": "Quantity",
+     "buyPrice": "Buy price",
+     "sellPrice": "Sell price",
+     "pnl": "Realised P&L",
+     "entryDate": "Buy date",
+     "exitDate": "Sell date"
+    }
+   }
+  ],
+  "behaviour": {
+   "traits": [
+    {
+     "id": 7,
+     "area": "exits",
+     "name": "Tail risk blindness",
+     "score": 100,
+     "now": "Just three trades account for 84% of everything you lost.",
+     "why": "Most trades feel controlled, so risk feels controlled. But the damage is concentrated in a few moments when discipline slipped. Those few trades decide the year, and they are the ones that never get reviewed.",
+     "ideal": "No single trade can lose more than a fixed cash amount, set before entry. The worst trades get reviewed first.",
+     "level": "Strong"
+    },
+    {
+     "id": 14,
+     "area": "exits",
+     "name": "Hindsight-driven exits",
+     "score": 80,
+     "now": "You lose on 100% of trades and your winners don't make up for it (payoff 0.00).",
+     "why": "When both the win rate and the payoff are weak, exits are usually reactive: closing after a sharp move against you, re-entering after it recovers. Each decision makes sense in the moment and costs money in sequence.",
+     "ideal": "Either the win rate or the payoff must be strong by design. Pick which one your setups depend on and manage exits to protect it.",
+     "level": "Strong"
+    },
+    {
+     "id": 64,
+     "area": "timing",
+     "name": "Short-term thinking in long trades",
+     "score": 40,
+     "now": "Positions you carried for days lost ₹10,221, while your quick trades did better.",
+     "why": "A trade that was meant to be quick becomes a \"long-term investment\" once it goes red. The story changes to justify not closing it.",
+     "ideal": "The holding period is set at entry. A short-term trade that fails is closed, not reclassified.",
+     "level": "Clear"
+    },
+    {
+     "id": 55,
+     "area": "timing",
+     "name": "Weekday blind spot",
+     "score": 35,
+     "now": "Wednesday is your worst day: 5 trades, 0% win rate, −₹10,221.",
+     "why": "Patterns tied to a day of the week are often about you, not the market: energy levels, routines, expiries, or what happened the day before.",
+     "ideal": "Days that consistently lose get smaller size or no trading until the reason is understood.",
+     "level": "Emerging"
+    }
+   ],
+   "more": [],
+   "tiles": {
+    "net": {
+     "now": "You finished −₹10,221 after every cost.",
+     "ideal": "Net P&L after costs is the only number that pays. Judge every change to your trading by its effect here."
+    },
+    "gross": {
+     "now": "Before costs you made −₹10,221.",
+     "ideal": "Gross P&L should comfortably exceed costs; if it barely does, trade less, not more."
+    },
+    "costs": {
+     "now": "Costs were 0% of what your winners made.",
+     "ideal": "Costs under 15–20% of gross profit. Fewer trades with larger targets get you there."
+    },
+    "winrate": {
+     "now": "You win 0% of trades.",
+     "ideal": "Win rate only matters alongside payoff. 40% with 2:1 winners beats 60% with 1:2."
+    },
+    "payoff": {
+     "now": "No winning trades in this file yet.",
+     "ideal": "A payoff above 1.5 gives room for a normal win rate to be profitable."
+    },
+    "avgwin": {
+     "now": "Your average winner is ₹0 (0.0%).",
+     "ideal": "Winners run to a planned target instead of being taken at the first sign of profit."
+    },
+    "avgloss": {
+     "now": "Your average loser is ₹2,044 (5.8%).",
+     "ideal": "Losers closed at a pre-set stop, so the average loss is smaller than the average win."
+    },
+    "pf": {
+     "now": "For every 1 lost you made 0.00.",
+     "ideal": "A profit factor above 1.3 after costs is a sustainable edge."
+    },
+    "worst": {
+     "now": "Your worst trade was ₹4,094.",
+     "ideal": "The worst trade is no bigger than one or two average wins."
+    },
+    "costsPanel": {
+     "now": "Costs are 0% of gross profit.",
+     "ideal": "Every trade expected to make several times its cost."
+    },
+    "leaks": {
+     "now": "Three trades cause 84% of losses.",
+     "ideal": "Leaks are fixed one at a time, starting with the most expensive."
+    },
+    "curve": {
+     "now": "At the worst point you were ₹10,221 below your peak.",
+     "ideal": "A steady upward slope with shallow dips; deep drops mean risk per trade is too high."
+    },
+    "instrument": {
+     "now": "Your mix across instruments.",
+     "ideal": "Capital goes to the instrument where your results are best, not where the action is."
+    },
+    "year": {
+     "now": "How each expiry year contributed.",
+     "ideal": "Improvement shows as each year being better than the last."
+    },
+    "diagnosis": {
+     "now": "The average trade loses ₹2,044.",
+     "ideal": "A positive average trade after costs, held steady over hundreds of trades."
+    },
+    "rules": {
+     "now": "Rules built from your own mistakes.",
+     "ideal": "Rules are followed before every trade, not just read once."
+    },
+    "patterns": {
+     "now": "Where your results cluster.",
+     "ideal": "Do more of what works, pause what consistently doesn't."
+    },
+    "psych": {
+     "now": "The habits behind the numbers.",
+     "ideal": "Awareness first; then one rule per habit, tested for a month."
+    },
+    "stopsOpt": {
+     "now": "How a premium stop would have changed results.",
+     "ideal": "Bought options exit at a fixed share of premium, usually 30–40% down."
+    },
+    "stopsLin": {
+     "now": "How a price stop would have changed results.",
+     "ideal": "Stops sized so a full stop-out is a normal loss."
+    },
+    "working": {
+     "now": "What already works for you.",
+     "ideal": "Protect your strengths: give them the most capital and the least interference."
+    },
+    "group": {
+     "now": "Results by type of instrument.",
+     "ideal": "Concentrate on the instrument with the best results per trade."
+    },
+    "weekday": {
+     "now": "Results by the weekday your contracts expired.",
+     "ideal": "If one expiry day stands out as losing, avoid holding into it."
+    },
+    "premium": {
+     "now": "Results by the premium you paid.",
+     "ideal": "Pick strikes for probability and liquidity, not price."
+    },
+    "expiryType": {
+     "now": "Weekly vs monthly contracts.",
+     "ideal": "Match the expiry to how long your idea needs."
+    },
+    "callPut": {
+     "now": "Calls vs puts.",
+     "ideal": "Trade the side the setup shows; review each side separately."
+    },
+    "entryDow": {
+     "now": "Wednesday is your weakest entry day.",
+     "ideal": "Size down on days that consistently lose until you know why."
+    },
+    "entryHour": {
+     "now": "Results by time of entry.",
+     "ideal": "Trade the hours where your record is best; sit out the rest."
+    },
+    "hold": {
+     "now": "Losers held 16.0 days, winners 0.0 days.",
+     "ideal": "Winners held at least as long as losers."
+    },
+    "busyDay": {
+     "now": "Results by how many trades you made that day.",
+     "ideal": "A daily trade limit. Quality drops as the count rises."
+    },
+    "direction": {
+     "now": "Long vs short.",
+     "ideal": "Both sides traded when the setup is there."
+    },
+    "month": {
+     "now": "0% of months were profitable.",
+     "ideal": "Most months profitable, with small losing months."
+    },
+    "size": {
+     "now": "Your largest positions: 0% win rate, −₹90.",
+     "ideal": "Size follows a formula, not conviction."
+    },
+    "style": {
+     "now": "Positions carried for days: −₹10,221.",
+     "ideal": "Holding period decided at entry, never changed because a trade is losing."
+    },
+    "lossDepth": {
+     "now": "20% of losers went past −10%.",
+     "ideal": "Most losses small, almost none deep. Deep losses mean stops weren't used."
+    },
+    "worstU": {
+     "now": "The names that cost you most.",
+     "ideal": "Repeat losers go on a pause list."
+    },
+    "bestU": {
+     "now": "The names that pay you most.",
+     "ideal": "Give your best names priority and patience."
+    },
+    "positions": {
+     "now": "Every position, 5 in total.",
+     "ideal": "Review the worst five positions every week."
+    }
+   },
+   "checked": 100
+  },
+  "progress": {
+   "level": {
+    "name": "Developing",
+    "index": 1,
+    "next": {
+     "name": "Steady",
+     "at": 55,
+     "gap": 9
+    },
+    "from": 40
+   },
+   "goals": [
+    {
+     "dim": "rr",
+     "label": "Risk : reward",
+     "score": 0,
+     "text": "Raise risk : reward",
+     "now": 0,
+     "target": 1.2,
+     "fmt": "x",
+     "better": "up"
+    },
+    {
+     "dim": "consistency",
+     "label": "Consistency",
+     "score": 0,
+     "text": "Lift your win rate",
+     "now": 0,
+     "target": 5,
+     "fmt": "%",
+     "better": "up"
+    },
+    {
+     "dim": "loss",
+     "label": "Loss control",
+     "score": 76,
+     "text": "Fewer losses past −10%",
+     "now": 20,
+     "target": 10,
+     "fmt": "%",
+     "better": "down"
+    }
+   ],
+   "saved": null,
+   "badges": [],
+   "summary": "This is your baseline score of 46. Cost efficiency is your strongest habit (100/100). The biggest opportunity next month: raise risk : reward.",
+   "labels": {
+    "rr": "Risk : reward",
+    "loss": "Loss control",
+    "consistency": "Consistency",
+    "emotion": "Emotional control",
+    "activity": "Trade selection",
+    "costs": "Cost efficiency"
+   },
+   "overall": {
+    "score": 46,
+    "d": {
+     "rr": 0,
+     "loss": 76,
+     "consistency": 0,
+     "emotion": 70,
+     "activity": 70,
+     "costs": 100
+    },
+    "m": {
+     "n": 5,
+     "pnl": -10221.420000000002,
+     "winRate": 0,
+     "payoff": 0,
+     "pf": 0,
+     "avgWin": 0,
+     "avgLoss": 2044.2840000000003,
+     "expectancy": -2044.2840000000003,
+     "avgLossPct": 5.771331852322295,
+     "deepShare": 0.2,
+     "bigLossX": 0,
+     "revengeRate": 0,
+     "maxStreak": 0,
+     "tradesPerDay": 0,
+     "costRatio": 0,
+     "zeroOptions": 0,
+     "habitCost": {
+      "revenge": 0,
+      "busy": 0,
+      "deep": 4093.86,
+      "zero": 0,
+      "charges": 0
+     },
+     "timed": false
+    }
+   },
+   "months": [
+    {
+     "key": "2025-03",
+     "score": 46,
+     "d": {
+      "rr": 0,
+      "loss": 76,
+      "consistency": 0,
+      "emotion": 70,
+      "activity": 70,
+      "costs": 100
+     },
+     "m": {
+      "n": 5,
+      "pnl": -10221.420000000002,
+      "winRate": 0,
+      "payoff": 0,
+      "pf": 0,
+      "avgWin": 0,
+      "avgLoss": 2044.2840000000003,
+      "expectancy": -2044.2840000000003,
+      "avgLossPct": 5.771331852322295,
+      "deepShare": 0.2,
+      "bigLossX": 0,
+      "revengeRate": 0,
+      "maxStreak": 0,
+      "tradesPerDay": 0,
+      "costRatio": 0,
+      "zeroOptions": 0,
+      "habitCost": {
+       "revenge": 0,
+       "busy": 0,
+       "deep": 4093.86,
+       "zero": 0,
+       "charges": 0
+      },
+      "timed": false
+     }
+    }
+   ],
+   "current": "2025-03",
+   "previous": null,
+   "delta": null,
+   "improvingStreak": 0,
+   "tracker": []
+  }
+ },
+ "m": "[circular]",
+ "trades": [
+  {
+   "symbol": "RELIANCE",
+   "segment": "Document",
+   "sheet": "Document",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "RELIANCE",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 43,
+   "buy": 31307.010000000002,
+   "sell": 28852.57,
+   "pnl": -2454.44,
+   "pct": -7.839905503591687,
+   "entryDate": "2025-03-12",
+   "exitDate": "2025-03-28",
+   "entryDow": "Wednesday",
+   "entryHour": null,
+   "holdDays": 16,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 60159.58,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Delivery",
+   "estCharges": 0,
+   "netEst": -2454.44,
+   "avgBuy": 728.07,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "INFY",
+   "segment": "Document",
+   "sheet": "Document",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "INFY",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 71,
+   "buy": 65640.92,
+   "sell": 63560.62,
+   "pnl": -2080.3,
+   "pct": -3.169212131700775,
+   "entryDate": "2025-03-12",
+   "exitDate": "2025-03-28",
+   "entryDow": "Wednesday",
+   "entryHour": null,
+   "holdDays": 16,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 129201.54000000001,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Delivery",
+   "estCharges": 0,
+   "netEst": -2080.3,
+   "avgBuy": 924.52,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "TCS",
+   "segment": "Document",
+   "sheet": "Document",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "TCS",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 31,
+   "buy": 32121.270000000004,
+   "sell": 28027.41,
+   "pnl": -4093.86,
+   "pct": -12.745012883986217,
+   "entryDate": "2025-03-12",
+   "exitDate": "2025-03-28",
+   "entryDow": "Wednesday",
+   "entryHour": null,
+   "holdDays": 16,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 60148.68000000001,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Delivery",
+   "estCharges": 0,
+   "netEst": -4093.86,
+   "avgBuy": 1036.17,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "ITC",
+   "segment": "Document",
+   "sheet": "Document",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "ITC",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 74,
+   "buy": 101953.5,
+   "sell": 101863.95999999999,
+   "pnl": -89.54,
+   "pct": -0.08782435129740519,
+   "entryDate": "2025-03-12",
+   "exitDate": "2025-03-28",
+   "entryDow": "Wednesday",
+   "entryHour": null,
+   "holdDays": 16,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 203817.46,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Delivery",
+   "estCharges": 0,
+   "netEst": -89.54,
+   "avgBuy": 1377.75,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "SBIN",
+   "segment": "Document",
+   "sheet": "Document",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "SBIN",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 38,
+   "buy": 29977.44,
+   "sell": 28474.160000000003,
+   "pnl": -1503.28,
+   "pct": -5.014704391035392,
+   "entryDate": "2025-03-12",
+   "exitDate": "2025-03-28",
+   "entryDow": "Wednesday",
+   "entryHour": null,
+   "holdDays": 16,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 58451.600000000006,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Delivery",
+   "estCharges": 0,
+   "netEst": -1503.28,
+   "avgBuy": 788.88,
+   "wentToZero": false,
+   "decayedWin": false
+  }
+ ]
+}

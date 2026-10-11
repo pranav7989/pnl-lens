@@ -1,0 +1,1160 @@
+{
+ "case": {
+  "id": "no_headers_csv",
+  "files": [
+   "no_headers.csv"
+  ]
+ },
+ "rawSha256": "89179179fa7842539fea59b5cacb9c39a081ebdeb0d0bda648256d83ef59ad39",
+ "report": {
+  "version": 1,
+  "generatedAt": "<normalised>",
+  "m": {
+   "from": null,
+   "to": null,
+   "clientId": null,
+   "source": "statement",
+   "hasDates": false,
+   "market": null,
+   "markets": [
+    {
+     "market": "Unclassified equities",
+     "n": 8
+    }
+   ],
+   "currency": "INR",
+   "n": 8,
+   "wins": 5,
+   "losses": 3,
+   "winRate": 0.625,
+   "grossProfit": 15097.55,
+   "grossLoss": 4517.93,
+   "profitFactor": 3.3416963078223874,
+   "avgWin": 3019.5099999999998,
+   "avgLoss": 1505.9766666666667,
+   "payoff": 2.0050177846934325,
+   "avgWinPct": 0,
+   "avgLossPct": 0,
+   "medWinPct": 0,
+   "expectancy": 1322.4525,
+   "realized": 10579.62,
+   "charges": 0,
+   "other": 0,
+   "net": 10579.62,
+   "unrealized": 0,
+   "turnover": 0,
+   "costPct": 0,
+   "largestWin": 4885.92,
+   "largestLoss": -4178.75,
+   "maxDD": -4178.75,
+   "optShare": 0,
+   "openPositions": []
+  },
+  "trades": [
+   {
+    "symbol": "RELIANCE",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "RELIANCE",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": 4163.61,
+    "netEst": 4163.61,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   },
+   {
+    "symbol": "INFY",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "INFY",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": -131.76,
+    "netEst": -131.76,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   },
+   {
+    "symbol": "TCS",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "TCS",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": 4885.92,
+    "netEst": 4885.92,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   },
+   {
+    "symbol": "SBIN",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "SBIN",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": 1477.25,
+    "netEst": 1477.25,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   },
+   {
+    "symbol": "ITC",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "ITC",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": 1136.85,
+    "netEst": 1136.85,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   },
+   {
+    "symbol": "HDFCBANK",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "HDFCBANK",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": -207.42,
+    "netEst": -207.42,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   },
+   {
+    "symbol": "WIPRO",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "WIPRO",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": 3433.92,
+    "netEst": 3433.92,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   },
+   {
+    "symbol": "LT",
+    "group": "Equity / cash",
+    "market": null,
+    "kind": "EQ",
+    "underlying": "LT",
+    "family": "Equity",
+    "expiry": null,
+    "weekday": null,
+    "expiryType": null,
+    "entryDate": null,
+    "exitDate": null,
+    "entryHour": null,
+    "holdDays": null,
+    "qty": 0,
+    "avgBuy": 0,
+    "buy": 0,
+    "sell": 0,
+    "pct": 0,
+    "pnl": -4178.75,
+    "netEst": -4178.75,
+    "style": "Intraday / BTST",
+    "openQty": 0,
+    "sellDays": 0,
+    "isOpt": false,
+    "segment": "Sheet1",
+    "mult": 1
+   }
+  ],
+  "b": {
+   "group": [
+    {
+     "key": "Equity / cash",
+     "n": 8,
+     "wins": 5,
+     "winRate": 0.625,
+     "pnl": 10579.62,
+     "turnover": 0,
+     "avgPct": 0
+    }
+   ],
+   "weekday": [],
+   "premium": [],
+   "expiryType": [],
+   "callPut": [],
+   "year": [],
+   "size": [
+    {
+     "key": "Under ₹10,000",
+     "n": 8,
+     "wins": 5,
+     "winRate": 0.625,
+     "pnl": 10579.62,
+     "turnover": 0,
+     "avgPct": 0
+    }
+   ],
+   "style": [
+    {
+     "key": "Intraday / BTST",
+     "n": 8,
+     "wins": 5,
+     "winRate": 0.625,
+     "pnl": 10579.62,
+     "turnover": 0,
+     "avgPct": 0
+    }
+   ],
+   "lossDepth": [
+    {
+     "key": "0–1%",
+     "n": 3,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -4517.93,
+     "turnover": 0,
+     "avgPct": 0
+    }
+   ],
+   "underlying": [
+    {
+     "key": "LT",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -4178.75,
+     "turnover": 0,
+     "avgPct": 0
+    },
+    {
+     "key": "HDFCBANK",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -207.42,
+     "turnover": 0,
+     "avgPct": 0
+    },
+    {
+     "key": "INFY",
+     "n": 1,
+     "wins": 0,
+     "winRate": 0,
+     "pnl": -131.76,
+     "turnover": 0,
+     "avgPct": 0
+    },
+    {
+     "key": "ITC",
+     "n": 1,
+     "wins": 1,
+     "winRate": 1,
+     "pnl": 1136.85,
+     "turnover": 0,
+     "avgPct": 0
+    },
+    {
+     "key": "SBIN",
+     "n": 1,
+     "wins": 1,
+     "winRate": 1,
+     "pnl": 1477.25,
+     "turnover": 0,
+     "avgPct": 0
+    },
+    {
+     "key": "WIPRO",
+     "n": 1,
+     "wins": 1,
+     "winRate": 1,
+     "pnl": 3433.92,
+     "turnover": 0,
+     "avgPct": 0
+    },
+    {
+     "key": "RELIANCE",
+     "n": 1,
+     "wins": 1,
+     "winRate": 1,
+     "pnl": 4163.61,
+     "turnover": 0,
+     "avgPct": 0
+    },
+    {
+     "key": "TCS",
+     "n": 1,
+     "wins": 1,
+     "winRate": 1,
+     "pnl": 4885.92,
+     "turnover": 0,
+     "avgPct": 0
+    }
+   ],
+   "entryDow": [],
+   "hold": [],
+   "entryHour": [],
+   "busyDay": [],
+   "month": [],
+   "direction": []
+  },
+  "stops": {
+   "opt": null,
+   "lin": {
+    "rows": [
+     {
+      "stop": 1,
+      "hit": 3,
+      "saved": 4517.93,
+      "net": 15097.550000000001
+     },
+     {
+      "stop": 2,
+      "hit": 3,
+      "saved": 4517.93,
+      "net": 15097.550000000001
+     },
+     {
+      "stop": 3,
+      "hit": 3,
+      "saved": 4517.93,
+      "net": 15097.550000000001
+     },
+     {
+      "stop": 5,
+      "hit": 3,
+      "saved": 4517.93,
+      "net": 15097.550000000001
+     },
+     {
+      "stop": 8,
+      "hit": 3,
+      "saved": 4517.93,
+      "net": 15097.550000000001
+     }
+    ],
+    "rec": 2,
+    "label": "Futures & stocks (stop as % of position value)"
+   }
+  },
+  "dropWorst": [
+   {
+    "k": 1,
+    "net": 14758.37
+   },
+   {
+    "k": 3,
+    "net": 15097.550000000001
+   }
+  ],
+  "heads": {},
+  "debitSummary": {},
+  "patterns": [
+   {
+    "dim": "Underlying",
+    "impact": 4517.93,
+    "text": "LT, HDFCBANK, INFY are behind 100% of everything you lost (−₹4,518). A ban list of three names changes the whole picture."
+   }
+  ],
+  "leaks": [
+   {
+    "level": "High",
+    "title": "Three positions carry 100% of all losses",
+    "impact": 4517.93,
+    "evidence": "LT −₹4,179 (0.0%) · HDFCBANK −₹207 (0.0%) · INFY −₹132 (0.0%).",
+    "fix": "Set a hard cash ceiling per position — ₹3,020, the size of one average win — and work quantity backwards from it so no single idea can do this again."
+   }
+  ],
+  "strengths": [
+   "63% of positions close green — the entries are finding something real.",
+   "Winners run 2.0× the size of losers, which is the hard half of trading to get right.",
+   "Best instrument: Equity / cash — ₹10,580 across 8 trades at 63% wins.",
+   "Best position size: Under ₹10,000 — ₹10,580 across 8 trades at 63% wins.",
+   "Biggest wins: TCS ₹4,886, RELIANCE ₹4,164, WIPRO ₹3,434."
+  ],
+  "rules": [
+   {
+    "rule": "Stop futures and stock positions at −2% of position value",
+    "why": "Worth roughly ₹4,518 on the same trades."
+   },
+   {
+    "rule": "Cap any single loss at ₹3,000",
+    "why": "One average win. Work the quantity backwards from this number, not from available margin."
+   },
+   {
+    "rule": "Write entry, stop and target before the order goes in",
+    "why": "Every leak above traces back to an exit that was never decided in advance."
+   }
+  ],
+  "seq": null,
+  "curve": [
+   {
+    "date": null,
+    "eq": 4163.61
+   },
+   {
+    "date": null,
+    "eq": 4031.85
+   },
+   {
+    "date": null,
+    "eq": 8917.77
+   },
+   {
+    "date": null,
+    "eq": 10395.02
+   },
+   {
+    "date": null,
+    "eq": 11531.87
+   },
+   {
+    "date": null,
+    "eq": 11324.45
+   },
+   {
+    "date": null,
+    "eq": 14758.37
+   },
+   {
+    "date": null,
+    "eq": 10579.62
+   }
+  ],
+  "diagnosis": "You are green after every cost. Keep the hit rate, cap the tail — one bad trade can undo a month here.",
+  "mapping": [
+   {
+    "kind": "aggregate",
+    "sheet": "Sheet1",
+    "manual": true,
+    "cols": {
+     "symbol": "col 1",
+     "pnl": "col 5"
+    },
+    "auto": true
+   }
+  ],
+  "behaviour": {
+   "traits": [
+    {
+     "id": 7,
+     "area": "exits",
+     "name": "Tail risk blindness",
+     "score": 100,
+     "now": "Just three trades account for 100% of everything you lost.",
+     "why": "Most trades feel controlled, so risk feels controlled. But the damage is concentrated in a few moments when discipline slipped. Those few trades decide the year, and they are the ones that never get reviewed.",
+     "ideal": "No single trade can lose more than a fixed cash amount, set before entry. The worst trades get reviewed first.",
+     "level": "Strong"
+    },
+    {
+     "id": 13,
+     "area": "exits",
+     "name": "Profit-taking anxiety",
+     "score": 100,
+     "now": "100% of your winning trades made so little they barely covered costs.",
+     "why": "The urge to see a green number can be stronger than the plan. Grabbing tiny gains feels productive, but it turns a good entry into a trade that pays the broker more than it pays you.",
+     "ideal": "A minimum target is set before entry, at several times the round-trip cost.",
+     "level": "Strong"
+    },
+    {
+     "id": 94,
+     "area": "discipline",
+     "name": "Unexamined winners",
+     "score": 25,
+     "now": "You're profitable overall, but a few losses still do most of the damage.",
+     "why": "When the total is positive, there's little urge to look closer. But the few large losses show where the next big setback will come from.",
+     "ideal": "Even in good periods, review the largest losses and what allowed them.",
+     "level": "Emerging"
+    }
+   ],
+   "more": [],
+   "tiles": {
+    "net": {
+     "now": "You finished ₹10,580 after every cost.",
+     "ideal": "Net P&L after costs is the only number that pays. Judge every change to your trading by its effect here."
+    },
+    "gross": {
+     "now": "Before costs you made ₹10,580.",
+     "ideal": "Gross P&L should comfortably exceed costs; if it barely does, trade less, not more."
+    },
+    "costs": {
+     "now": "Costs were 0% of what your winners made.",
+     "ideal": "Costs under 15–20% of gross profit. Fewer trades with larger targets get you there."
+    },
+    "winrate": {
+     "now": "You win 63% of trades.",
+     "ideal": "Win rate only matters alongside payoff. 40% with 2:1 winners beats 60% with 1:2."
+    },
+    "payoff": {
+     "now": "Average win is 2.01× the average loss.",
+     "ideal": "A payoff above 1.5 gives room for a normal win rate to be profitable."
+    },
+    "avgwin": {
+     "now": "Your average winner is ₹3,020 (0.0%).",
+     "ideal": "Winners run to a planned target instead of being taken at the first sign of profit."
+    },
+    "avgloss": {
+     "now": "Your average loser is ₹1,506 (0.0%).",
+     "ideal": "Losers closed at a pre-set stop, so the average loss is smaller than the average win."
+    },
+    "pf": {
+     "now": "For every 1 lost you made 3.34.",
+     "ideal": "A profit factor above 1.3 after costs is a sustainable edge."
+    },
+    "worst": {
+     "now": "Your worst trade was ₹4,179, about 1.4 average wins.",
+     "ideal": "The worst trade is no bigger than one or two average wins."
+    },
+    "costsPanel": {
+     "now": "Costs are 0% of gross profit.",
+     "ideal": "Every trade expected to make several times its cost."
+    },
+    "leaks": {
+     "now": "Three trades cause 100% of losses.",
+     "ideal": "Leaks are fixed one at a time, starting with the most expensive."
+    },
+    "curve": {
+     "now": "At the worst point you were ₹4,179 below your peak.",
+     "ideal": "A steady upward slope with shallow dips; deep drops mean risk per trade is too high."
+    },
+    "instrument": {
+     "now": "Your mix across instruments.",
+     "ideal": "Capital goes to the instrument where your results are best, not where the action is."
+    },
+    "year": {
+     "now": "How each expiry year contributed.",
+     "ideal": "Improvement shows as each year being better than the last."
+    },
+    "diagnosis": {
+     "now": "The average trade makes ₹1,322.",
+     "ideal": "A positive average trade after costs, held steady over hundreds of trades."
+    },
+    "rules": {
+     "now": "Rules built from your own mistakes.",
+     "ideal": "Rules are followed before every trade, not just read once."
+    },
+    "patterns": {
+     "now": "Where your results cluster.",
+     "ideal": "Do more of what works, pause what consistently doesn't."
+    },
+    "psych": {
+     "now": "The habits behind the numbers.",
+     "ideal": "Awareness first; then one rule per habit, tested for a month."
+    },
+    "stopsOpt": {
+     "now": "How a premium stop would have changed results.",
+     "ideal": "Bought options exit at a fixed share of premium, usually 30–40% down."
+    },
+    "stopsLin": {
+     "now": "How a price stop would have changed results.",
+     "ideal": "Stops sized so a full stop-out is a normal loss."
+    },
+    "working": {
+     "now": "What already works for you.",
+     "ideal": "Protect your strengths: give them the most capital and the least interference."
+    },
+    "group": {
+     "now": "Results by type of instrument.",
+     "ideal": "Concentrate on the instrument with the best results per trade."
+    },
+    "weekday": {
+     "now": "Results by the weekday your contracts expired.",
+     "ideal": "If one expiry day stands out as losing, avoid holding into it."
+    },
+    "premium": {
+     "now": "Results by the premium you paid.",
+     "ideal": "Pick strikes for probability and liquidity, not price."
+    },
+    "expiryType": {
+     "now": "Weekly vs monthly contracts.",
+     "ideal": "Match the expiry to how long your idea needs."
+    },
+    "callPut": {
+     "now": "Calls vs puts.",
+     "ideal": "Trade the side the setup shows; review each side separately."
+    },
+    "entryDow": {
+     "now": "Results by the day you opened trades.",
+     "ideal": "Size down on days that consistently lose until you know why."
+    },
+    "entryHour": {
+     "now": "Results by time of entry.",
+     "ideal": "Trade the hours where your record is best; sit out the rest."
+    },
+    "hold": {
+     "now": "Results by how long you held.",
+     "ideal": "Winners held at least as long as losers."
+    },
+    "busyDay": {
+     "now": "Results by how many trades you made that day.",
+     "ideal": "A daily trade limit. Quality drops as the count rises."
+    },
+    "direction": {
+     "now": "Long vs short.",
+     "ideal": "Both sides traded when the setup is there."
+    },
+    "month": {
+     "now": "Month by month.",
+     "ideal": "Most months profitable, with small losing months."
+    },
+    "size": {
+     "now": "Your largest positions: 50% win rate, −₹745.",
+     "ideal": "Size follows a formula, not conviction."
+    },
+    "style": {
+     "now": "Intraday vs carried positions.",
+     "ideal": "Holding period decided at entry, never changed because a trade is losing."
+    },
+    "lossDepth": {
+     "now": "0% of losers went past −10%.",
+     "ideal": "Most losses small, almost none deep. Deep losses mean stops weren't used."
+    },
+    "worstU": {
+     "now": "The names that cost you most.",
+     "ideal": "Repeat losers go on a pause list."
+    },
+    "bestU": {
+     "now": "The names that pay you most.",
+     "ideal": "Give your best names priority and patience."
+    },
+    "positions": {
+     "now": "Every position, 8 in total.",
+     "ideal": "Review the worst five positions every week."
+    }
+   },
+   "checked": 100
+  },
+  "progress": {
+   "level": {
+    "name": "Elite",
+    "index": 4,
+    "next": null,
+    "from": 85
+   },
+   "goals": [
+    {
+     "dim": "rr",
+     "label": "Risk : reward",
+     "score": 100,
+     "text": "Raise risk : reward",
+     "now": 2.01,
+     "target": 2.31,
+     "fmt": "x",
+     "better": "up"
+    },
+    {
+     "dim": "loss",
+     "label": "Loss control",
+     "score": 100,
+     "text": "Fewer losses past −10%",
+     "now": 0,
+     "target": 10,
+     "fmt": "%",
+     "better": "down"
+    },
+    {
+     "dim": "consistency",
+     "label": "Consistency",
+     "score": 100,
+     "text": "Lift your win rate",
+     "now": 63,
+     "target": 68,
+     "fmt": "%",
+     "better": "up"
+    }
+   ],
+   "saved": null,
+   "badges": [
+    {
+     "id": "disc",
+     "name": "Disciplined",
+     "desc": "Score of 70 or more"
+    }
+   ],
+   "summary": "This is your baseline score of 91. Risk : reward is your strongest habit (100/100). The biggest opportunity next month: raise risk : reward.",
+   "labels": {
+    "rr": "Risk : reward",
+    "loss": "Loss control",
+    "consistency": "Consistency",
+    "emotion": "Emotional control",
+    "activity": "Trade selection",
+    "costs": "Cost efficiency"
+   },
+   "overall": {
+    "score": 91,
+    "d": {
+     "rr": 100,
+     "loss": 100,
+     "consistency": 100,
+     "emotion": 70,
+     "activity": 70,
+     "costs": 100
+    },
+    "m": {
+     "n": 8,
+     "pnl": 10579.62,
+     "winRate": 0.625,
+     "payoff": 2.0050177846934325,
+     "pf": 3.3416963078223874,
+     "avgWin": 3019.5099999999998,
+     "avgLoss": 1505.9766666666667,
+     "expectancy": 1322.4525,
+     "avgLossPct": 0,
+     "deepShare": 0,
+     "bigLossX": 1.3839165957390438,
+     "revengeRate": 0,
+     "maxStreak": 0,
+     "tradesPerDay": 0,
+     "costRatio": 0,
+     "zeroOptions": 0,
+     "habitCost": {
+      "revenge": 0,
+      "busy": 0,
+      "deep": 0,
+      "zero": 0,
+      "charges": 0
+     },
+     "timed": false
+    }
+   },
+   "months": [],
+   "current": null,
+   "previous": null,
+   "delta": null,
+   "improvingStreak": 0,
+   "tracker": []
+  }
+ },
+ "m": "[circular]",
+ "trades": [
+  {
+   "symbol": "RELIANCE",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "RELIANCE",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": 4163.61,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": 4163.61,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "INFY",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "INFY",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": -131.76,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": -131.76,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "TCS",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "TCS",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": 4885.92,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": 4885.92,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "SBIN",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "SBIN",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": 1477.25,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": 1477.25,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "ITC",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "ITC",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": 1136.85,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": 1136.85,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "HDFCBANK",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "HDFCBANK",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": -207.42,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": -207.42,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "WIPRO",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "WIPRO",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": 3433.92,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": 3433.92,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  },
+  {
+   "symbol": "LT",
+   "segment": "Sheet1",
+   "sheet": "Sheet1",
+   "market": null,
+   "kind": "EQ",
+   "underlying": "LT",
+   "family": "Equity",
+   "group": "Equity / cash",
+   "mult": 1,
+   "expiry": null,
+   "expiryType": null,
+   "weekday": null,
+   "year": null,
+   "strike": null,
+   "qty": 0,
+   "buy": 0,
+   "sell": 0,
+   "pnl": -4178.75,
+   "pct": 0,
+   "entryDate": null,
+   "exitDate": null,
+   "entryDow": null,
+   "entryHour": null,
+   "holdDays": null,
+   "openQty": 0,
+   "openValue": 0,
+   "unreal": 0,
+   "fees": 0,
+   "source": "statement",
+   "turnover": 0,
+   "isOpt": false,
+   "sellDays": 0,
+   "style": "Intraday / BTST",
+   "estCharges": 0,
+   "netEst": -4178.75,
+   "avgBuy": 0,
+   "wentToZero": false,
+   "decayedWin": false
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+ "case": {
+  "id": "open_only_xlsx",
+  "files": [
+   "open_only.xlsx"
+  ]
+ },
+ "rawSha256": "633c54d25b401dc9fdf69a5c2f0384356a4ae590d7bdb6da3993870242ff8c39",
+ "report": null,
+ "m": {
+  "from": "2026-04-01",
+  "to": "2026-09-30",
+  "clientId": null,
+  "source": "statement",
+  "hasDates": false,
+  "market": null,
+  "markets": [],
+  "currency": "INR",
+  "n": 0,
+  "wins": 0,
+  "losses": 0,
+  "winRate": 0,
+  "grossProfit": 0,
+  "grossLoss": 0,
+  "profitFactor": null,
+  "avgWin": 0,
+  "avgLoss": 0,
+  "payoff": null,
+  "avgWinPct": 0,
+  "avgLossPct": 0,
+  "medWinPct": 0,
+  "expectancy": 0,
+  "realized": 0,
+  "charges": 0,
+  "other": 0,
+  "net": 0,
+  "unrealized": 0,
+  "turnover": 0,
+  "costPct": 0,
+  "largestWin": 0,
+  "largestLoss": 0,
+  "maxDD": 0,
+  "optShare": 0,
+  "openPositions": []
+ },
+ "trades": []
+}
