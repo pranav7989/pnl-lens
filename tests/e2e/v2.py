@@ -4,7 +4,7 @@
 """Report v2 + document formats E2E. Server on :3100, AUTH_MODE=dev, fresh credits (>=4)."""
 import re, sys, pathlib
 from playwright.sync_api import sync_playwright
-BASE='http://localhost:3100'; FX=pathlib.Path(__file__).resolve().parents[1]/'fixtures'
+BASE='http://localhost:3100'; FX=pathlib.Path(__file__).resolve().parents[2]/'packages/engine/test/fixtures'
 ok=lambda c,m: print(('PASS ' if c else 'FAIL ')+m) or (c or sys.exit(1))
 with sync_playwright() as p:
     b=p.chromium.launch(); pg=b.new_page(viewport={'width':1440,'height':900}); errs=[]

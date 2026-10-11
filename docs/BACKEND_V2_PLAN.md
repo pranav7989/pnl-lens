@@ -1,6 +1,6 @@
 # Backend v2 — Plan
 
-**Status:** APPROVED 2026-10-11, with the changes recorded in §2. Phase 1 in progress.
+**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done** (2026-10-11, branch `backend-v2`); waiting for go-ahead on Phase 2.
 **Goal:** move parsing and analysis from the browser to the server, and store raw files, normalised trades and computed metrics. Everything runs on one Ubuntu 24.04 VM with Docker Compose. AI/ML is out of scope; the data model is only made ready for it.
 
 Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and network · 5 Engine and parity · 6 Pipeline · 7 Data model · 8 API · 9 Enforcement · 10 Privacy and security · 11 Front end · 12 Infra and operations · 13 Testing · 14 Phases · 15 Risks
@@ -13,7 +13,7 @@ Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and n
 |---|---|---|---|
 | F1 | The engine is plain JS with injected libraries (XLSX, CFB, pdfjs). It already runs in Node; the unit tests do this. | `lib/engine/*`, `tests/extract.test.ts` | It can move to `packages/engine` byte-for-byte. Only a thin Node runner is new. |
 | F2 | Output is not fully deterministic: `generatedAt = new Date()`. | `lib/engine/index.ts:43` | Golden tests ignore `generatedAt` only. Every other byte must match. |
-| F3 | The date fallback `new Date(s)` parses in the **local timezone**. | `lib/engine/engine.js:58` | Results can differ between a browser in IST and a server in UTC. The worker and tests pin `TZ`. The value is decision D9. |
+| F3 | The date fallback `new Date(s)` parses in the **local timezone**. | `lib/engine/engine.js:58` | Results can differ between a browser in IST and a server in UTC. The worker and tests pin `TZ`. The value is decision D9. **Measured in Phase 1:** under UTC, 9 of 22 golden cases differ (the CSV tradebooks), so this is not an edge case. |
 | F4 | The engine has module-level state (`CUR`, set by `setCurrency` inside `analyze`) that is used to format money in leak/rule text. | `engine.js:33–41, 512` | `analyze()` is synchronous, so jobs in one Node process can't interleave inside it. The worker must never `await` between `setCurrency` and the end of `analyze`. This holds today. |
 | F5 | Money text uses `toLocaleString('en-IN')`, which depends on ICU. | `engine.js:37` | Node 22 official images ship full ICU. Golden tests run in the same image as the worker. |
 | F6 | The server enforces only "credits > 0". `create_report_with_credit` ignores `subscriptions.files_per_report`, `ends_at` and `reports_used`. Expiry is a flat `REPORT_TTL_DAYS`, not the plan's `retentionDays`. | `0003_functions.sql`, `pg-store.ts` | Rule 5 is not met today. New SQL functions are needed (§9). |
@@ -313,7 +313,7 @@ Wording: identical except the strings approved under D1/D4.
 | Phase | Scope | Done when |
 |---|---|---|
 | **0 · Plan** | This document. | ✅ Approved 2026-10-11. |
-| **1 · Monorepo and parity baseline** | `git init` / branch; goldens from **current** code (TZ `Asia/Kolkata`); npm workspaces; move the engine (unchanged) to `packages/engine`, pricing/types to `packages/shared`, migrations to `packages/db`; the Next app becomes `apps/web` and still works exactly as today (browser engine); ESLint; root scripts `test`, `typecheck`, `lint`, `docs:index` across workspaces; Node 22; passwords out of `docker-compose.yml` into `.env` with new generated values. | Parity tests are byte-identical; all existing tests pass; the app runs as before; INDEX regenerated. |
+| **1 · Monorepo and parity baseline** ✅ | `git init` / branch; goldens from **current** code (TZ `Asia/Kolkata`); npm workspaces; move the engine (unchanged) to `packages/engine`, pricing/types to `packages/shared`, migrations to `packages/db`; the Next app becomes `apps/web` and still works exactly as today (browser engine); ESLint; root scripts `test`, `typecheck`, `lint`, `docs:index` across workspaces; Node 22; passwords out of `docker-compose.yml` into `.env` with new generated values. | Parity tests are byte-identical; all existing tests pass; the app runs as before; INDEX regenerated. |
 | **2 · Infrastructure (dev)** | `infra/compose.dev.yml`, Dockerfiles, Caddyfile, Postgres init with roles from env, Redis, MinIO bootstrap, networks as in §4, `.env.example`, remove F9 passwords. | `docker compose -f infra/compose.dev.yml up -d` brings everything up healthy; only Caddy is reachable from outside the Docker networks. |
 | **3 · Database v2** | Migrations 0008–0014, typed queries (Kysely), seed updated (D6), SQL tests. | Fresh DB and an upgraded 0007 DB both migrate; all role and function tests pass. |
 | **4 · API** | Fastify app; port every route 1:1; analyses/upload endpoints; encryption; consent; rate limits; OpenAPI; old-path aliases. | Route tests pass; OpenAPI generated; the old Next routes and the new API produce the same responses for the same requests (contract test). |
@@ -323,6 +323,17 @@ Wording: identical except the strings approved under D1/D4.
 | **8 · Production VM** | `provision.sh`, `compose.prod.yml`, GitHub Actions deploy, backups plus a **restore drill**, monitoring, fresh database (D7), DNS cutover runbook and rollback plan. | Staging VM passes e2e; restore drill done; cutover checklist signed off by you. |
 
 ---
+
+### Phase 1 result (2026-10-11)
+
+| Item | Result |
+|---|---|
+| Goldens | 22 cases from the original engine (commit `3bdf976`, TZ Asia/Kolkata), byte-identical after the move through `src/node.ts` |
+| Engine files | `engine.js`, `behaviour.js`, `extract.js`, `index.ts`, `types.ts`: only the `@file` header line changed (git rename, 98–99% similarity) |
+| Dependencies | Original lockfile kept; engine libraries unchanged (pdf.js 6.3.289, SheetJS 0.18.5, cfb 1.2.2). Added: eslint 9.39.5, typescript-eslint 8.70.1, @eslint/js, globals; `@types/node` 20 → 22.20.4 |
+| Checks | `npm test` 86 passed + 7 skipped (Postgres-only); `npm run typecheck` clean; `npm run lint` 0 errors, 11 warnings (existing dead code, left untouched under rule 8) |
+| App | `npm run build` succeeds; the built server serves every page; saving and opening a report works (smoke test) |
+| Not verified | Docker build/compose (Docker is not installed on the dev PC); browser e2e (`tests/e2e/*.py`, Playwright not installed); the one-off browser-vs-Node diff (§5 step 4), moved to Phase 6 where Playwright is set up |
 
 ## 15. Risks
 

@@ -1,6 +1,16 @@
 # Environment variables
 
-Set these in DigitalOcean App Platform (Settings → App-level environment variables). Mark secrets as **Encrypted**. Local development: copy `.env.example` to `.env.local`.
+Set these in DigitalOcean App Platform (Settings → App-level environment variables). Mark secrets as **Encrypted**.
+
+**Local files (monorepo):**
+
+| File | Read by | Holds |
+|---|---|---|
+| `apps/web/.env.local` | `npm run dev` (Next.js reads env from its own folder) | App variables below; copy the app part of `.env.example` |
+| `.env` (repo root) | `docker compose` (variable substitution) | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `LENS_APP_PASSWORD`; random, generated, never committed |
+| `.env.local` (repo root) | `docker compose` → `app` service (`env_file`) | App variables for the container |
+
+All three are git-ignored. `docker compose` refuses to start if the passwords in `.env` are missing.
 
 | Variable | Required | Example / values | Purpose |
 |---|---|---|---|
@@ -24,3 +34,6 @@ Set these in DigitalOcean App Platform (Settings → App-level environment varia
 | `RAZORPAY_WEBHOOK_SECRET` | razorpay mode | | Webhook signature secret |
 | `CRON_SECRET` | optional | | Only if purge is triggered over HTTP |
 | `ALLOW_DEV_AUTH_IN_PROD` | **never in prod** | — | Test-only override |
+| `TZ` | yes (server) | `Asia/Kolkata` | Pinned server timezone (backend-v2 D9). The engine's date fallback is timezone-dependent; tests pin it in `vitest.config.ts` |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` | compose (`.env`) | random | Postgres superuser for the local stack (migrations only) |
+| `LENS_APP_PASSWORD` | compose (`.env`) | random | Password set on the `lens_app` role by the `migrate` service |

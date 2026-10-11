@@ -5,12 +5,15 @@ PnL Lens (pnllens.com) is a paid web app. A trader uploads broker P&L statements
 tradebooks (CSV, XLSX, XLS, PDF, DOC). The app auto-detects columns (the user is NEVER
 asked to map columns) and produces a dashboard: Overview, Progress, Insights & fixes,
 Clusters, Positions. Two sites: India (INR) and Global (USD). Plans: Single, Snapshot,
-Progress, Discipline (see lib/pricing.ts). "File" = one broker statement.
+Progress, Discipline (see packages/shared/src/pricing.ts). "File" = one broker statement.
 
 ## Current state (before this rebuild)
 - Next.js 14 App Router + TypeScript. Start with docs/INDEX.md and docs/ARCHITECTURE.md.
-- The analysis engine runs in the BROWSER: lib/engine/*.js (Web Worker, pdf.js, SheetJS).
-- PostgreSQL migrations db/migrations/0001–0007: users, reports, credits, payments,
+- Since Phase 1 this is an npm workspaces monorepo: apps/web (the Next app), packages/engine,
+  packages/shared, packages/db. Run commands from the repo root.
+- The analysis engine still runs in the BROWSER (until Phase 6): packages/engine/src/*.js
+  (Web Worker, pdf.js, SheetJS). Engine parity = packages/engine/test/golden (see docs/TESTING.md).
+- PostgreSQL migrations packages/db/migrations/0001–0007: users, reports, credits, payments,
   subscriptions, RBAC (owner/admin/support/finance/analyst), telemetry, audit log.
 - Payments are built but off (PAYMENTS_MODE=off|link|razorpay). See docs/PAYMENTS_RAZORPAY.md.
 
@@ -50,8 +53,10 @@ removed (off | razorpay only). Server TZ = Asia/Kolkata. Fresh start, no data mi
 
 ## Commands
 - Dev stack: `docker compose -f infra/compose.dev.yml up -d` (exists from Phase 2)
-- Tests: `npm test`  Type check: `npm run typecheck`  Lint: `npm run lint` (lint added in Phase 1)
+- Tests: `npm test`  Type check: `npm run typecheck`  Lint: `npm run lint`
 - Migrations: `npm run db:migrate`
+- Windows dev machine: Node/Git were installed via winget; a terminal opened before that may need
+  `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
 
 ## Definition of done (every phase)
 Tests pass, typecheck passes, docs updated, no secrets committed, and a short summary written.

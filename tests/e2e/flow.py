@@ -7,7 +7,7 @@ out-of-credits → column mapper → expiry. Run: python3 tests/e2e/flow.py"""
 import json, os, re, sys, pathlib
 from playwright.sync_api import sync_playwright
 BASE = os.environ.get('BASE', 'http://localhost:3100')
-FX = pathlib.Path(__file__).resolve().parents[1] / 'fixtures'
+FX = pathlib.Path(__file__).resolve().parents[2] / 'packages/engine/test/fixtures'
 STORE = pathlib.Path(os.environ.get('STORE_FILE') or (pathlib.Path(__file__).resolve().parents[2] / '.data' / 'dev-store.json'))
 ok = lambda c, m: print(('PASS ' if c else 'FAIL ') + m) or (c or sys.exit(1))
 shots = pathlib.Path('/tmp/e2e'); shots.mkdir(exist_ok=True)

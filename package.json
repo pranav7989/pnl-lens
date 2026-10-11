@@ -2,35 +2,34 @@
   "name": "pnl-lens",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "workspaces": [
+    "packages/engine",
+    "packages/shared",
+    "packages/db",
+    "apps/web"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "db:migrate": "node scripts/migrate.mjs",
-    "test:db": "vitest run tests/pg-store.test.ts",
-    "db:purge": "node scripts/purge.mjs",
-    "postinstall": "node scripts/copy-pdf-worker.mjs",
+    "dev": "npm run dev -w @pnl-lens/web",
+    "build": "npm run build -w @pnl-lens/web",
+    "start": "npm run start -w @pnl-lens/web",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "db:migrate": "npm run migrate -w @pnl-lens/db",
+    "db:purge": "npm run purge -w @pnl-lens/db",
+    "test:db": "npm run test:db -w @pnl-lens/web",
     "docs:index": "node scripts/gen-index.mjs"
   },
-  "dependencies": {
-    "@aws-sdk/client-sesv2": "^3.1142.0",
-    "cfb": "^1.2.2",
-    "jose": "^5.9.0",
-    "next": "14.2.35",
-    "pdfjs-dist": "^6.3.289",
-    "pg": "^8.23.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "xlsx": "0.18.5"
-  },
   "devDependencies": {
-    "@types/node": "^20.14.0",
-    "@types/pg": "^8.23.1",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
+    "@eslint/js": "9.39.5",
+    "@types/node": "22.20.4",
+    "eslint": "9.39.5",
+    "globals": "16.5.0",
     "typescript": "^5.5.0",
+    "typescript-eslint": "8.70.1",
     "vitest": "^2.1.0"
   }
 }

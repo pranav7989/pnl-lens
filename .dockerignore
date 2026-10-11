@@ -1,7 +1,10 @@
-node_modules
-.next
+**/node_modules
+**/.next
 .data
+.git
 .env*
 !.env.example
 tests
+apps/web/tests
+packages/engine/test
 *.md

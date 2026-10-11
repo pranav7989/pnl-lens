@@ -1,0 +1,22 @@
+{
+  "name": "@pnl-lens/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./extract": "./src/extract.js",
+    "./behaviour": "./src/behaviour.js",
+    "./types": "./src/types.ts",
+    "./node": "./src/node.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "cfb": "^1.2.2",
+    "pdfjs-dist": "^6.3.289",
+    "xlsx": "0.18.5"
+  }
+}
