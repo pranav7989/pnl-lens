@@ -15,6 +15,7 @@ Start here. Every source file starts with a 3-line header (`@file`, `@area`, `@w
 | 7 | `docs/HANDOFF_HISTORY.md` | Detailed change log and decisions |
 | 8 | `docs/BACKEND_V2_PLAN.md` | Plan for moving parsing/analysis to the server (backend-v2, approved; phase status inside) |
 | 9 | `docs/INFRA.md` | Docker Compose stack: services, networks, least privilege, secrets, commands |
+| 10 | `docs/legal/` | **Drafts, not in force:** Privacy Policy and Terms of Service for backend-v2, with LAWYER CHECK / BUILD CHECK markers |
 
 ## 2. Folder map
 
