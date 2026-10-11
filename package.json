@@ -1,0 +1,36 @@
+{
+  "name": "pnl-lens",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node scripts/migrate.mjs",
+    "test:db": "vitest run tests/pg-store.test.ts",
+    "db:purge": "node scripts/purge.mjs",
+    "postinstall": "node scripts/copy-pdf-worker.mjs",
+    "docs:index": "node scripts/gen-index.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1142.0",
+    "cfb": "^1.2.2",
+    "jose": "^5.9.0",
+    "next": "14.2.35",
+    "pdfjs-dist": "^6.3.289",
+    "pg": "^8.23.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
+}

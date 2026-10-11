@@ -1,0 +1,69 @@
+# DigitalOcean App Platform spec for pnllens.com
+#   doctl apps create --spec .do/app.yaml      (first time)
+#   doctl apps update <app-id> --spec .do/app.yaml
+name: pnllens
+region: blr                      # Bangalore; use sgp (Singapore) if your account doesn't offer blr for App Platform
+domains:
+  - domain: pnllens.com
+    type: PRIMARY
+  - domain: www.pnllens.com
+    type: ALIAS
+databases:
+  - name: db
+    engine: PG
+    version: "16"
+    production: true
+    cluster_name: pnllens-db      # create the managed cluster first (see docs/DEPLOYMENT_DIGITALOCEAN.md)
+    db_name: lens
+    db_user: lens_admin
+services:
+  - name: web
+    dockerfile_path: Dockerfile
+    github: { repo: YOUR_GITHUB_USER/pnl-lens-app, branch: main, deploy_on_push: true }
+    http_port: 3000
+    instance_size_slug: apps-s-1vcpu-1gb
+    instance_count: 2
+    health_check: { http_path: /api/health }
+    envs:
+      - { key: NODE_ENV, value: production }
+      - { key: APP_URL, value: https://pnllens.com }
+      - { key: STORE_DRIVER, value: pg }
+      - { key: AUTH_MODE, value: jwt }
+      - { key: DATABASE_URL, value: "${APP_DATABASE_URL}", type: SECRET }   # lens_app connection string (least-privilege role)
+      - { key: DATABASE_SSL, value: require }
+      - { key: DATABASE_CA_CERT, value: "${db.CA_CERT}" }
+      - { key: SESSION_SECRET, type: SECRET }
+      - { key: OTP_PEPPER, type: SECRET }
+      - { key: MAIL_DRIVER, value: resend }
+      - { key: MAIL_FROM, value: "PnL Lens <no-reply@pnllens.com>" }
+      - { key: RESEND_API_KEY, type: SECRET }
+      - { key: GOOGLE_CLIENT_ID, type: SECRET }
+      - { key: GOOGLE_CLIENT_SECRET, type: SECRET }
+      - { key: RAZORPAY_KEY_ID, type: SECRET }
+      - { key: RAZORPAY_KEY_SECRET, type: SECRET }
+      - { key: RAZORPAY_WEBHOOK_SECRET, type: SECRET }
+      - { key: PRICING_DEFAULT_COUNTRY, value: US }
+      - { key: PAYMENTS_MODE, value: "off" }          # off → link → razorpay (docs/PAYMENTS_RAZORPAY.md)
+      # - { key: PAYMENT_LINK_PROGRESS_INR, value: "https://rzp.io/..." }   # link mode: one per plan + currency
+jobs:
+  - name: migrate                 # runs before every deploy, with the admin (owner) credentials
+    kind: PRE_DEPLOY
+    dockerfile_path: Dockerfile
+    github: { repo: YOUR_GITHUB_USER/pnl-lens-app, branch: main }
+    run_command: node scripts/migrate.mjs
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - { key: DATABASE_URL, value: "${db.DATABASE_URL}" }
+      - { key: DATABASE_SSL, value: require }
+      - { key: DATABASE_CA_CERT, value: "${db.CA_CERT}" }
+  - name: purge                   # nightly clean-up of expired reports
+    kind: SCHEDULED
+    cron: "30 20 * * *"            # 20:30 UTC = 02:00 IST
+    dockerfile_path: Dockerfile
+    github: { repo: YOUR_GITHUB_USER/pnl-lens-app, branch: main }
+    run_command: node scripts/purge.mjs
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - { key: DATABASE_URL, value: "${APP_DATABASE_URL}", type: SECRET }
+      - { key: DATABASE_SSL, value: require }
+      - { key: DATABASE_CA_CERT, value: "${db.CA_CERT}" }

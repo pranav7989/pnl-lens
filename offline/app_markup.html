@@ -1,0 +1,87 @@
+<div id="appview" class="appview" hidden>
+  <header class="app-local">
+    <div class="bar">
+      <a class="brand" href="#top" style="text-decoration:none"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" class="logo-mark"><rect width="32" height="32" rx="8" fill="#FFD60A"/><rect x="7" y="17" width="4" height="8" rx="2" fill="#000"/><rect x="14" y="13" width="4" height="12" rx="2" fill="#000"/><rect x="21" y="9" width="4" height="16" rx="2" fill="#000"/><path d="M6 14.5 L13 9.5 L17 11.5 L24.5 5.5" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.5 5.2 L24.8 5.2 L24.8 9.4" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>PnL Lens</span></a>
+      <span class="local-badge">Offline copy</span>
+      <div class="app-actions">
+        <button class="btn ghost hide" id="newReport">New report</button>
+        <button class="btn ghost hide" id="csvBtn">CSV</button>
+        <button class="btn ghost hide" id="pdfBtn">PDF</button>
+        <a class="btn ghost" href="#top">Home</a>
+      </div>
+    </div>
+  </header>
+  <div class="lock-msg" id="lockMsg" role="alert" hidden><div><b id="lockTitle"></b><p id="lockText"></p></div><button type="button" id="lockClose" aria-label="Close">×</button></div>
+  <div class="confirm" id="confirmNew" hidden><div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="cnT"><h3 id="cnT">Start a new report?</h3><p id="cnText">This closes the current report. Your next report will use one report from your plan.</p><div class="confirm-act"><button class="btn ghost" type="button" id="cnNo">Keep this report</button><button class="btn" type="button" id="cnYes">Start new report</button></div></div></div>
+  <main class="appmain">
+    <section id="uploadView" style="max-width:760px;margin:0 auto">
+      <div class="up-plan" id="upPlan"></div>
+      <h1 class="page-title">New report</h1>
+      <p class="page-sub">Your statements are read on this device and never uploaded. Reports are kept in this browser so you can reopen them later.</p>
+      <div id="drop" tabindex="0" role="button" aria-label="Choose files">
+        <b id="dropTitle">Add your broker statements</b>
+        <span class="muted">1 file = one P&amp;L statement or tradebook downloaded from your broker · Excel, CSV, PDF or Word · 10MB each</span>
+        <div style="margin-top:14px"><span class="btn">Choose files</span></div>
+        <input id="file" type="file" accept=".xlsx,.xls,.csv,.pdf,.docx,.doc" multiple hidden>
+      </div>
+      <div class="up-note" role="note">
+        <b>Check your files before you upload.</b>
+        <span id="planNote" class="plan-note">Each report allows up to 3 files. Once a file has been analysed its place is used, even if you remove it later. Re-opening the same file is always fine.</span>
+        <span>Reports can't be refunded once generated. If something genuinely goes wrong, write to <a href="mailto:support@pnllens.com">support@pnllens.com</a> and we'll respond promptly.</span>
+      </div>
+      <ul class="filelist" id="fileList"></ul>
+      <div class="filters" style="margin-top:16px;align-items:center">
+        <label class="muted" style="font-size:13px">Currency&nbsp;<select id="currency" aria-label="Currency"><option value="">Detect automatically</option></select></label>
+        <button class="btn" id="analyse" disabled>Analyse</button>
+      </div>
+      <p class="status err" id="err" role="status" hidden></p>
+      <div class="up-hist"><div class="ws-side-h">Your reports</div><div id="historyList2" class="ws-hist"></div></div>
+      
+    </section>
+    <section id="reportView" hidden>
+      <div class="ws">
+        <aside class="ws-side" aria-label="Reports">
+          <div class="ws-plan" id="planCard"></div>
+          <div class="ws-side-h">This report</div>
+          <div id="sideList" role="tablist" aria-orientation="vertical"></div>
+          <input id="addFile" type="file" accept=".xlsx,.xls,.csv,.pdf,.docx,.doc" hidden>
+          <p class="ws-side-note" id="sideNote"></p>
+          <div class="ws-side-h ws-hist-h">Your reports</div>
+          <div id="historyList" class="ws-hist"></div>
+        </aside>
+        <div class="ws-main">
+          <div class="report-head">
+            <div>
+              <h1 class="page-title" id="reportTitle">Report</h1>
+              <div class="muted" style="font-size:13px" id="reportMeta"></div>
+            </div>
+          </div>
+          <div class="panel" id="slotEmpty" hidden>
+            <h3>No closed trades found in <span id="slotEmptyName"></span></h3>
+            <p class="muted" style="margin:6px 0 10px">This file doesn't contain any completed trades for PnL Lens to analyse. Usually that means:</p>
+            <ul class="ws-reasons">
+              <li>The date range had only open positions, or no trading at all</li>
+              <li>It's a holdings, ledger or contract-note export rather than a P&amp;L statement or tradebook</li>
+              <li>It's a scanned PDF (an image with no readable text)</li>
+            </ul>
+            <p class="muted" style="margin-top:10px">Download the <b>P&amp;L statement</b> or <b>tradebook</b> for a period with closed trades, then add it with <b>+</b>. You can remove this file with <b>×</b>.</p>
+          </div>
+          <div id="reportRoot">
+            <nav class="tabs" role="tablist">
+              <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+              <button role="tab" data-tab="progress" aria-selected="false">Progress</button>
+              <button role="tab" data-tab="insights" aria-selected="false">Insights &amp; fixes</button>
+              <button role="tab" data-tab="clusters" aria-selected="false">Clusters</button>
+              <button role="tab" data-tab="positions" aria-selected="false">Positions</button>
+            </nav>
+            <section id="overview" class="tab"></section>
+            <section id="progress" class="tab hide"></section>
+            <section id="insights" class="tab hide"></section>
+            <section id="clusters" class="tab hide"></section>
+            <section id="positions" class="tab hide"></section>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
