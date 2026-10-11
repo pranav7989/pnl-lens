@@ -1,0 +1,28 @@
+# Caddy — the only service reachable from outside the Docker networks.
+# Dev: plain HTTP on the address in SITE_ADDRESS (default :80, published on 127.0.0.1:8080).
+# Production TLS (Cloudflare origin certificate, trusted proxies) is added in Phase 8.
+{
+	admin localhost:2019
+	auto_https off
+}
+
+{$SITE_ADDRESS::80} {
+	request_body {
+		max_size 35MB
+	}
+	encode zstd gzip
+	header -Server
+
+	# New API (Fastify). Until the Phase 6 cutover, the existing /api/* routes are still served by the web app.
+	handle /api/v1/* {
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

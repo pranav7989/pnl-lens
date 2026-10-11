@@ -7,10 +7,9 @@ Set these in DigitalOcean App Platform (Settings → App-level environment varia
 | File | Read by | Holds |
 |---|---|---|
 | `apps/web/.env.local` | `npm run dev` (Next.js reads env from its own folder) | App variables below; copy the app part of `.env.example` |
-| `.env` (repo root) | `docker compose` (variable substitution) | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `LENS_APP_PASSWORD`; random, generated, never committed |
-| `.env.local` (repo root) | `docker compose` → `app` service (`env_file`) | App variables for the container |
+| `.env` (repo root) | `docker compose` (via `--env-file .env` in the `stack:*` scripts) | Stack secrets (DB roles, Redis, Garage, S3 keys); created by `npm run stack:env`, never committed. List: `docs/INFRA.md` → Secrets |
 
-All three are git-ignored. `docker compose` refuses to start if the passwords in `.env` are missing.
+Both files are git-ignored. `docker compose` refuses to start if a secret in `.env` is missing. The dev stack sets the web app's variables itself in `infra/compose.dev.yml`, with no secrets inline.
 
 | Variable | Required | Example / values | Purpose |
 |---|---|---|---|
@@ -35,5 +34,10 @@ All three are git-ignored. `docker compose` refuses to start if the passwords in
 | `CRON_SECRET` | optional | | Only if purge is triggered over HTTP |
 | `ALLOW_DEV_AUTH_IN_PROD` | **never in prod** | — | Test-only override |
 | `TZ` | yes (server) | `Asia/Kolkata` | Pinned server timezone (backend-v2 D9). The engine's date fallback is timezone-dependent; tests pin it in `vitest.config.ts` |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` | compose (`.env`) | random | Postgres superuser for the local stack (migrations only) |
-| `LENS_APP_PASSWORD` | compose (`.env`) | random | Password set on the `lens_app` role by the `migrate` service |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` | stack (`.env`) | random | Postgres superuser (migrations only) |
+| `LENS_APP_PASSWORD` / `LENS_WORKER_PASSWORD` | stack (`.env`) | random | Login passwords for `lens_app` (api, web) and `lens_worker` (worker), set by `packages/db/scripts/setup-roles.mjs` |
+| `REDIS_PASSWORD` | stack (`.env`) | random | Required by every Redis client |
+| `GARAGE_RPC_SECRET` / `GARAGE_ADMIN_TOKEN` | stack (`.env`) | random | Garage storage node secret and admin API token (used only by `storage-init`) |
+| `S3_API_ACCESS_KEY_ID` / `S3_API_SECRET_ACCESS_KEY` | stack (`.env`) | `GK`+24 hex / 64 hex | API storage key: write-only on bucket `statements` |
+| `S3_WORKER_ACCESS_KEY_ID` / `S3_WORKER_SECRET_ACCESS_KEY` | stack (`.env`) | `GK`+24 hex / 64 hex | Worker storage key: read + write |
+| `DATABASE_URL`, `REDIS_URL`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | api / worker containers | built in `compose.dev.yml` from the values above | Per-service connection settings |

@@ -13,7 +13,8 @@ Start here. Every source file starts with a 3-line header (`@file`, `@area`, `@w
 | 5 | `docs/PAYMENTS_RAZORPAY.md` | Payment modes and the Razorpay integration (with official doc links) |
 | 6 | `docs/TESTING.md` | How to run every test suite |
 | 7 | `docs/HANDOFF_HISTORY.md` | Detailed change log and decisions |
-| 8 | `docs/BACKEND_V2_PLAN.md` | Plan for moving parsing/analysis to the server (backend-v2, draft) |
+| 8 | `docs/BACKEND_V2_PLAN.md` | Plan for moving parsing/analysis to the server (backend-v2, approved; phase status inside) |
+| 9 | `docs/INFRA.md` | Docker Compose stack: services, networks, least privilege, secrets, commands |
 
 ## 2. Folder map
 
@@ -34,9 +35,13 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 | `apps/web/tests/` | Web unit tests (sign-in codes, payments, roles, Postgres store) |
 | `packages/engine/` | The analysis engine, **moved unchanged** (`src/`), its Node runner (`src/node.ts`), tests, fixtures and **golden parity files** (`test/golden/`) |
 | `packages/shared/` | Plans and prices (`src/pricing.ts`), app limits (`src/limits.ts`) |
-| `packages/db/` | SQL migrations (run in order), seed for local dev, SQL tests, migrate/purge/demo-data scripts |
+| `apps/api/` | Fastify API (`/api/v1`). Phase 2 skeleton: health + readiness only |
+| `apps/worker/` | Job worker (BullMQ from Phase 5). Phase 2 skeleton: dependency checks only |
+| `packages/db/` | SQL migrations (run in order), seed for local dev, SQL tests, migrate / role-setup / purge / demo-data scripts |
+| `infra/` | Docker Compose stack (`compose.dev.yml`), Dockerfiles (`docker/`), `caddy/Caddyfile`, `garage/garage.toml`, setup scripts (`scripts/`) — see `docs/INFRA.md` |
 | `scripts/` | Index generator |
 | `tests/e2e/` | Browser end-to-end tests (`*.py`) for the whole system |
+| `tests/stack/` | Stack tests against the running Docker stack (`npm run test:stack`) |
 | `.do/app.yaml` | DigitalOcean App Platform spec (stale; retired in backend-v2 Phase 8) |
 | `docs/` | All documentation |
 
@@ -73,7 +78,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 113 files._
+_Generated from file headers by `npm run docs:index` — 120 files._
 
 ### Pages
 
@@ -219,6 +224,8 @@ _Generated from file headers by `npm run docs:index` — 113 files._
 | `packages/db/migrations/0006_admin_read_audit.sql` | Lets the app read the audit log for the support timeline. |
 | `packages/db/migrations/0007_payments_plans.sql` | subscriptions table and grant_plan() used by the Razorpay webhook. |
 | `packages/db/optional/pg_cron.sql` | Optional: schedule the purge inside Postgres if pg_cron is available. |
+| `packages/db/scripts/seed-dev.mjs` | Applies seed.sql (dev user with credits) — only when SEED_DEV_DATA=true (set by infra/compose.dev.yml only). |
+| `packages/db/scripts/setup-roles.mjs` | Creates/updates the login roles lens_app and lens_worker with passwords from env (runs after migrations, as superuser). |
 | `packages/db/seed.sql` | Local development seed (dev user with credits). Never run in production. |
 
 ### Ops
@@ -228,6 +235,8 @@ _Generated from file headers by `npm run docs:index` — 113 files._
 | `apps/web/app/api/cron/purge/route.ts` | POST /api/cron/purge — optional HTTP trigger for the nightly purge (needs CRON_SECRET). The scheduled job uses scripts/purge.mjs. |
 | `apps/web/app/api/health/route.ts` | GET /api/health — liveness check used by DigitalOcean App Platform. |
 | `apps/web/scripts/copy-pdf-worker.mjs` | postinstall: copies the pdf.js worker into public/. |
+| `infra/scripts/gen-env.mjs` | Fills .env with random secrets for every stack variable that is missing. Never changes or prints existing values. |
+| `infra/scripts/storage-init.mjs` | One-off, idempotent Garage setup via its admin API: node layout, private bucket, and least-privilege S3 keys. |
 | `packages/db/scripts/migrate.mjs` | Applies packages/db/migrations in order (runs as the pre-deploy job). |
 | `packages/db/scripts/purge.mjs` | Nightly purge of expired reports (DigitalOcean scheduled job). |
 | `packages/db/scripts/seed-admin-demo.mjs` | Fills a local database with demo admin data (refuses production). |
@@ -262,5 +271,6 @@ _Generated from file headers by `npm run docs:index` — 113 files._
 | `tests/e2e/mock-google.mjs` | Mock Google OpenID provider used by the sign-in E2E. |
 | `tests/e2e/payments.py` | Payments E2E: off / link modes and the signed webhook path. |
 | `tests/e2e/v2.py` | Browser E2E: report tabs, hover cards, behaviour, clusters, PDF/Word uploads. |
+| `tests/stack/stack.test.ts` | Dev stack checks: all services healthy, only Caddy published, internal network isolated, least-privilege DB/Redis/storage. |
 
 <!-- FILES:END -->

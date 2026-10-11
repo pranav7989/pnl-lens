@@ -9,6 +9,7 @@ Run from the repo root (npm workspaces). Node 22.13+.
 | Lint | `npm run lint` | nothing |
 | Engine only (formats, PDF/Word, behaviour, **golden parity**) | `npm test -w @pnl-lens/engine` | nothing |
 | Web only (sign-in codes, payments, roles) | `npm test -w @pnl-lens/web` | nothing |
+| **Docker stack** (health, only Caddy exposed, network isolation, DB/Redis/storage least privilege) | `npm run stack:up` then `npm run test:stack` | Docker Desktop running; `.env` from `npm run stack:env` |
 | Postgres integration | `TEST_ADMIN_URL=… TEST_DATABASE_URL=… npm run test:db` | local Postgres with migrations |
 | SQL functions | `psql $ADMIN_URL -f packages/db/tests/01_functions.sql` | Postgres |
 | Report flow (browser) | `python3 tests/e2e/flow.py` | server on :3100, `AUTH_MODE=dev` |

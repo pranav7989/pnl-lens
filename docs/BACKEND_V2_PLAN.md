@@ -1,6 +1,6 @@
 # Backend v2 — Plan
 
-**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done** (2026-10-11, branch `backend-v2`); waiting for go-ahead on Phase 2.
+**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11, branch `backend-v2`); waiting for go-ahead on Phase 3.
 **Goal:** move parsing and analysis from the browser to the server, and store raw files, normalised trades and computed metrics. Everything runs on one Ubuntu 24.04 VM with Docker Compose. AI/ML is out of scope; the data model is only made ready for it.
 
 Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and network · 5 Engine and parity · 6 Pipeline · 7 Data model · 8 API · 9 Enforcement · 10 Privacy and security · 11 Front end · 12 Infra and operations · 13 Testing · 14 Phases · 15 Risks
@@ -47,6 +47,7 @@ Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and n
 | **D12** | Offsite backups: DigitalOcean Spaces through `restic`, encrypted (default). |
 | **D13** | `git init`, commit the current tree to `main`, branch `backend-v2` (default). |
 | **F9** | **All passwords move out of `docker-compose.yml` into `.env` (git-ignored); new random ones are generated.** Done in Phase 1. |
+| **D14** | **MinIO replaced by Garage** (approved 2026-10-11, Phase 2). MinIO's free Docker images are no longer published: every tag on Docker Hub and quay.io is gone or needs an account. Garage `dxflrs/garage:v2.4.1` is S3-compatible, single-container and built for small self-hosted servers. Per-key bucket permissions give the API **write-only** and the worker read+write. App code is unaffected: files are encrypted by the app and stored through the standard S3 API. Wherever this plan says "MinIO", read "Garage". |
 | **Location** | The project lives at `C:\Users\drvvl\Documents\pnl-lens`. The Downloads copy is the untouched original. |
 
 ### 2.1 Proposed wording (NOT applied; needs owner sign-off before Phase 6)
@@ -314,7 +315,7 @@ Wording: identical except the strings approved under D1/D4.
 |---|---|---|
 | **0 · Plan** | This document. | ✅ Approved 2026-10-11. |
 | **1 · Monorepo and parity baseline** ✅ | `git init` / branch; goldens from **current** code (TZ `Asia/Kolkata`); npm workspaces; move the engine (unchanged) to `packages/engine`, pricing/types to `packages/shared`, migrations to `packages/db`; the Next app becomes `apps/web` and still works exactly as today (browser engine); ESLint; root scripts `test`, `typecheck`, `lint`, `docs:index` across workspaces; Node 22; passwords out of `docker-compose.yml` into `.env` with new generated values. | Parity tests are byte-identical; all existing tests pass; the app runs as before; INDEX regenerated. |
-| **2 · Infrastructure (dev)** | `infra/compose.dev.yml`, Dockerfiles, Caddyfile, Postgres init with roles from env, Redis, MinIO bootstrap, networks as in §4, `.env.example`, remove F9 passwords. | `docker compose -f infra/compose.dev.yml up -d` brings everything up healthy; only Caddy is reachable from outside the Docker networks. |
+| **2 · Infrastructure (dev)** ✅ | `infra/compose.dev.yml`, Dockerfiles, Caddyfile, Postgres init with roles from env, Redis, MinIO bootstrap, networks as in §4, `.env.example`, remove F9 passwords. | `docker compose -f infra/compose.dev.yml up -d` brings everything up healthy; only Caddy is reachable from outside the Docker networks. |
 | **3 · Database v2** | Migrations 0008–0014, typed queries (Kysely), seed updated (D6), SQL tests. | Fresh DB and an upgraded 0007 DB both migrate; all role and function tests pass. |
 | **4 · API** | Fastify app; port every route 1:1; analyses/upload endpoints; encryption; consent; rate limits; OpenAPI; old-path aliases. | Route tests pass; OpenAPI generated; the old Next routes and the new API produce the same responses for the same requests (contract test). |
 | **5 · Worker** | BullMQ flow, sandboxed parse, normalise, store, retries, scheduled purge/cleanup, access logging; SheetJS upgrade (D10) as a separate commit with a golden report. | Fixtures through the full pipeline equal the goldens; purge removes objects; hostile-file tests pass. |
@@ -335,6 +336,22 @@ Wording: identical except the strings approved under D1/D4.
 | App | `npm run build` succeeds; the built server serves every page; saving and opening a report works (smoke test) |
 | Not verified | Docker build/compose (Docker is not installed on the dev PC); browser e2e (`tests/e2e/*.py`, Playwright not installed); the one-off browser-vs-Node diff (§5 step 4), moved to Phase 6 where Playwright is set up |
 
+### Phase 2 result (2026-10-11)
+
+| Item | Result |
+|---|---|
+| Stack | `infra/compose.dev.yml`: caddy, web, api, worker, postgres 16.14, redis 7.4.11, garage v2.4.1, plus one-off jobs `migrate` and `storage-init`. Guide: `docs/INFRA.md` |
+| Storage | **MinIO replaced by Garage** (D14): MinIO's free images are gone. API key is write-only; worker key is read+write |
+| Exposure | Only Caddy publishes a port (127.0.0.1:8080 in dev). `internal` network has no internet; the worker cannot reach out, the api can |
+| Database | `setup-roles.mjs` sets `lens_app` / `lens_worker` passwords from `.env` on every run; PUBLIC has no CONNECT; scram passwords required for every connection, including inside the container |
+| Secrets | `npm run stack:env` generates 11 secrets into `.env`; none are in git, compose files or images |
+| Skeletons | `apps/api` (Fastify: `/api/v1/health`, `/api/v1/ready`) and `apps/worker` (dependency checks); real logic in Phases 4–5 |
+| Removed | Root `docker-compose.yml` (replaced); root `Dockerfile` moved to `infra/docker/web.Dockerfile` |
+| Checks | `npm run test:stack` **44/44**; `npm test` 86 passed + 7 skipped; typecheck clean; lint 0 errors (11 old warnings) |
+| Dependencies | New npm packages resolved as of 2026-09-26 (all ≥ 2 weeks old; a batch of Fastify sub-packages released 2026-10-10 was avoided); existing package versions unchanged |
+| Transitional | `web` sits on the internal network and uses Postgres directly until the Phase 6 cutover (tested as such) |
+| Dev machine | Docker/WSL memory raised to 6 GB + 8 GB swap (`%USERPROFILE%\.wslconfig`); the first build crashed at 4 GB. The PC has 7.8 GB RAM, so builds are tight |
+
 ## 15. Risks
 
 | Risk | Mitigation |
@@ -345,3 +362,5 @@ Wording: identical except the strings approved under D1/D4.
 | One VM is a single point of failure | Offsite backups with a tested restore; documented rebuild from `provision.sh` plus a restore. Accepted trade-off for this scale. |
 | Free previews used as free analysis | Previews show only summary numbers (as today), plus D11 rate limits. |
 | Cutover breaks payments or sign-in | Old webhook and callback paths stay valid; payments are off at cutover anyway. |
+| Garage `replication_factor = 1` is described upstream as "test only" | Accepted for one VM: durability comes from the nightly offsite backup and the Phase 8 restore drill, the same as for Postgres. |
+| Dev laptop has 7.8 GB RAM | Images build one at a time if needed (`docker compose build web`). The production VM is sized separately (§12). |

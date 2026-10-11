@@ -1,0 +1,188 @@
+# PnL Lens — development stack (backend-v2 Phase 2). Run from the repo root:
+#   npm run stack:env     # once: fills .env with random secrets
+#   npm run stack:up      # build + start, waits until healthy
+#   npm run test:stack    # proves the isolation rules
+# Open http://localhost:8080. Only Caddy publishes a port; everything else is on private networks.
+# Optional debugging ports (127.0.0.1 only): add  -f infra/compose.dev.ports.yml
+name: pnl-lens
+
+x-tz: &tz
+  TZ: Asia/Kolkata
+
+services:
+  # ---------------------------------------------------------------- edge
+  caddy:
+    image: caddy:2.11.4-alpine
+    ports: ["${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:80"]
+    environment:
+      SITE_ADDRESS: ":80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on:
+      web: { condition: service_healthy }
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      retries: 6
+    restart: unless-stopped
+
+  web:
+    build: { context: .., dockerfile: infra/docker/web.Dockerfile }
+    image: pnl-lens/web:dev
+    environment:
+      <<: *tz
+      AUTH_MODE: dev
+      ALLOW_DEV_AUTH_IN_PROD: "true"          # dev stack only: the image runs NODE_ENV=production
+      STORE_DRIVER: pg
+      DATABASE_URL: postgres://lens_app:${LENS_APP_PASSWORD:?run npm run stack:env}@postgres:5432/lens
+      APP_URL: http://localhost:${HTTP_PORT:-8080}
+      MAIL_DRIVER: console
+      PAYMENTS_MODE: "off"
+    # Transitional until the Phase 6 cutover: the web app still holds today's API routes and talks to
+    # Postgres directly, so it sits on the internal network too. After Phase 6 it is edge-only.
+    networks: [edge, internal]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  api:
+    build: { context: .., dockerfile: infra/docker/api.Dockerfile }
+    image: pnl-lens/api:dev
+    environment:
+      <<: *tz
+      DATABASE_URL: postgres://lens_app:${LENS_APP_PASSWORD:?run npm run stack:env}@postgres:5432/lens
+      REDIS_URL: redis://:${REDIS_PASSWORD:?run npm run stack:env}@redis:6379
+      S3_ENDPOINT: http://garage:3900
+      S3_REGION: garage
+      S3_BUCKET: statements
+      S3_ACCESS_KEY_ID: ${S3_API_ACCESS_KEY_ID:?run npm run stack:env}
+      S3_SECRET_ACCESS_KEY: ${S3_API_SECRET_ACCESS_KEY:?run npm run stack:env}
+    networks: [edge, internal]             # edge = egress for email, Google, Razorpay
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage-init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    develop:
+      watch:
+        - { action: rebuild, path: ../apps/api/src }
+
+  # ---------------------------------------------------------------- internal only (no internet)
+  worker:
+    build: { context: .., dockerfile: infra/docker/worker.Dockerfile }
+    image: pnl-lens/worker:dev
+    environment:
+      <<: *tz
+      DATABASE_URL: postgres://lens_worker:${LENS_WORKER_PASSWORD:?run npm run stack:env}@postgres:5432/lens
+      REDIS_URL: redis://:${REDIS_PASSWORD:?run npm run stack:env}@redis:6379
+      S3_ENDPOINT: http://garage:3900
+      S3_REGION: garage
+      S3_BUCKET: statements
+      S3_ACCESS_KEY_ID: ${S3_WORKER_ACCESS_KEY_ID:?run npm run stack:env}
+      S3_SECRET_ACCESS_KEY: ${S3_WORKER_SECRET_ACCESS_KEY:?run npm run stack:env}
+    networks: [internal]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage-init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    develop:
+      watch:
+        - { action: rebuild, path: ../apps/worker/src }
+
+  postgres:
+    image: postgres:16.14-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lens_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run npm run stack:env}
+      POSTGRES_DB: lens
+      # Passwords for every connection, including from inside this container (the image otherwise trusts
+      # local/loopback connections). Applies when the data volume is first initialised.
+      POSTGRES_INITDB_ARGS: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
+    volumes: [pgdata:/var/lib/postgresql/data]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d lens"]
+      interval: 3s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.11-alpine
+    # AOF persistence + noeviction (BullMQ requirement); password required for every client.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction", "--requirepass", "${REDIS_PASSWORD:?run npm run stack:env}"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?run npm run stack:env}   # lets the healthcheck's redis-cli authenticate
+    volumes: [redisdata:/data]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 30
+    restart: unless-stopped
+
+  garage:
+    image: dxflrs/garage:v2.4.1
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?run npm run stack:env}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?run npm run stack:env}
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- one-off jobs
+  migrate:
+    build: { context: .., dockerfile: infra/docker/tools.Dockerfile }
+    image: pnl-lens/tools:dev
+    command: ["sh", "-c", "node packages/db/scripts/migrate.mjs && node packages/db/scripts/setup-roles.mjs && node packages/db/scripts/seed-dev.mjs"]
+    environment:
+      MIGRATE_DATABASE_URL: postgres://${POSTGRES_USER:-lens_admin}:${POSTGRES_PASSWORD:?run npm run stack:env}@postgres:5432/lens
+      LENS_APP_PASSWORD: ${LENS_APP_PASSWORD:?run npm run stack:env}
+      LENS_WORKER_PASSWORD: ${LENS_WORKER_PASSWORD:?run npm run stack:env}
+      SEED_DEV_DATA: "true"                   # dev only: dev user with 5 credits
+    networks: [internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  storage-init:
+    build: { context: .., dockerfile: infra/docker/tools.Dockerfile }   # same image as migrate (cached)
+    image: pnl-lens/tools:dev
+    command: ["node", "infra/scripts/storage-init.mjs"]
+    environment:
+      GARAGE_ADMIN_URL: http://garage:3903
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?run npm run stack:env}
+      S3_BUCKET: statements
+      STORAGE_CAPACITY_BYTES: "10000000000"
+      S3_API_ACCESS_KEY_ID: ${S3_API_ACCESS_KEY_ID:?run npm run stack:env}
+      S3_API_SECRET_ACCESS_KEY: ${S3_API_SECRET_ACCESS_KEY:?run npm run stack:env}
+      S3_WORKER_ACCESS_KEY_ID: ${S3_WORKER_ACCESS_KEY_ID:?run npm run stack:env}
+      S3_WORKER_SECRET_ACCESS_KEY: ${S3_WORKER_SECRET_ACCESS_KEY:?run npm run stack:env}
+    networks: [internal]
+    depends_on:
+      garage: { condition: service_healthy }
+    restart: "no"
+
+networks:
+  edge: {}
+  internal:
+    internal: true          # no route to the internet
+
+volumes:
+  pgdata:
+  redisdata:
+  garage_meta:
+  garage_data:
+  caddy_data:
+  caddy_config:

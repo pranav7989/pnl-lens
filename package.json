@@ -9,7 +9,9 @@
     "packages/engine",
     "packages/shared",
     "packages/db",
-    "apps/web"
+    "apps/web",
+    "apps/api",
+    "apps/worker"
   ],
   "scripts": {
     "dev": "npm run dev -w @pnl-lens/web",
@@ -21,7 +23,12 @@
     "db:migrate": "npm run migrate -w @pnl-lens/db",
     "db:purge": "npm run purge -w @pnl-lens/db",
     "test:db": "npm run test:db -w @pnl-lens/web",
-    "docs:index": "node scripts/gen-index.mjs"
+    "docs:index": "node scripts/gen-index.mjs",
+    "stack:env": "node infra/scripts/gen-env.mjs",
+    "stack:up": "docker compose --env-file .env -f infra/compose.dev.yml up -d --build --wait",
+    "stack:down": "docker compose --env-file .env -f infra/compose.dev.yml down",
+    "stack:logs": "docker compose --env-file .env -f infra/compose.dev.yml logs -f --tail=100",
+    "test:stack": "vitest run --config tests/stack/vitest.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

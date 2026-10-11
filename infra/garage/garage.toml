@@ -1,0 +1,18 @@
+# Garage (S3-compatible object storage) — single node. Replaces MinIO (backend-v2 plan D14).
+# Secrets are NOT in this file: GARAGE_RPC_SECRET and GARAGE_ADMIN_TOKEN come from the environment (.env).
+# Reference: https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
+replication_factor = 1          # one VM, no redundancy: durability comes from the nightly offsite backup
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"     # private network only; path-style requests (no root_domain)
+
+[admin]
+api_bind_addr = "[::]:3903"     # private network only; bearer token required

@@ -26,7 +26,7 @@ The approved plan is docs/BACKEND_V2_PLAN.md.
 ## Stack (fixed)
 Node 22, TypeScript strict, npm workspaces. apps/web (Next.js), apps/api (Fastify),
 apps/worker (BullMQ), packages/engine, packages/db, packages/shared, infra/.
-PostgreSQL 16, Redis 7, MinIO, Caddy.
+PostgreSQL 16, Redis 7, Garage (S3-compatible; replaced MinIO, plan D14), Caddy.
 
 ## Rules — non-negotiable
 1. Do not change engine behaviour. Move it to packages/engine and prove parity:
@@ -52,7 +52,8 @@ user or account closure); plan validity only gates creating new reports. Link pa
 removed (off | razorpay only). Server TZ = Asia/Kolkata. Fresh start, no data migration.
 
 ## Commands
-- Dev stack: `docker compose -f infra/compose.dev.yml up -d` (exists from Phase 2)
+- Dev stack: `npm run stack:env` (once) · `npm run stack:up` · `npm run test:stack` · `npm run stack:down`
+  (= `docker compose --env-file .env -f infra/compose.dev.yml …`; see docs/INFRA.md)
 - Tests: `npm test`  Type check: `npm run typecheck`  Lint: `npm run lint`
 - Migrations: `npm run db:migrate`
 - Windows dev machine: Node/Git were installed via winget; a terminal opened before that may need

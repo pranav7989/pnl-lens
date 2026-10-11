@@ -1,0 +1,7 @@
+# Files used inside Linux containers must keep LF line endings on Windows checkouts.
+*.sh        text eol=lf
+*.mjs       text eol=lf
+*.toml      text eol=lf
+*.yml       text eol=lf
+Caddyfile   text eol=lf
+*Dockerfile text eol=lf

@@ -1,0 +1,10 @@
+# Optional debugging overlay: publishes the private services on 127.0.0.1 only (never on a server).
+#   docker compose -f infra/compose.dev.yml -f infra/compose.dev.ports.yml up -d
+# Not used by `npm run stack:up` or `npm run test:stack` (which checks that nothing but Caddy is published).
+services:
+  postgres:
+    ports: ["127.0.0.1:5432:5432"]
+  redis:
+    ports: ["127.0.0.1:6379:6379"]
+  garage:
+    ports: ["127.0.0.1:3900:3900"]
