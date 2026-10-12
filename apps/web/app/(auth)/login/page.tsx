@@ -15,7 +15,8 @@ const ERRORS: Record<string, string> = {
   google_disabled: 'Google sign-in is not available right now. Use an email code.',
 };
 
-export default async function Login({ searchParams }: { searchParams: { error?: string; next?: string } }) {
+export default async function Login(props: { searchParams: Promise<{ error?: string; next?: string }> }) {
+  const searchParams = await props.searchParams;
   if (await getSessionUser()) redirect('/dashboard');
   const next = searchParams.next?.startsWith('/') && !searchParams.next.startsWith('//') ? searchParams.next : '/dashboard';
   return (

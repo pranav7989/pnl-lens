@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   };
   if (q.get('error')) return fail(`provider_${q.get('error')}`);
   try {
-    const { profile, next } = await finishGoogle({ origin, code: q.get('code') || '', state: q.get('state') || '', cookie: cookies().get(OAUTH_COOKIE)?.value });
+    const { profile, next } = await finishGoogle({ origin, code: q.get('code') || '', state: q.get('state') || '', cookie: (await cookies()).get(OAUTH_COOKIE)?.value });
     const store = getAuthStore();
     const user = await store.upsertUserByGoogle({ ...profile, country: clientCountry(req) });
     if (user.status === 'blocked') return fail('blocked');

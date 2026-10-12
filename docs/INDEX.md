@@ -81,7 +81,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 197 files._
+_Generated from file headers by `npm run docs:index` — 199 files._
 
 ### Pages
 
@@ -364,5 +364,7 @@ _Generated from file headers by `npm run docs:index` — 197 files._
 | `tests/e2e/payments.py` | Payments E2E: off / link modes and the signed webhook path. |
 | `tests/e2e/v2.py` | Browser E2E: report tabs, hover cards, behaviour, clusters, PDF/Word uploads. |
 | `tests/stack/stack.test.ts` | Dev stack checks: all services healthy, only Caddy published, internal network isolated, least-privilege DB/Redis/storage. |
+| `tests/visual/capture.mjs` | Screenshots of every page at 1440 and 390 px (before/after comparisons for "keep the UI exactly", rule 8). |
+| `tests/visual/compare.mjs` | Pixel comparison of two screenshot folders (from capture.mjs); writes diff images and prints the share of changed pixels per page. |
 
 <!-- FILES:END -->

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 /** Pricing page: plans priced by visitor country; BuyButton handles off / link / razorpay modes (lib/payments). */
 export default async function Pricing() {
   const user = await getSessionUser();
-  const plans = plansFor(requestCountry() || user?.country);
+  const plans = plansFor((await requestCountry()) || user?.country);
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
       <h1 className="page-title">Plans</h1>

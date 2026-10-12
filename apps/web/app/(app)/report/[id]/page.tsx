@@ -12,7 +12,8 @@ import ReportView from '@/components/ReportView';
 export const dynamic = 'force-dynamic';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function ReportPage({ params }: { params: { id: string } }) {
+export default async function ReportPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getSessionUser();
   if (!user) redirect(`/login?next=/report/${params.id}`);
   if (!UUID.test(params.id)) notFound();
