@@ -148,9 +148,9 @@ describe('through Caddy', () => {
 });
 
 describe('worker', () => {
-  it('is ready: Postgres as lens_worker, Redis, storage', () => {
+  it('is ready: Postgres as lens_worker, Redis, storage, queue consumer', () => {
     const r = dc('exec', '-T', 'worker', 'node', '-e', "fetch('http://127.0.0.1:4100/health').then(r=>r.text()).then(t=>console.log(t))");
-    expect(JSON.parse(r.out).checks).toEqual({ db: 'ok', redis: 'ok', storage: 'ok' });
+    expect(JSON.parse(r.out).checks).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok' });
   });
   it('runs in the pinned timezone Asia/Kolkata (plan D9)', () => {
     const r = dc('exec', '-T', 'worker', 'node', '-e', 'console.log(new Date(2024,0,1).getTimezoneOffset())');
@@ -292,8 +292,52 @@ describe('API on the stack (Phase 4)', () => {
     const kek = { id: kekId, key: Buffer.from(env[`FILE_KEK_${kekId.toUpperCase()}`], 'hex') };
     expect(decryptFile(got.stdout, Buffer.from(iv, 'hex'), Buffer.from(wrapped, 'hex'), kek).equals(plain)).toBe(true);
   });
-  it('reports the job status to the owner', async () => {
+  it('reports the job status to the owner (the Phase 5 worker processes it)', async () => {
     const r = await fetch(`${BASE}/api/v1/analyses/${analysisId}`);
-    expect(await r.json()).toMatchObject({ id: analysisId, status: 'queued', fileCount: 1 });
+    expect(await r.json()).toMatchObject({ id: analysisId, status: expect.stringMatching(/^(queued|parsing|analysing|storing|ready)$/), fileCount: 1 });
+  });
+});
+
+describe('worker on the stack (Phase 5)', () => {
+  const ORIGIN = `http://localhost:${process.env.HTTP_PORT || 8080}`;
+  const FIX = path.join(ROOT, 'packages/engine/test/fixtures');
+  const golden = JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/engine/test/golden/combo_tradebook_plus_other_account.json'), 'utf8')).report;
+  let analysisId = '';
+
+  it('worker is ready: Postgres as lens_worker, Redis, storage, queue', () => {
+    const r = dc('exec', '-T', 'worker', 'node', '-e', "fetch('http://127.0.0.1:4100/health').then(r=>r.json()).then(j=>console.log(JSON.stringify(j.checks)))");
+    expect(JSON.parse(r.out)).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok' });
+  });
+  it('two statements uploaded through Caddy become a ready analysis equal to the golden combined report', async () => {
+    const fd = new FormData();
+    fd.set('consent', 'true');
+    fd.append('files', new Blob([fs.readFileSync(path.join(FIX, 'zerodha_tradebook.csv'))]), 'zerodha_tradebook.csv');
+    fd.append('files', new Blob([fs.readFileSync(path.join(FIX, 'groww_pnl.csv'))]), 'groww_pnl.csv');
+    const up = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: ORIGIN } });
+    expect(up.status).toBe(202);
+    analysisId = (await up.json()).analysisId;
+    let s: any = null;
+    for (let i = 0; i < 60; i++) {
+      s = await (await fetch(`${BASE}/api/v1/analyses/${analysisId}`)).json();
+      if (s.status === 'ready' || s.status === 'failed') break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    expect(s.status).toBe('ready');
+    expect(s.preview).toMatchObject({ positions: golden.m.n, currency: golden.m.currency, net: golden.m.net });
+    const payload = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, `select payload::text from analyses where id = '${analysisId}'`).out;
+    expect({ ...JSON.parse(payload), generatedAt: '<normalised>' }).toEqual(golden);
+  });
+  it('the worker logged a read and a decrypt for each file', () => {
+    const r = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD,
+      `select string_agg(action, ',' order by id) from file_access_log where actor_kind = 'worker' and file_id in (select file_id from analysis_files where analysis_id = '${analysisId}')`);
+    expect(r.out).toBe('read,decrypt,read,decrypt');
+  });
+  it('saving spends one report from the seeded dev plan and serves the report', async () => {
+    const save = await fetch(`${BASE}/api/v1/reports`, { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ analysisId }) });
+    expect(save.status).toBe(201);
+    const { id } = await save.json();
+    const rep = await (await fetch(`${BASE}/api/v1/reports/${id}`)).json();
+    expect(rep.report.m.n).toBe(golden.m.n);
+    expect(rep.summary.monthLabel).toMatch(/^[A-Z]{3}-\d{2}$/);
   });
 });

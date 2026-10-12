@@ -16,7 +16,8 @@ Start here. Every source file starts with a 3-line header (`@file`, `@area`, `@w
 | 8 | `docs/BACKEND_V2_PLAN.md` | Plan for moving parsing/analysis to the server (backend-v2, approved; phase status inside) |
 | 9 | `docs/INFRA.md` | Docker Compose stack: services, networks, least privilege, secrets, commands |
 | 10 | `docs/API.md` | The API (`/api/v1`): conventions, every endpoint, upload fields, code map |
-| 11 | `docs/legal/` | **Drafts, not in force:** Privacy Policy and Terms of Service for backend-v2, with LAWYER CHECK / BUILD CHECK markers |
+| 11 | `docs/WORKER.md` | The worker: one job step by step, failure rules, schedules, settings |
+| 12 | `docs/legal/` | **Drafts, not in force:** Privacy Policy and Terms of Service for backend-v2, with LAWYER CHECK / BUILD CHECK markers |
 
 ## 2. Folder map
 
@@ -38,7 +39,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 | `packages/engine/` | The analysis engine, **moved unchanged** (`src/`), its Node runner (`src/node.ts`), tests, fixtures and **golden parity files** (`test/golden/`) |
 | `packages/shared/` | Plans and prices, limits, auth (codes, Google, sessions), payments, RBAC rules, telemetry, mail, consent text, file encryption, job names — used by web and api |
 | `apps/api/` | Fastify API (`/api/v1`): sign-in, uploads, reports, plans, payments, admin, privacy. See `docs/API.md` and `apps/api/openapi.json` |
-| `apps/worker/` | Job worker (BullMQ from Phase 5). Phase 2 skeleton: dependency checks only |
+| `apps/worker/` | Job worker (BullMQ): decrypt, engine in an isolated child process, store; nightly purge and storage sweep. See `docs/WORKER.md` |
 | `packages/db/` | SQL migrations (run in order), seed for local dev, SQL tests, migrate / role-setup / purge / demo-data scripts |
 | `infra/` | Docker Compose stack (`compose.dev.yml`), Dockerfiles (`docker/`), `caddy/Caddyfile`, `garage/garage.toml`, setup scripts (`scripts/`) — see `docs/INFRA.md` |
 | `scripts/` | Index generator |
@@ -80,7 +81,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 184 files._
+_Generated from file headers by `npm run docs:index` — 197 files._
 
 ### Pages
 
@@ -230,7 +231,15 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 
 | File | What it does |
 |---|---|
-| `apps/worker/src/main.ts` | Worker skeleton (Phase 2): checks Postgres (as lens_worker), Redis and storage every 30 s; local health endpoint. |
+| `apps/worker/src/config.ts` | Worker configuration from env: lens_worker DB URL, Redis, storage (read + delete), file keys, engine limits. |
+| `apps/worker/src/engine-child.ts` | Child process that runs the engine on one job's decrypted files (memory-capped, killed on timeout); returns the report, per-file fingerprints, fills and parse info. |
+| `apps/worker/src/engine-runner.ts` | Starts engine-child.js per job with a memory cap and a timeout; a hung or crashing parse fails that file, not the worker (plan D10). |
+| `apps/worker/src/engine-version.ts` | engine_version written on every derived row: a hash of the engine's source files (fixed at build time in the image). |
+| `apps/worker/src/main.ts` | Worker process: BullMQ consumer for analysis jobs (retries, dead-letter on final failure), schedules for nightly purge and storage sweep, local health endpoint. |
+| `apps/worker/src/maintenance.ts` | Scheduled jobs: nightly purge (raw files after 30 days, unsaved drafts after 24 h, old sign-in codes) and the storage sweep that deletes shredded objects. |
+| `apps/worker/src/pipeline.ts` | One analysis job: fetch + decrypt files (logged) → engine in a child process → store payload, trades, fills, metrics, traits, parse runs in one transaction. |
+| `apps/worker/src/queue-worker.ts` | BullMQ consumer for analysis jobs: runs the pipeline, retries infrastructure errors, and on the final failure marks the analysis failed (dead letter). |
+| `apps/worker/src/storage.ts` | Object storage for the worker (S3 API on Garage): read encrypted files, delete shredded ones. In-memory version for tests. |
 
 ### Core
 
@@ -298,6 +307,7 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `apps/web/app/api/cron/purge/route.ts` | POST /api/cron/purge — optional HTTP trigger for the nightly purge (needs CRON_SECRET). The scheduled job uses scripts/purge.mjs. |
 | `apps/web/app/api/health/route.ts` | GET /api/health — liveness check used by DigitalOcean App Platform. |
 | `apps/web/scripts/copy-pdf-worker.mjs` | postinstall: copies the pdf.js worker into public/. |
+| `apps/worker/scripts/build.mjs` | Bundles the worker (dist/main.js) and the engine child process (dist/engine-child.js) with esbuild; engine_version fixed from the engine sources. |
 | `infra/scripts/gen-env.mjs` | Fills .env with random secrets for every stack variable that is missing. Never changes or prints existing values. |
 | `infra/scripts/storage-init.mjs` | One-off, idempotent Garage setup via its admin API: node layout, private bucket, and least-privilege S3 keys. |
 | `packages/db/scripts/migrate.mjs` | Applies packages/db/migrations in order (runs as the pre-deploy job). |
@@ -330,6 +340,11 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `apps/web/tests/payments.test.ts` | Razorpay checkout and webhook signature verification. |
 | `apps/web/tests/pg-store.test.ts` | PostgreSQL store integration (needs TEST_DATABASE_URL). |
 | `apps/web/tests/rbac.test.ts` | Role permissions and error fingerprinting. |
+| `apps/worker/test/global-setup.ts` | Builds the worker bundles once before the tests (the engine child process runs from dist/, as in the image). |
+| `apps/worker/test/helpers.ts` | Worker test helpers: encrypted uploads of real fixtures (as the API stores them), pipeline deps with the real engine child, golden cases. |
+| `apps/worker/test/hostile.test.ts` | Hostile files: a parse that runs too long is killed, one that exhausts memory crashes only its child; the worker carries on and the job fails cleanly. |
+| `apps/worker/test/pipeline.test.ts` | Every golden case through the real pipeline (encrypted storage → engine child → DB): stored report equals the parity output; failures cost no credit. |
+| `apps/worker/test/queue.test.ts` | Real sample files through the real queue (API producer → Redis → worker consumer); retries then dead letter; nightly purge and storage sweep. |
 | `packages/db/test/db/harness.ts` | DB test harness: fresh database per suite on the throwaway test Postgres, real migrate + setup-roles scripts, role-scoped clients, fixtures. |
 | `packages/db/test/db/migrations.test.ts` | Migrations apply from 0001 on an empty database and on top of a 0007 database with old data; the old web flow keeps working. |
 | `packages/db/test/db/plans.test.ts` | Server-side plan rules: create_report_from_analysis (all refusal reasons, races), file-set lock, owner-only manual grant, webhook replay. |
@@ -349,11 +364,5 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `tests/e2e/payments.py` | Payments E2E: off / link modes and the signed webhook path. |
 | `tests/e2e/v2.py` | Browser E2E: report tabs, hover cards, behaviour, clusters, PDF/Word uploads. |
 | `tests/stack/stack.test.ts` | Dev stack checks: all services healthy, only Caddy published, internal network isolated, least-privilege DB/Redis/storage. |
-
-### Other
-
-| File | What it does |
-|---|---|
-| `apps/api/dist/main.js` | (no header) |
 
 <!-- FILES:END -->

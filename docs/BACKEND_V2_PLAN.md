@@ -1,6 +1,6 @@
 # Backend v2 — Plan
 
-**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11), **Phase 3 done**, **Phase 4 done** (2026-10-12, branch `backend-v2`); waiting for go-ahead on Phase 5.
+**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11), **Phase 3 done**, **Phase 4 done**, **Phase 5 done** (2026-10-12, branch `backend-v2`); waiting for go-ahead on Phase 6.
 **Goal:** move parsing and analysis from the browser to the server, and store raw files, normalised trades and computed metrics. Everything runs on one Ubuntu 24.04 VM with Docker Compose. AI/ML is out of scope; the data model is only made ready for it.
 
 Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and network · 5 Engine and parity · 6 Pipeline · 7 Data model · 8 API · 9 Enforcement · 10 Privacy and security · 11 Front end · 12 Infra and operations · 13 Testing · 14 Phases · 15 Risks
@@ -50,6 +50,7 @@ Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and n
 | **D14** | **MinIO replaced by Garage** (approved 2026-10-11, Phase 2). MinIO's free Docker images are no longer published: every tag on Docker Hub and quay.io is gone or needs an account. Garage `dxflrs/garage:v2.4.1` is S3-compatible, single-container and built for small self-hosted servers. Per-key bucket permissions give the API **write-only** and the worker read+write. App code is unaffected: files are encrypted by the app and stored through the standard S3 API. Wherever this plan says "MinIO", read "Garage". |
 | **D15** | **Master-prompt data items added** (approved 2026-10-12, Phase 3). The first draft of §7 left out `parse_runs`, `fills`, `report_traits`, `data_requests` and `reports.title` / `month_label` / `fingerprint`. They are added in the migration where each belongs (0009–0011), not in a separate 0015. `report_files` is replaced by `analysis_files` plus `reports.used_fingerprints`, which also covers the "+" flow. |
 | **D16** | **Phase 4 API choices** (2026-10-12). (a) Uploads are buffered in memory (≤ 10 MB each, at most 3) and type-checked before anything is stored, instead of being streamed into storage. (b) Account deletion (`DELETE /me`) runs at once; `data_requests` is used for exports. (c) "+" on a report whose statements were purged after 30 days answers 409 `files_expired` (safe default until the owner decides; see §15). (d) The API is bundled with esbuild, because the workspace packages ship TypeScript source. (e) Every state-changing request needs a same-site `Origin`/`Referer` (CSRF), in addition to SameSite=Lax cookies. (f) Engine error sentences are kept word for word in `analyses.error_message` (migration 0015). |
+| **D17** | **Phase 5 worker choices** (2026-10-12). (a) The engine runs in a child process per job (`--max-old-space-size`, SIGKILL on timeout), instead of BullMQ's sandboxed processor, so each job gets fresh engine state and a hard memory cap. (b) File problems are final (not retried); only infrastructure errors are retried, 3 attempts with exponential backoff, then dead letter. (c) Fills come from the engine's own `parseSheetAuto` (read-only use). (d) `engine_version` is a hash of the engine sources. (e) New user texts for cases the browser never had: parse timeout, parse out of memory, files purged (see `docs/WORKER.md`). |
 | **Location** | The project lives at `C:\Users\drvvl\Documents\pnl-lens`. The Downloads copy is the untouched original. |
 
 ### 2.1 Proposed wording (NOT applied; needs owner sign-off before Phase 6)
@@ -420,6 +421,19 @@ Done on macOS (Apple Silicon); Phases 1–2 were re-verified on the same machine
 | Tests | `apps/api` **56**: 25 without a DB (type check on every fixture, encryption, OpenAPI, rate limit); 31 on Postgres covering sign-in, CSRF, `/me` and `/plans`, consents, export and deletion, uploads (limits, encryption at rest, consent, queue), status and preview, save and credits, file-set lock, rename and delete, webhook signature, replay and legacy path, RBAC, audit and owner grant. `test:stack` **51/51** (5 new: upload through Caddy, a job in Redis, and the stored object fetched with the worker key and decrypted with the file key). `packages/db` 128; `npm test` green; typecheck clean; lint 0 errors |
 | Also fixed | `docs:index` silently dropped files whose area was not in its fixed list (17 API/worker files); it now lists every area |
 | Not done here | The worker that processes the jobs (Phase 5); Caddy still sends `/api/*` (other than `/api/v1`) to the web app until the Phase 6 cutover; a byte-level comparison of old Next responses with new API responses was replaced by tests that pin the old shapes and texts, because the Next handlers can't run outside Next |
+
+### Phase 5 result (2026-10-12)
+
+| Item | Result |
+|---|---|
+| Worker | `apps/worker`: BullMQ consumer (concurrency 2), fetch + decrypt (logged), engine in a memory-capped child process with a timeout, one-transaction store of payload, trades, fills, metrics, traits, parse runs and file fingerprints; retries, dead letter, idempotency; schedules for the nightly purge (02:00 IST) and the storage sweep (15 min). See `docs/WORKER.md` |
+| Parity | **All 22 golden cases** (17 single files, 3 combined, 2 currency overrides) go through the real pipeline (encrypted storage → child process → DB). The engine output is **byte-identical** to the golden JSON, and the stored payload, trade count and saved report equal it |
+| Credits | A failed file (no closed trades, unreadable, timeout, out of memory, purged, dead-lettered) leaves the plan untouched and can't be saved; tested |
+| File-set lock | The worker sets per-file fingerprints with the offline tool's rule: a renamed copy matches, the same statement as PDF and as Word matches, a different statement does not. End to end, "+" then swapping in a third statement is refused |
+| Hostile files | A parse past the timeout is killed; a parse past its memory cap crashes only its child, and the worker carries on |
+| Tests | `apps/worker` **36** (22 golden pipelines; failures, idempotency, storage outage then retry, purged files, fingerprints, lock; timeout and memory; real Redis: API producer → worker consumer for 3 files with duplicate enqueue, retry ×3 → dead letter; nightly purge + sweep). `test:stack` **55/55** (4 new: worker health, 2 files through Caddy → ready → equal to the golden combined report, access log, save + serve). All earlier suites green; typecheck clean; lint 0 errors |
+| Test services | `infra/compose.test.yml` now also has a throwaway Redis (127.0.0.1:56379, `TEST_REDIS_PASSWORD`) |
+| SheetJS upgrade (D10) | Separate commit; see its result below |
 
 ## 15. Risks
 

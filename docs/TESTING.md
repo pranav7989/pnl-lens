@@ -10,8 +10,9 @@ Run from the repo root (npm workspaces). Node 22.13+.
 | Engine only (formats, PDF/Word, behaviour, **golden parity**) | `npm test -w @pnl-lens/engine` | nothing |
 | Web only (sign-in codes, payments, roles) | `npm test -w @pnl-lens/web` | nothing |
 | **API** (routes on real Postgres: sign-in, CSRF, uploads, limits, encryption, reports, credits, file-set lock, webhook replay, RBAC; plus type check, encryption, OpenAPI, rate limit) | `npm run db:test:up` then `npm test -w @pnl-lens/api` | the test Postgres for the route suites (they skip without it) |
+| **Worker** (all 22 golden cases through the real pipeline, byte-identical; failures cost no credit; idempotency; retries + dead letter on real Redis; hostile files; purge + sweep) | `npm run db:test:up` then `npm test -w @pnl-lens/worker` | test Postgres + Redis (DB/queue suites skip without them); builds `apps/worker/dist` first |
 | OpenAPI spec | `npm run openapi -w @pnl-lens/api` regenerates `apps/api/openapi.json` | nothing |
-| **Docker stack** (health, only Caddy exposed, network isolation, DB/Redis/storage least privilege, API upload → queue → encrypted object) | `npm run stack:up` then `npm run test:stack` | Docker Desktop running; `.env` from `npm run stack:env` |
+| **Docker stack** (health, only Caddy exposed, network isolation, DB/Redis/storage least privilege, API upload → queue → encrypted object; worker → ready report equal to the golden) | `npm run stack:up` then `npm run test:stack` | Docker Desktop running; `.env` from `npm run stack:env` |
 | **Database v2** (migrations from 0001 and from 0007, plan rules, races, file-set lock, role denials, purge/delete, research views, worker store step) | `npm run db:test:up` then `npm run test:db` | Docker Desktop running; `.env` from `npm run stack:env` |
 | Web Postgres store (old flow, until Phase 6) | `TEST_ADMIN_URL=… TEST_DATABASE_URL=… npm run test:db -w @pnl-lens/web` | a migrated database (e.g. on the test Postgres) |
 | SQL functions (old flow) | `psql $ADMIN_URL -f packages/db/seed.sql -f packages/db/tests/01_functions.sql` | migrated Postgres |

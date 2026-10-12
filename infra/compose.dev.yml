@@ -97,6 +97,11 @@ services:
       S3_BUCKET: statements
       S3_ACCESS_KEY_ID: ${S3_WORKER_ACCESS_KEY_ID:?run npm run stack:env}
       S3_SECRET_ACCESS_KEY: ${S3_WORKER_SECRET_ACCESS_KEY:?run npm run stack:env}
+      FILE_KEK_ID: ${FILE_KEK_ID:?run npm run stack:env}
+      FILE_KEK_K1: ${FILE_KEK_K1:?run npm run stack:env}
+      WORKER_CONCURRENCY: "2"
+      ENGINE_TIMEOUT_MS: "60000"
+      ENGINE_MEMORY_MB: "512"
     networks: [internal]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -106,6 +111,8 @@ services:
     develop:
       watch:
         - { action: rebuild, path: ../apps/worker/src }
+        - { action: rebuild, path: ../packages/engine/src }
+        - { action: rebuild, path: ../packages/db/src }
 
   postgres:
     image: postgres:16.14-bookworm

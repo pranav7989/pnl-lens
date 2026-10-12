@@ -1,6 +1,6 @@
 # @file  infra/docker/worker.Dockerfile
 # @area  Ops
-# @what  Worker image. Build context = repo root. Debian slim: official Node binary with full ICU (engine formatting).
+# @what  Worker image. Build context = repo root. Debian slim: official Node binary with full ICU (engine formatting). Bundled with esbuild; engine libraries installed.
 FROM node:22.23.2-bookworm-slim AS base
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -15,6 +15,9 @@ COPY packages/db/package.json packages/db/package.json
 FROM base AS build
 RUN npm ci --no-audit --no-fund --ignore-scripts
 COPY tsconfig.base.json ./
+COPY packages/shared/src packages/shared/src
+COPY packages/db/src packages/db/src
+COPY packages/engine/src packages/engine/src
 COPY apps/worker apps/worker
 RUN npm run build -w @pnl-lens/worker
 

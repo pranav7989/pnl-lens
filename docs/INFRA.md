@@ -19,7 +19,7 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 | caddy | `caddy:2.11.4-alpine` | edge | Reverse proxy; the only published port. 35 MB body limit, no `Server` header, JSON access logs |
 | web | `infra/docker/web.Dockerfile` (node 22.23.2 alpine) | edge, internal | Next.js app (unchanged UI) |
 | api | `infra/docker/api.Dockerfile` (node 22.23.2 bookworm-slim) | edge, internal | Fastify API (`/api/v1`, see `docs/API.md`), bundled with esbuild |
-| worker | `infra/docker/worker.Dockerfile` (node 22.23.2 bookworm-slim) | internal | Job worker. Phase 2: dependency checks only. `TZ=Asia/Kolkata` (plan D9) |
+| worker | `infra/docker/worker.Dockerfile` (node 22.23.2 bookworm-slim) | internal | Job worker: engine in an isolated child process, store, purge and sweep (`docs/WORKER.md`). `TZ=Asia/Kolkata` (plan D9) |
 | postgres | `postgres:16.14-bookworm` | internal | Database `lens`. Apps log in as `lens_app` / `lens_worker`, never the superuser |
 | redis | `redis:7.4.11-alpine` | internal | Queue store. Password required, AOF on, `noeviction` |
 | garage | `dxflrs/garage:v2.4.1` | internal | S3-compatible file storage (replaces MinIO, plan D14). Bucket `statements` |
@@ -47,7 +47,7 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 | Stop (keeps data) | `npm run stack:down` |
 | Stop and **delete all data** | `docker compose --env-file .env -f infra/compose.dev.yml down -v` |
 | Rebuild api/worker on code change | `docker compose --env-file .env -f infra/compose.dev.yml watch` |
-| Database tests (separate throwaway Postgres on 127.0.0.1:55432) | `npm run db:test:up` → `npm run test:db` → `npm run db:test:down` |
+| Database, API and worker tests (throwaway Postgres on 127.0.0.1:55432 and Redis on 127.0.0.1:56379) | `npm run db:test:up` → `npm run test:db` → `npm run db:test:down` |
 | Debug ports on 127.0.0.1 (Postgres 5432, Redis 6379, S3 3900) | add `-f infra/compose.dev.ports.yml` to the compose command |
 
 Windows: Docker Desktop must show **Engine running**. Compose reads `.env` from the repo root because the scripts pass `--env-file .env`.

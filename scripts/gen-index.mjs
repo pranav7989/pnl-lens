@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIRS = ['apps', 'packages', 'infra', 'scripts', 'tests'];
 const EXT = /\.(ts|tsx|js|mjs|py|sql|css)$/;
-const SKIP = ['node_modules', '.next', 'fixtures', 'golden', 'public'];
+const SKIP = ['node_modules', '.next', 'dist', 'fixtures', 'golden', 'public'];
 const CONFIG = /^(next\.config\.mjs|vitest\.config\.ts|eslint\.config\.mjs)$/; // tool configs, not source
 const files = [];
 const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) { if (!SKIP.includes(f.name)) walk(p); } else if (EXT.test(f.name) && !f.name.endsWith('.d.ts') && !CONFIG.test(f.name)) files.push(p); } };
