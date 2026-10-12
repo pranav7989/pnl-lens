@@ -19,7 +19,9 @@ const rows = files.map((p) => {
   const g = (k) => (head.match(new RegExp(`@${k}\\s+(.+)`)) || [])[1]?.replace(/\s*\*\/\s*$/, '').trim() || '';
   return { file: path.relative(ROOT, p).split(path.sep).join('/'), area: g('area') || 'Other', what: g('what') || '(no header)' };
 });
-const ORDER = ['Pages', 'Landing', 'Brand', 'Auth', 'Reports', 'Engine', 'Report UI', 'Payments', 'Admin', 'Core', 'Styles', 'Database', 'Ops', 'Offline', 'Tests', 'Other'];
+const KNOWN = ['Pages', 'Landing', 'Brand', 'Auth', 'Reports', 'Engine', 'Report UI', 'Payments', 'Admin', 'API', 'Worker', 'Core', 'Styles', 'Database', 'Ops', 'Offline', 'Tests', 'Other'];
+// any other area is listed at the end instead of being dropped
+const ORDER = [...KNOWN.slice(0, -1), ...[...new Set(rows.map((x) => x.area))].filter((a) => !KNOWN.includes(a)).sort(), 'Other'];
 let out = '';
 for (const a of ORDER) {
   const r = rows.filter((x) => x.area === a).sort((x, y) => x.file.localeCompare(y.file));

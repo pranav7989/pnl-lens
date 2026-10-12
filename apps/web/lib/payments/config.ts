@@ -20,6 +20,8 @@
  *   PAYMENT_LINK_SINGLE_INR, PAYMENT_LINK_SINGLE_USD, PAYMENT_LINK_SNAPSHOT_INR, …
  *   (PLAN = SINGLE | SNAPSHOT | PROGRESS | DISCIPLINE, CURRENCY = INR | USD)
  * Docs: docs/PAYMENTS_RAZORPAY.md
+ * backend-v2: apps/api supports off | razorpay only (plan D5); this link mode lives on in apps/web until the
+ * Phase 6 cutover removes the web payment routes.
  * ============================================================================
  */
 import type { PlanId } from '@pnl-lens/shared/pricing';
@@ -39,8 +41,4 @@ export function paymentLink(plan: PlanId, currency: 'INR' | 'USD'): string | nul
   return url && /^https:\/\/(rzp\.io|pages\.razorpay\.com|razorpay\.me|[a-z0-9.-]*razorpay\.com)\//i.test(url) ? url : null;
 }
 
-export const razorpayKeys = () => ({
-  keyId: process.env.RAZORPAY_KEY_ID || '',
-  keySecret: process.env.RAZORPAY_KEY_SECRET || '',
-  webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
-});
+export { razorpayKeys } from '@pnl-lens/shared/payments/config';

@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./normalise": "./src/normalise.ts"
+    "./normalise": "./src/normalise.ts",
+    "./testing": "./test/db/harness.ts"
   },
   "scripts": {
     "migrate": "node scripts/migrate.mjs",

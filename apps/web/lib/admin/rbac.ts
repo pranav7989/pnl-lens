@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/lib/admin/rbac.ts
  * @area  Admin
- * @what  Roles and permissions (owner, admin, support, finance, analyst) and the requirePerm() guard.
+ * @what  requirePerm() guard for web admin routes; the roles and permissions live in packages/shared/src/admin/rbac.ts.
  */
 /**
  * Role-based access control. The role is read from the database on every admin request
@@ -10,21 +10,9 @@
 import { pool } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth/session';
 
-export type Role = 'user' | 'owner' | 'admin' | 'support' | 'finance' | 'analyst';
-export type Perm = 'tab:users' | 'tab:finance' | 'tab:errors' | 'tab:support' | 'tab:product' | 'user:lookup' | 'user:pii' | 'roles:manage';
+import { can, type Role, type Perm } from '@pnl-lens/shared/admin/rbac';
 
-export const PERMS: Record<Role, Perm[]> = {
-  owner: ['tab:users', 'tab:finance', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage'],
-  admin: ['tab:users', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage'],
-  support: ['tab:errors', 'tab:support', 'user:lookup', 'user:pii'],
-  finance: ['tab:finance'],
-  analyst: ['tab:users', 'tab:product'],
-  user: [],
-};
-export const can = (role: Role | null | undefined, perm: Perm) => !!role && PERMS[role]?.includes(perm);
-export const isStaff = (role: Role | null | undefined) => !!role && role !== 'user';
-/** Roles an actor may assign: owners assign any role; admins assign anything except owner. */
-export const assignable = (actor: Role): Role[] => (actor === 'owner' ? ['user', 'owner', 'admin', 'support', 'finance', 'analyst'] : actor === 'admin' ? ['user', 'admin', 'support', 'finance', 'analyst'] : []);
+export { PERMS, can, isStaff, assignable, type Role, type Perm } from '@pnl-lens/shared/admin/rbac';
 
 export async function getRole(userId: string): Promise<Role> {
   if (process.env.AUTH_MODE === 'dev' && process.env.STORE_DRIVER !== 'pg') return 'owner';

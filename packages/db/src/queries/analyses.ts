@@ -81,7 +81,7 @@ export async function analysisCounts(db: Db, userId: string): Promise<{ today: n
 /** api: status for GET /analyses/:id. Scoped by user. */
 export async function getAnalysis(db: Db, userId: string, id: string) {
   return db.selectFrom('analyses')
-    .select(['id', 'status', 'error_code', 'file_count', 'target_report_id', 'report_id', 'created_at', 'finished_at', 'expires_at', 'payload'])
+    .select(['id', 'status', 'error_code', 'error_message', 'file_count', 'target_report_id', 'report_id', 'created_at', 'finished_at', 'expires_at', 'payload'])
     .where('id', '=', id).where('user_id', '=', userId)
     .executeTakeFirst();
 }
@@ -101,11 +101,12 @@ export async function loadJob(db: Db, analysisId: string) {
 }
 
 /** worker: move a job forward. Never moves a finished job back (a late retry cannot undo `ready`). */
-export async function setAnalysisStatus(db: Db, analysisId: string, status: Exclude<AnalysisStatus, 'ready'>, errorCode?: string) {
+export async function setAnalysisStatus(db: Db, analysisId: string, status: Exclude<AnalysisStatus, 'ready'>, errorCode?: string, errorMessage?: string) {
   await db.updateTable('analyses')
     .set({
       status,
       error_code: status === 'failed' ? errorCode ?? 'unknown' : null,
+      error_message: status === 'failed' ? errorMessage?.slice(0, 500) ?? null : null,
       ...(status === 'parsing' ? { started_at: sql`coalesce(started_at, now())`, attempts: sql`attempts + 1` } : {}),
       ...(status === 'failed' ? { finished_at: sql`now()` } : {}),
     } as any)
@@ -176,7 +177,7 @@ export async function storeAnalysisResult(db: Db, input: StoreResultInput): Prom
       await tx.updateTable('statement_files').set({ fingerprint: fp }).where('id', '=', fileId).execute();
     }
     await tx.updateTable('analyses').set({
-      payload: JSON.stringify(input.report), engine_version: input.engineVersion, status: 'ready', error_code: null,
+      payload: JSON.stringify(input.report), engine_version: input.engineVersion, status: 'ready', error_code: null, error_message: null,
       finished_at: sql`now()` as any,
     }).where('id', '=', a.id).execute();
     return true;

@@ -52,7 +52,7 @@ export async function listReports(db: Db, userId: string, limit = 200) {
 /** One report with its renderable payload. Undefined if not the user's; `purged_at` set if deleted. */
 export async function getReport(db: Db, userId: string, reportId: string) {
   return db.selectFrom('reports')
-    .select(['id', 'title', 'month_label', 'created_at', 'purged_at', 'file_names', 'market', 'currency', 'trade_count',
+    .select(['id', 'title', 'month_label', 'created_at', 'expires_at', 'purged_at', 'file_names', 'market', 'currency', 'trade_count',
       'net_pnl_minor', 'report', 'subscription_id', 'used_fingerprints', 'analysis_id'])
     .where('id', '=', reportId).where('user_id', '=', userId)
     .executeTakeFirst();

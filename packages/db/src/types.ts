@@ -1,7 +1,7 @@
 /**
  * @file  packages/db/src/types.ts
  * @area  Database
- * @what  Kysely table types for the schema after migration 0014 (hand-written; every table is exercised through these types by test/db/*).
+ * @what  Kysely table types for the schema after migration 0015 (hand-written; every table is exercised through these types by test/db/*).
  */
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
 
@@ -94,6 +94,7 @@ export interface AnalysesTable {
   target_report_id: string | null;
   status: Generated<AnalysisStatus>;
   error_code: string | null;
+  error_message: string | null;
   currency_override: string | null;
   file_count: number;
   engine_version: string | null;

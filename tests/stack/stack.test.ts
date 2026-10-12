@@ -196,10 +196,10 @@ describe('Postgres least privilege', () => {
     const r = psql('lens_worker', env.LENS_WORKER_PASSWORD, 'select count(*) from public.analyses');
     expect(r.code, r.err).toBe(0);
   });
-  it('the migrate job applied every migration up to 0014 and the dev user has a plan (D6)', () => {
+  it('the migrate job applied every migration (0014 or later) and the dev user has a plan (D6)', () => {
     expect(psql('lens_app', env.LENS_APP_PASSWORD, "select count(*) from public.subscriptions where user_id = '00000000-0000-0000-0000-000000000001' and ends_at > now()").out).toBe('1');
     const r = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, "select max(name) from public.schema_migrations");
-    expect(r.out).toMatch(/^0014_/);
+    expect(r.out >= '0014_').toBe(true);
   });
 });
 
@@ -249,5 +249,51 @@ describe('storage (Garage, S3 API) least privilege', () => {
   it('neither key can create buckets', () => {
     expect(aws(...API, ['s3', 'mb', 's3://probe-bucket']).code).not.toBe(0);
     expect(aws(...WORKER, ['s3', 'mb', 's3://probe-bucket']).code).not.toBe(0);
+  });
+});
+
+describe('API on the stack (Phase 4)', () => {
+  const ORIGIN = `http://localhost:${process.env.HTTP_PORT || 8080}`;
+  const FIXTURE = path.join(ROOT, 'packages/engine/test/fixtures/zerodha_tradebook.csv');
+  let analysisId = '';
+
+  it('is ready: Postgres (lens_app), Redis and storage all ok', async () => {
+    const r = await fetch(`${BASE}/api/v1/ready`);
+    expect(await r.json()).toEqual({ ok: true, checks: { db: 'ok', redis: 'ok', storage: 'ok' } });
+  });
+  it('refuses a cross-site upload (CSRF origin check)', async () => {
+    const fd = new FormData(); fd.set('consent', 'true');
+    const r = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: 'https://evil.example' } });
+    expect(r.status).toBe(403);
+  });
+  it('accepts an upload through Caddy and queues a BullMQ job', async () => {
+    const fd = new FormData();
+    fd.set('consent', 'true');
+    fd.set('files', new Blob([fs.readFileSync(FIXTURE)]), 'zerodha_tradebook.csv');
+    const r = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: ORIGIN } });
+    expect(r.status).toBe(202);
+    analysisId = (await r.json()).analysisId;
+    const keys = dc('exec', '-T', 'redis', 'redis-cli', '-a', env.REDIS_PASSWORD, '--no-auth-warning', 'exists', `bull:analyses:analysis-${analysisId}`);
+    expect(keys.out).toBe('1');
+  });
+  it('the stored object is encrypted, and the worker key + file key decrypt it to the original', async () => {
+    const row = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD,
+      `select f.storage_key || ',' || encode(f.iv, 'hex') || ',' || encode(f.wrapped_dek, 'hex') || ',' || f.enc_key_id
+         from analysis_files af join statement_files f on f.id = af.file_id where af.analysis_id = '${analysisId}'`);
+    const [key, iv, wrapped, kekId] = row.out.split(',');
+    expect(kekId).toBe(env.FILE_KEK_ID);
+    const got = spawnSync('docker', ['run', '--rm', '--network', INTERNAL, '-e', `AWS_ACCESS_KEY_ID=${env.S3_WORKER_ACCESS_KEY_ID}`,
+      '-e', `AWS_SECRET_ACCESS_KEY=${env.S3_WORKER_SECRET_ACCESS_KEY}`, '-e', 'AWS_DEFAULT_REGION=garage', '-e', 'AWS_EC2_METADATA_DISABLED=true',
+      AWS_IMAGE, '--endpoint-url', 'http://garage:3900', 's3', 'cp', `s3://statements/${key}`, '-'], { maxBuffer: 20 * 1024 * 1024 });
+    expect(got.status, String(got.stderr)).toBe(0);
+    const plain = fs.readFileSync(FIXTURE);
+    expect(got.stdout.includes(plain.subarray(0, 32))).toBe(false);
+    const { decryptFile } = await import('../../packages/shared/src/file-crypto');
+    const kek = { id: kekId, key: Buffer.from(env[`FILE_KEK_${kekId.toUpperCase()}`], 'hex') };
+    expect(decryptFile(got.stdout, Buffer.from(iv, 'hex'), Buffer.from(wrapped, 'hex'), kek).equals(plain)).toBe(true);
+  });
+  it('reports the job status to the owner', async () => {
+    const r = await fetch(`${BASE}/api/v1/analyses/${analysisId}`);
+    expect(await r.json()).toMatchObject({ id: analysisId, status: 'queued', fileCount: 1 });
   });
 });

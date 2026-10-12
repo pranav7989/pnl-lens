@@ -1,38 +1,21 @@
 /**
  * @file  apps/web/lib/admin/telemetry.ts
  * @area  Admin
- * @what  Product events and error capture (best-effort; never breaks a request).
+ * @what  Product events and error capture (best-effort; never breaks a request), bound to the web app's pool.
  */
-/** Product events and error capture. Best-effort: telemetry never breaks a user request. */
-import crypto from 'node:crypto';
+/** Product events and error capture. Best-effort: telemetry never breaks a user request. SQL in packages/shared. */
 import { pool } from '@/lib/db';
+import { trackWith, captureErrorWith, type ErrorContext } from '@pnl-lens/shared/admin/telemetry';
+
+export { CLIENT_EVENTS, fingerprintOf } from '@pnl-lens/shared/admin/telemetry';
 
 const on = () => process.env.STORE_DRIVER === 'pg';
-export const CLIENT_EVENTS = new Set(['upload_started', 'upload_failed', 'no_trades', 'report_viewed', 'tab_viewed', 'pdf_exported', 'csv_exported', 'pricing_viewed']);
+const db = { query: (text: string, params?: unknown[]) => pool().query(text, params) };
 
 export async function track(userId: string | null, name: string, props?: Record<string, unknown>) {
-  if (!on()) return;
-  try {
-    if (name === 'active') {
-      await pool().query(`insert into public.events (user_id, name) values ($1, 'active') on conflict do nothing`, [userId]);
-    } else {
-      await pool().query(`insert into public.events (user_id, name, props) values ($1, $2, $3)`, [userId, name, props ? JSON.stringify(props).slice(0, 4000) : null]);
-    }
-  } catch { /* ignore */ }
+  if (on()) await trackWith(db, userId, name, props);
 }
 
-export function fingerprintOf(message: string, stack?: string | null) {
-  const frame = (stack || '').split('\n').find((l) => /at |@/.test(l)) || '';
-  const norm = message.replace(/[0-9a-f]{8,}/gi, '#').replace(/\d+/g, 'N').slice(0, 200);
-  return crypto.createHash('sha1').update(norm + '|' + frame.trim().replace(/:\d+:\d+/g, '')).digest('hex').slice(0, 16);
-}
-
-export async function captureError(e: unknown, ctx: { source: 'server' | 'client'; route?: string; userId?: string | null; context?: Record<string, unknown> }) {
-  if (!on()) return;
-  try {
-    const err = e instanceof Error ? e : new Error(String(e));
-    await pool().query(
-      `insert into public.error_events (fingerprint, message, stack, source, route, user_id, context) values ($1, $2, $3, $4, $5, $6, $7)`,
-      [fingerprintOf(err.message, err.stack), err.message.slice(0, 500), (err.stack || '').slice(0, 4000), ctx.source, ctx.route || null, ctx.userId || null, ctx.context ? JSON.stringify(ctx.context).slice(0, 4000) : null]);
-  } catch { /* ignore */ }
+export async function captureError(e: unknown, ctx: ErrorContext) {
+  if (on()) await captureErrorWith(db, e, ctx);
 }

@@ -61,6 +61,17 @@ services:
       S3_BUCKET: statements
       S3_ACCESS_KEY_ID: ${S3_API_ACCESS_KEY_ID:?run npm run stack:env}
       S3_SECRET_ACCESS_KEY: ${S3_API_SECRET_ACCESS_KEY:?run npm run stack:env}
+      AUTH_MODE: dev
+      ALLOW_DEV_AUTH_IN_PROD: "true"          # dev stack only (same as web): every request is the seeded dev user
+      SESSION_SECRET: ${SESSION_SECRET:?run npm run stack:env}
+      OTP_PEPPER: ${OTP_PEPPER:?run npm run stack:env}
+      IP_HASH_SECRET: ${IP_HASH_SECRET:?run npm run stack:env}
+      FILE_KEK_ID: ${FILE_KEK_ID:?run npm run stack:env}
+      FILE_KEK_K1: ${FILE_KEK_K1:?run npm run stack:env}
+      APP_URL: http://localhost:${HTTP_PORT:-8080}
+      MAIL_DRIVER: console
+      PAYMENTS_MODE: "off"
+      EXPOSE_OPENAPI: "true"                  # dev only: GET /api/v1/openapi.json
     networks: [edge, internal]             # edge = egress for email, Google, Razorpay
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -70,6 +81,8 @@ services:
     develop:
       watch:
         - { action: rebuild, path: ../apps/api/src }
+        - { action: rebuild, path: ../packages/db/src }
+        - { action: rebuild, path: ../packages/shared/src }
 
   # ---------------------------------------------------------------- internal only (no internet)
   worker:

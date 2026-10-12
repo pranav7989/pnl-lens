@@ -53,8 +53,8 @@ describe.skipIf(!ok)('worker store step', () => {
 
   it('a failed job keeps its error code and a late retry cannot undo ready', async () => {
     const up = await createUpload(t.app, { userId: user, files: [fakeFile()] });
-    await setAnalysisStatus(t.worker, up.analysisId, 'failed', 'no_closed_trades');
-    expect((await getAnalysis(t.app, user, up.analysisId))).toMatchObject({ status: 'failed', error_code: 'no_closed_trades' });
+    await setAnalysisStatus(t.worker, up.analysisId, 'failed', 'read_error', 'This PDF has no readable text (it may be a scan).');
+    expect((await getAnalysis(t.app, user, up.analysisId))).toMatchObject({ status: 'failed', error_code: 'read_error', error_message: 'This PDF has no readable text (it may be a scan).' });
 
     const done = await createUpload(t.app, { userId: user, files: [fakeFile()] });
     await storeAnalysisResult(t.worker, { analysisId: done.analysisId, engineVersion: 'golden', report: golden(withReport[0]) });

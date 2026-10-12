@@ -1,6 +1,6 @@
 # Backend v2 — Plan
 
-**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11), **Phase 3 done** (2026-10-12, branch `backend-v2`); waiting for go-ahead on Phase 4.
+**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11), **Phase 3 done**, **Phase 4 done** (2026-10-12, branch `backend-v2`); waiting for go-ahead on Phase 5.
 **Goal:** move parsing and analysis from the browser to the server, and store raw files, normalised trades and computed metrics. Everything runs on one Ubuntu 24.04 VM with Docker Compose. AI/ML is out of scope; the data model is only made ready for it.
 
 Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and network · 5 Engine and parity · 6 Pipeline · 7 Data model · 8 API · 9 Enforcement · 10 Privacy and security · 11 Front end · 12 Infra and operations · 13 Testing · 14 Phases · 15 Risks
@@ -49,6 +49,7 @@ Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and n
 | **F9** | **All passwords move out of `docker-compose.yml` into `.env` (git-ignored); new random ones are generated.** Done in Phase 1. |
 | **D14** | **MinIO replaced by Garage** (approved 2026-10-11, Phase 2). MinIO's free Docker images are no longer published: every tag on Docker Hub and quay.io is gone or needs an account. Garage `dxflrs/garage:v2.4.1` is S3-compatible, single-container and built for small self-hosted servers. Per-key bucket permissions give the API **write-only** and the worker read+write. App code is unaffected: files are encrypted by the app and stored through the standard S3 API. Wherever this plan says "MinIO", read "Garage". |
 | **D15** | **Master-prompt data items added** (approved 2026-10-12, Phase 3). The first draft of §7 left out `parse_runs`, `fills`, `report_traits`, `data_requests` and `reports.title` / `month_label` / `fingerprint`. They are added in the migration where each belongs (0009–0011), not in a separate 0015. `report_files` is replaced by `analysis_files` plus `reports.used_fingerprints`, which also covers the "+" flow. |
+| **D16** | **Phase 4 API choices** (2026-10-12). (a) Uploads are buffered in memory (≤ 10 MB each, at most 3) and type-checked before anything is stored, instead of being streamed into storage. (b) Account deletion (`DELETE /me`) runs at once; `data_requests` is used for exports. (c) "+" on a report whose statements were purged after 30 days answers 409 `files_expired` (safe default until the owner decides; see §15). (d) The API is bundled with esbuild, because the workspace packages ship TypeScript source. (e) Every state-changing request needs a same-site `Origin`/`Referer` (CSRF), in addition to SameSite=Lax cookies. (f) Engine error sentences are kept word for word in `analyses.error_message` (migration 0015). |
 | **Location** | The project lives at `C:\Users\drvvl\Documents\pnl-lens`. The Downloads copy is the untouched original. |
 
 ### 2.1 Proposed wording (NOT applied; needs owner sign-off before Phase 6)
@@ -249,6 +250,8 @@ Stable IDs, `engine_version` on every derived row, normalised numeric trades, pe
 
 ## 8. API (apps/api, Fastify)
 
+**As built (Phase 4): see `docs/API.md`** for every endpoint, field and limit; the spec is `apps/api/openapi.json`. Endpoint names follow this section, plus the master-prompt names as aliases (`POST /uploads`, `GET /reports/:id/status`, `GET /plans`, `POST /me/export`, `POST /me/delete`), `PATCH /reports/:id` (rename) and `POST /reports/:id/files` ("+"). The draft below is kept for history.
+
 - `/api/v1/*`, zod schemas through `fastify-type-provider-zod`; OpenAPI from `@fastify/swagger` and written to `apps/api/openapi.json` in CI. The docs UI is served in dev only.
 - Plugins: `@fastify/cookie` (same `lens_session` JWT, same secret, so existing sessions stay valid), `@fastify/multipart` (stream, hard limits), `@fastify/rate-limit` (Redis store), pino logging with PII redaction.
 - Every existing route is ported with the **same behaviour and response shapes**:
@@ -405,6 +408,19 @@ Done on macOS (Apple Silicon); Phases 1–2 were re-verified on the same machine
 | Bug caught by the tests | Views in `research` ran their inner security-invoker views and functions with the caller's rights, so `lens_research` was denied. Fixed: the research views now read base tables and compute the HMAC inline |
 | Not done here (by design) | Fills extraction and per-trade source file (Phase 5, worker); API routes (Phase 4); the old `create_report_with_credit()` path stays for apps/web until the Phase 6 cutover |
 
+### Phase 4 result (2026-10-12)
+
+| Item | Result |
+|---|---|
+| API | `apps/api`: every route from §8, ported with the same status codes, error codes and texts as `apps/web/app/api/*`. New: uploads, analyses, reports v2, plans, consents, export, account deletion, owner grant. OpenAPI generated (`apps/api/openapi.json`, 29 paths) and checked by a test |
+| Reuse, not rewrite | Auth (codes, Google, sessions, request helpers), payments (Razorpay), RBAC rules, telemetry, mail and admin SQL moved with `git mv` from `apps/web/lib` to `packages/shared`. The web keeps thin re-exports, so its tests and build are unchanged |
+| Uploads | Real type from bytes (the engine's `detectKind` plus a reject list), 10 MB and 3-file limits, plan statements-per-report, D11 (20 a day, 3 running), required consent, AES-256-GCM per file with a wrapped key, write-only storage key, access log, BullMQ job |
+| Security | CSRF origin check; rate limits (Redis store in the stack); refuses to run as anything but `lens_app`; no secrets in images (5 new secrets generated into `.env`); cookies, auth and signature headers redacted from logs |
+| Migration | `0015_analysis_error_message.sql` (D16 f) |
+| Tests | `apps/api` **56**: 25 without a DB (type check on every fixture, encryption, OpenAPI, rate limit); 31 on Postgres covering sign-in, CSRF, `/me` and `/plans`, consents, export and deletion, uploads (limits, encryption at rest, consent, queue), status and preview, save and credits, file-set lock, rename and delete, webhook signature, replay and legacy path, RBAC, audit and owner grant. `test:stack` **51/51** (5 new: upload through Caddy, a job in Redis, and the stored object fetched with the worker key and decrypted with the file key). `packages/db` 128; `npm test` green; typecheck clean; lint 0 errors |
+| Also fixed | `docs:index` silently dropped files whose area was not in its fixed list (17 API/worker files); it now lists every area |
+| Not done here | The worker that processes the jobs (Phase 5); Caddy still sends `/api/*` (other than `/api/v1`) to the web app until the Phase 6 cutover; a byte-level comparison of old Next responses with new API responses was replaced by tests that pin the old shapes and texts, because the Next handlers can't run outside Next |
+
 ## 15. Risks
 
 | Risk | Mitigation |
@@ -417,6 +433,6 @@ Done on macOS (Apple Silicon); Phases 1–2 were re-verified on the same machine
 | Cutover breaks payments or sign-in | Old webhook and callback paths stay valid; payments are off at cutover anyway. |
 | Garage `replication_factor = 1` is described upstream as "test only" | Accepted for one VM: durability comes from the nightly offsite backup and the Phase 8 restore drill, the same as for Postgres. |
 | Dev laptop has 7.8 GB RAM | Images build one at a time if needed (`docker compose build web`). The production VM is sized separately (§12). |
-| Raw files are deleted after 30 days (D3), but the "+" button re-analyses a report's earlier files together with the new one | **Decision needed before Phase 5:** after 30 days, either refuse "+" on that report with a clear message, or keep the files of saved reports longer. The DB supports both: `delete_after` is per file |
+| Raw files are deleted after 30 days (D3), but the "+" button re-analyses a report's earlier files together with the new one | **Owner decision still open.** The API now refuses "+" on such a report with 409 `files_expired` and a clear message (D16 c). The alternative, keeping the files of saved reports longer, is a one-line change to `delete_after` |
 | Until the Phase 6 cutover, apps/web still saves reports through the old `create_report_with_credit()`, which checks credits only | Same behaviour as before v2; it goes away at cutover. The new functions are already the only path for the API |
 | The research pseudonym key is stored in the DB (and so in backups): pseudonymised, not anonymised data | Listed for the lawyer in PRIVACY_NOTES (Phase 6). `lens_research` has no login |

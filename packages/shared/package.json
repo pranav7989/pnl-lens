@@ -5,9 +5,30 @@
   "type": "module",
   "exports": {
     "./pricing": "./src/pricing.ts",
-    "./limits": "./src/limits.ts"
+    "./limits": "./src/limits.ts",
+    "./db": "./src/db.ts",
+    "./consent": "./src/consent.ts",
+    "./jobs": "./src/jobs.ts",
+    "./mail": "./src/mail.ts",
+    "./auth/otp": "./src/auth/otp.ts",
+    "./auth/google": "./src/auth/google.ts",
+    "./auth/session": "./src/auth/session.ts",
+    "./auth/types": "./src/auth/types.ts",
+    "./auth/pg-auth-store": "./src/auth/pg-auth-store.ts",
+    "./auth/request": "./src/auth/request.ts",
+    "./auth/origin": "./src/auth/origin.ts",
+    "./admin/rbac": "./src/admin/rbac.ts",
+    "./admin/queries": "./src/admin/queries.ts",
+    "./admin/telemetry": "./src/admin/telemetry.ts",
+    "./payments/config": "./src/payments/config.ts",
+    "./payments/razorpay": "./src/payments/razorpay.ts",
+    "./file-crypto": "./src/file-crypto.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "jose": "^5.9.0",
+    "@aws-sdk/client-sesv2": "^3.1142.0"
   }
 }
