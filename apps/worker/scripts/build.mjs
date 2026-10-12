@@ -19,7 +19,7 @@ const external = [...new Set(['apps/worker', 'packages/engine', 'packages/db', '
 external.push('pdfjs-dist/*', 'xlsx/*');
 
 // Same hash as src/engine-version.ts computes from the sources in dev and tests.
-const ENGINE_FILES = ['engine.js', 'behaviour.js', 'extract.js', 'index.ts', 'node.ts'];
+const ENGINE_FILES = ['engine.js', 'behaviour.js', 'extract.js', 'index.ts', 'node.ts', '../package.json'];
 const h = crypto.createHash('sha256');
 for (const f of ENGINE_FILES) h.update(f).update('\0').update(fs.readFileSync(path.join(repo, 'packages/engine/src', f)));
 const ENGINE_VERSION = `e1-${h.digest('hex').slice(0, 12)}`;

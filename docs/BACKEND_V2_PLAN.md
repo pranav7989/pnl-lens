@@ -20,7 +20,7 @@ Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and n
 | F7 | The server trusts report numbers computed in the browser ("validates structure, not arithmetic"). | `lib/api/validate.ts`, HANDOFF §5 | This goes away: the server computes every report. |
 | F8 | UI wording promises files are **never uploaded**, in 5 places. | `Landing.tsx:112,162,231,239`, `upload/page.tsx:20` | It becomes false after v2. This conflicts with rule 8; see D1. |
 | F9 | `docker-compose.yml` contains DB passwords (`adminpw`, `apppw`). | repo root | Rule 2: remove them, take values from `.env`, and rotate anything that was ever deployed with them. |
-| F10 | `xlsx@0.18.5` has published advisories (prototype pollution, ReDoS). It was "browser-only, user's own files" before; it now parses **strangers' files on our server**. | `package.json` | Sandbox the parser (§10). Upgrading SheetJS may change output, so it is a separate step with its own golden diff (D10). |
+| F10 | **Resolved for the server in Phase 5: the engine uses SheetJS 0.20.3.** `xlsx@0.18.5` has published advisories (prototype pollution, ReDoS). It was "browser-only, user's own files" before; it now parses **strangers' files on our server**. | `package.json` | Sandbox the parser (§10). Upgrading SheetJS may change output, so it is a separate step with its own golden diff (D10). |
 | F11 | `link` payment mode says plans "are then granted by an admin". | `lib/payments/config.ts` | This conflicts with rule 6; see D5. |
 | F12 | The report validator allows 4-letter currencies (`USDT` is in `CURSYM`), but `reports.currency` is `char(3)`. | `validate.ts:26`, `0001_schema.sql` | Latent insert failure. v2 uses `text` in new tables and will check whether the engine can emit `USDT`. |
 | F13 | There is no lint script and no ESLint config. The folder is not a git repo. | `package.json` | Phase 1 adds ESLint and `git init` (D13). |
@@ -433,7 +433,18 @@ Done on macOS (Apple Silicon); Phases 1–2 were re-verified on the same machine
 | Hostile files | A parse past the timeout is killed; a parse past its memory cap crashes only its child, and the worker carries on |
 | Tests | `apps/worker` **36** (22 golden pipelines; failures, idempotency, storage outage then retry, purged files, fingerprints, lock; timeout and memory; real Redis: API producer → worker consumer for 3 files with duplicate enqueue, retry ×3 → dead letter; nightly purge + sweep). `test:stack` **55/55** (4 new: worker health, 2 files through Caddy → ready → equal to the golden combined report, access log, save + serve). All earlier suites green; typecheck clean; lint 0 errors |
 | Test services | `infra/compose.test.yml` now also has a throwaway Redis (127.0.0.1:56379, `TEST_REDIS_PASSWORD`) |
-| SheetJS upgrade (D10) | Separate commit; see its result below |
+| SheetJS upgrade (D10) | Separate commit; result below |
+
+### SheetJS upgrade (D10) result (2026-10-12)
+
+| Item | Result |
+|---|---|
+| Change | The engine's `xlsx` moves from npm 0.18.5 (unmaintained on npm; advisories CVE-2023-30533 prototype pollution and CVE-2024-22363 ReDoS) to **0.20.3**, the current release from the official SheetJS CDN (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`, pinned by URL with an integrity hash in the lockfile; no install scripts, no dependencies). Only the engine (server parsing) uses it. apps/web keeps 0.18.5 for the browser path, which Phase 6 removes |
+| What the user sees | **The report JSON is byte-identical in all 22 golden cases** (`report` and `m` unchanged) |
+| Golden diff (reviewed) | 11 lines in 9 files: `rawSha256` in the 9 CSV cases (raw cells: 0.18.5 shifted CSV dates by +05:30, so `2025-01-06` came out as 05:30 IST; 0.20.3 gives exact midnight and turns time-only text into a fraction of a day), plus the internal-only `exitHour` of one Dhan trade, 11 → 12 (it appears in two cases: `dhan_tradebook_csv` and `combo_three_files`). That field is not in the report JSON. Goldens regenerated with `UPDATE_GOLDENS=1` |
+| Bonus | Under `TZ=UTC` all 22 golden cases now pass (before: 9 differed, finding F3). The engine no longer depends on the server timezone for CSV files; the Asia/Kolkata pin (D9) stays as a safety net |
+| engine_version | Now also hashes the engine's `package.json`, so a library change gives a new version (`e1-9bfbf94ab2b6`) |
+| Image fix found by the stack test | npm nests the engine's SheetJS under `packages/engine/node_modules` (the web app pins another version), and the runtime image did not copy it, so the child crashed on start-up. The worker image now places the engine's own dependencies next to the bundle. The same run showed that a non-memory child crash was being treated as a file problem; it is now an infrastructure error (retried, then dead letter), and the worker's health includes an engine self-test |
 
 ## 15. Risks
 

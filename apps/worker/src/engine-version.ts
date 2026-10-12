@@ -1,7 +1,7 @@
 /**
  * @file  apps/worker/src/engine-version.ts
  * @area  Worker
- * @what  engine_version written on every derived row: a hash of the engine's source files (fixed at build time in the image).
+ * @what  engine_version written on every derived row: a hash of the engine's source files and package.json (fixed at build time in the image).
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -9,7 +9,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 declare const __ENGINE_VERSION__: string | undefined;
-export const ENGINE_FILES = ['engine.js', 'behaviour.js', 'extract.js', 'index.ts', 'node.ts'];
+/** Engine sources plus its package.json, so a parser library change (e.g. SheetJS) also gives a new version. */
+export const ENGINE_FILES = ['engine.js', 'behaviour.js', 'extract.js', 'index.ts', 'node.ts', '../package.json'];
 
 /** `e1-<12 hex>` from the engine sources; any engine change gives a new version, so old rows can be found and re-run. */
 export function hashEngineSources(dir: string) {

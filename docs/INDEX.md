@@ -234,7 +234,7 @@ _Generated from file headers by `npm run docs:index` — 197 files._
 | `apps/worker/src/config.ts` | Worker configuration from env: lens_worker DB URL, Redis, storage (read + delete), file keys, engine limits. |
 | `apps/worker/src/engine-child.ts` | Child process that runs the engine on one job's decrypted files (memory-capped, killed on timeout); returns the report, per-file fingerprints, fills and parse info. |
 | `apps/worker/src/engine-runner.ts` | Starts engine-child.js per job with a memory cap and a timeout; a hung or crashing parse fails that file, not the worker (plan D10). |
-| `apps/worker/src/engine-version.ts` | engine_version written on every derived row: a hash of the engine's source files (fixed at build time in the image). |
+| `apps/worker/src/engine-version.ts` | engine_version written on every derived row: a hash of the engine's source files and package.json (fixed at build time in the image). |
 | `apps/worker/src/main.ts` | Worker process: BullMQ consumer for analysis jobs (retries, dead-letter on final failure), schedules for nightly purge and storage sweep, local health endpoint. |
 | `apps/worker/src/maintenance.ts` | Scheduled jobs: nightly purge (raw files after 30 days, unsaved drafts after 24 h, old sign-in codes) and the storage sweep that deletes shredded objects. |
 | `apps/worker/src/pipeline.ts` | One analysis job: fetch + decrypt files (logged) → engine in a child process → store payload, trades, fills, metrics, traits, parse runs in one transaction. |
