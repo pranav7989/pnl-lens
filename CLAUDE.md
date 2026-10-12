@@ -56,6 +56,7 @@ removed (off | razorpay only). Server TZ = Asia/Kolkata. Fresh start, no data mi
   (= `docker compose --env-file .env -f infra/compose.dev.yml …`; see docs/INFRA.md)
 - Tests: `npm test`  Type check: `npm run typecheck`  Lint: `npm run lint`
 - Migrations: `npm run db:migrate`
+- DB tests: `npm run db:test:up` then `npm run test:db` (throwaway Postgres, infra/compose.test.yml)
 - Windows dev machine: Node/Git were installed via winget; a terminal opened before that may need
   `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
 

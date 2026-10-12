@@ -22,13 +22,15 @@
     "lint": "eslint .",
     "db:migrate": "npm run migrate -w @pnl-lens/db",
     "db:purge": "npm run purge -w @pnl-lens/db",
-    "test:db": "npm run test:db -w @pnl-lens/web",
+    "test:db": "npm run test:db -w @pnl-lens/db",
     "docs:index": "node scripts/gen-index.mjs",
     "stack:env": "node infra/scripts/gen-env.mjs",
     "stack:up": "docker compose --env-file .env -f infra/compose.dev.yml up -d --build --wait",
     "stack:down": "docker compose --env-file .env -f infra/compose.dev.yml down",
     "stack:logs": "docker compose --env-file .env -f infra/compose.dev.yml logs -f --tail=100",
-    "test:stack": "vitest run --config tests/stack/vitest.config.ts"
+    "test:stack": "vitest run --config tests/stack/vitest.config.ts",
+    "db:test:up": "docker compose --env-file .env -f infra/compose.test.yml up -d --wait",
+    "db:test:down": "docker compose --env-file .env -f infra/compose.test.yml down -v"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

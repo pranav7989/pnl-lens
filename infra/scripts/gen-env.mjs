@@ -31,6 +31,7 @@ const SPEC = [
   ['S3_API_SECRET_ACCESS_KEY', () => hex(32)],
   ['S3_WORKER_ACCESS_KEY_ID', () => 'GK' + hex(12)],
   ['S3_WORKER_SECRET_ACCESS_KEY', () => hex(32)],
+  ['TEST_POSTGRES_PASSWORD', () => hex(32)],          // throwaway DB for npm run test:db (infra/compose.test.yml)
 ];
 
 const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '') : '';

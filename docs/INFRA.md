@@ -30,9 +30,10 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 
 | Who | Postgres | Redis | Storage (bucket `statements`) |
 |---|---|---|---|
-| api | `lens_app`: no DDL, no DELETE (migrations 0002–0007) | password | **write only**: can upload, cannot read back or list |
-| worker | `lens_worker`: can connect; table grants arrive in Phase 3 (migration 0008) | password | read + write (S3 needs write to delete for purge) |
+| api | `lens_app`: no DDL, no DELETE; since 0012 no direct writes to credits, subscriptions or report contents (only `title`); plans and reports change through SECURITY DEFINER functions | password | **write only**: can upload, cannot read back or list |
+| worker | `lens_worker` (0008–0013): reads jobs and file metadata, writes engine results, runs purge jobs; nothing on users, payments, credits, subscriptions, consents or reports | password | read + write (S3 needs write to delete for purge) |
 | web (until Phase 6) | `lens_app` | — | — |
+| research (future) | `lens_research`: NOLOGIN; SELECT on the pseudonymised `research.*` views only (0014) | — | — |
 | anyone else | `PUBLIC` has no CONNECT on the database | refused | anonymous refused; bucket has no website/public access |
 
 ## Commands (repo root)
@@ -46,13 +47,14 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 | Stop (keeps data) | `npm run stack:down` |
 | Stop and **delete all data** | `docker compose --env-file .env -f infra/compose.dev.yml down -v` |
 | Rebuild api/worker on code change | `docker compose --env-file .env -f infra/compose.dev.yml watch` |
+| Database tests (separate throwaway Postgres on 127.0.0.1:55432) | `npm run db:test:up` → `npm run test:db` → `npm run db:test:down` |
 | Debug ports on 127.0.0.1 (Postgres 5432, Redis 6379, S3 3900) | add `-f infra/compose.dev.ports.yml` to the compose command |
 
 Windows: Docker Desktop must show **Engine running**. Compose reads `.env` from the repo root because the scripts pass `--env-file .env`.
 
 ## Secrets
 
-All in `.env` (git-ignored, created by `npm run stack:env`): `POSTGRES_USER`, `POSTGRES_PASSWORD`, `LENS_APP_PASSWORD`, `LENS_WORKER_PASSWORD`, `REDIS_PASSWORD`, `GARAGE_RPC_SECRET`, `GARAGE_ADMIN_TOKEN`, `S3_API_ACCESS_KEY_ID`, `S3_API_SECRET_ACCESS_KEY`, `S3_WORKER_ACCESS_KEY_ID`, `S3_WORKER_SECRET_ACCESS_KEY`. Nothing secret is in compose files, Dockerfiles, `garage.toml` or images (`.dockerignore` excludes `.env*`).
+All in `.env` (git-ignored, created by `npm run stack:env`): `POSTGRES_USER`, `POSTGRES_PASSWORD`, `LENS_APP_PASSWORD`, `LENS_WORKER_PASSWORD`, `REDIS_PASSWORD`, `GARAGE_RPC_SECRET`, `GARAGE_ADMIN_TOKEN`, `S3_API_ACCESS_KEY_ID`, `S3_API_SECRET_ACCESS_KEY`, `S3_WORKER_ACCESS_KEY_ID`, `S3_WORKER_SECRET_ACCESS_KEY`, plus `TEST_POSTGRES_PASSWORD` for the throwaway test database (`infra/compose.test.yml`). Nothing secret is in compose files, Dockerfiles, `garage.toml` or images (`.dockerignore` excludes `.env*`).
 
 **Rotating secrets:**
 - Postgres app roles: change the value in `.env`, then run `npm run stack:up` again. The `migrate` job re-applies role passwords on every run.

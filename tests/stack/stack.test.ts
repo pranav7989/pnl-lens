@@ -186,11 +186,20 @@ describe('Postgres least privilege', () => {
     const r = psql('lens_app', env.LENS_APP_PASSWORD, "select count(*) from public.credits where user_id = '00000000-0000-0000-0000-000000000001'");
     expect(r.out).toBe('1');
   });
-  it('lens_worker logs in but has no table access yet (grants arrive in Phase 3)', () => {
+  it('lens_worker logs in and cannot read users (no access to accounts, payments or credits)', () => {
     expect(psql('lens_worker', env.LENS_WORKER_PASSWORD, 'select current_user').out).toBe('lens_worker');
     const r = psql('lens_worker', env.LENS_WORKER_PASSWORD, 'select count(*) from public.users');
     expect(r.code).not.toBe(0);
     expect(r.err).toMatch(/permission denied/);
+  });
+  it('lens_worker can read its job tables (migration 0009)', () => {
+    const r = psql('lens_worker', env.LENS_WORKER_PASSWORD, 'select count(*) from public.analyses');
+    expect(r.code, r.err).toBe(0);
+  });
+  it('the migrate job applied every migration up to 0014 and the dev user has a plan (D6)', () => {
+    expect(psql('lens_app', env.LENS_APP_PASSWORD, "select count(*) from public.subscriptions where user_id = '00000000-0000-0000-0000-000000000001' and ends_at > now()").out).toBe('1');
+    const r = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, "select max(name) from public.schema_migrations");
+    expect(r.out).toMatch(/^0014_/);
   });
 });
 

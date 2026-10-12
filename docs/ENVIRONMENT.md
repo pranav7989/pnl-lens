@@ -40,4 +40,5 @@ Both files are git-ignored. `docker compose` refuses to start if a secret in `.e
 | `GARAGE_RPC_SECRET` / `GARAGE_ADMIN_TOKEN` | stack (`.env`) | random | Garage storage node secret and admin API token (used only by `storage-init`) |
 | `S3_API_ACCESS_KEY_ID` / `S3_API_SECRET_ACCESS_KEY` | stack (`.env`) | `GK`+24 hex / 64 hex | API storage key: write-only on bucket `statements` |
 | `S3_WORKER_ACCESS_KEY_ID` / `S3_WORKER_SECRET_ACCESS_KEY` | stack (`.env`) | `GK`+24 hex / 64 hex | Worker storage key: read + write |
+| `TEST_POSTGRES_PASSWORD` / `TEST_PG_PORT` | test DB (`.env`) | random / `55432` | Throwaway Postgres for `npm run test:db` (`infra/compose.test.yml`); never used by the app |
 | `DATABASE_URL`, `REDIS_URL`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | api / worker containers | built in `compose.dev.yml` from the values above | Per-service connection settings |

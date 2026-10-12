@@ -3,12 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./normalise": "./src/normalise.ts"
+  },
   "scripts": {
     "migrate": "node scripts/migrate.mjs",
     "purge": "node scripts/purge.mjs",
-    "seed:admin-demo": "node scripts/seed-admin-demo.mjs"
+    "seed:admin-demo": "node scripts/seed-admin-demo.mjs",
+    "test": "vitest run",
+    "test:db": "vitest run test/db",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "kysely": "0.29.6",
     "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@pnl-lens/engine": "0.1.0",
+    "@types/pg": "^8.23.1"
   }
 }

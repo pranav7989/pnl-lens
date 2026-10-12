@@ -1,6 +1,6 @@
 # Backend v2 — Plan
 
-**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11, branch `backend-v2`); waiting for go-ahead on Phase 3.
+**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11), **Phase 3 done** (2026-10-12, branch `backend-v2`); waiting for go-ahead on Phase 4.
 **Goal:** move parsing and analysis from the browser to the server, and store raw files, normalised trades and computed metrics. Everything runs on one Ubuntu 24.04 VM with Docker Compose. AI/ML is out of scope; the data model is only made ready for it.
 
 Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and network · 5 Engine and parity · 6 Pipeline · 7 Data model · 8 API · 9 Enforcement · 10 Privacy and security · 11 Front end · 12 Infra and operations · 13 Testing · 14 Phases · 15 Risks
@@ -48,6 +48,7 @@ Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and n
 | **D13** | `git init`, commit the current tree to `main`, branch `backend-v2` (default). |
 | **F9** | **All passwords move out of `docker-compose.yml` into `.env` (git-ignored); new random ones are generated.** Done in Phase 1. |
 | **D14** | **MinIO replaced by Garage** (approved 2026-10-11, Phase 2). MinIO's free Docker images are no longer published: every tag on Docker Hub and quay.io is gone or needs an account. Garage `dxflrs/garage:v2.4.1` is S3-compatible, single-container and built for small self-hosted servers. Per-key bucket permissions give the API **write-only** and the worker read+write. App code is unaffected: files are encrypted by the app and stored through the standard S3 API. Wherever this plan says "MinIO", read "Garage". |
+| **D15** | **Master-prompt data items added** (approved 2026-10-12, Phase 3). The first draft of §7 left out `parse_runs`, `fills`, `report_traits`, `data_requests` and `reports.title` / `month_label` / `fingerprint`. They are added in the migration where each belongs (0009–0011), not in a separate 0015. `report_files` is replaced by `analysis_files` plus `reports.used_fingerprints`, which also covers the "+" flow. |
 | **Location** | The project lives at `C:\Users\drvvl\Documents\pnl-lens`. The Downloads copy is the untouched original. |
 
 ### 2.1 Proposed wording (NOT applied; needs owner sign-off before Phase 6)
@@ -166,47 +167,83 @@ POST /api/v1/reports {analysisId}  → create_report_from_analysis(): spends the
 
 ## 7. Data model (new migrations 0008+ only; 0001–0007 untouched)
 
+As built in Phase 3 (2026-10-12). Master-prompt items that the first draft of this section left out (`parse_runs`, `fills`, `report_traits`, `data_requests`, `reports.title` / `month_label` / `fingerprint`) were added in the migration where each belongs (decision **D15**).
+
 | Migration | Adds |
 |---|---|
-| `0008_roles_v2.sql` | `lens_worker` (nologin; password set by infra init), `lens_research` (nologin, for later). Grants are added in each migration below. |
-| `0009_files_analyses.sql` | `statement_files`, `analyses`, `file_access_log` |
-| `0010_trades_metrics.sql` | `trades`, `report_metrics`, `report_files`; new columns on `reports`: `analysis_id`, `engine_version`, `subscription_id` |
-| `0011_consents.sql` | `consents` (append-only) and view `user_consent_current` |
-| `0012_plans_v2.sql` | `create_report_from_analysis()`, `admin_grant_plan()` (owner-only, D5), `subscriptions.granted_by` / `grant_reason` columns |
-| `0013_purge_v2.sql` | `purge_raw_files()` (30 days, D3), `purge_drafts()`, `delete_report_v2()`, `delete_account()` |
-| `0014_research_ready.sql` | `research` schema with views for opted-in users only, pseudonymised (no grants to any login role yet) |
+| `0008_roles_v2.sql` | `lens_worker`, `lens_research` (both NOLOGIN in SQL; `setup-roles.mjs` turns on LOGIN for `lens_worker` only). Worker may write `error_events`. |
+| `0009_files_analyses.sql` | `analyses`, `statement_files`, `analysis_files`, `file_access_log`, `parse_runs` |
+| `0010_trades_metrics.sql` | `trades`, `fills`, `report_metrics`, `report_traits`, view `current_trades`; `reports` gains `analysis_id`, `engine_version`, `subscription_id`, `title`, `month_label`, `used_fingerprints`, `fingerprint`; `reports.currency` becomes `text` (F12) |
+| `0011_consents.sql` | `consents` (append-only), view `user_consent_current`, `data_requests` |
+| `0012_plans_v2.sql` | `create_report_from_analysis()`, `add_analysis_to_report()` (file-set lock), `admin_grant_plan()` (owner-only, D5); `subscriptions.granted_by` / `grant_reason` and a "has a source" check; `lens_app` loses INSERT/UPDATE on `credits` and `reports` (keeps UPDATE of `reports.title`); `grant_plan()` no longer executable by PUBLIC |
+| `0013_purge_v2.sql` | `purge_raw_files()` (30 days, D3), `purge_drafts()` (24 h), `purge_otp_codes()` (7 days), `delete_report_v2()`, `delete_account()`; `users.status` may be `deleted` |
+| `0014_research_ready.sql` | `research` schema: pseudonymised views for users whose current research consent is granted; HMAC key generated inside the DB; SELECT for `lens_research` (NOLOGIN) only |
+
+### Model in one paragraph
+An **upload** creates one `analyses` row (a job) and 1–3 `statement_files`, linked by `analysis_files`. The worker stores the engine output for that analysis (`payload` plus `trades`, `report_metrics`, `report_traits`, `fills`, `parse_runs`) in one transaction. **Saving** calls `create_report_from_analysis()`: one report is spent from a valid plan and the report points at that analysis. The **"+" button** uploads the new file(s) as a new analysis that also reads the report's existing files (`target_report_id`). `add_analysis_to_report()` then swaps the report to the new analysis, enforcing the file-set lock and spending nothing. Derived rows are keyed by analysis and never rewritten. `reports.analysis_id` marks the current analysis, and the view `current_trades` gives "the trades of a user's live reports" without double counting.
 
 ### Tables (main columns)
 
-**statement_files:** `id uuid`, `user_id`, `analysis_id`, `original_name`, `ext`, `detected_kind` (`sheet|pdf|docx|doc|rtf`), `size_bytes`, `sha256`, `storage_key` (random, not the file name), `enc_alg`, `enc_key_id`, `wrapped_dek bytea`, `iv bytea`, `created_at`, `purged_at`.
+**analyses:** `id`, `user_id`, `target_report_id` ("+" flow), `status` (`queued → parsing → analysing → storing → ready | failed`; one column, the separate `stage` was folded in), `error_code`, `currency_override`, `file_count` (1–3), `engine_version`, `payload jsonb` (ReportV1, nulled once claimed), `attempts`, `created_at`, `started_at`, `finished_at`, `expires_at` (now + 24 h), `report_id`, `claimed_at`.
 
-**analyses:** `id`, `user_id`, `status`, `stage`, `error_code`, `currency_override`, `file_count`, `engine_version`, `payload jsonb` (ReportV1, only until claimed), `created_at`, `finished_at`, `expires_at` (now + 24 h for drafts), `report_id` (set once claimed).
+**statement_files:** `id`, `user_id`, `original_name`, `ext` (allow-list), `detected_kind` (`sheet|pdf|docx|doc|rtf`), `mime`, `size_bytes` (≤ 10 MB), `sha256`, `storage_key` (random), `enc_alg`, `enc_key_id`, `wrapped_dek`, `iv`, `fingerprint` (file-set lock, same rule as the offline tool), `status` (`stored|purged|deleted`), `created_at`, `delete_after` (now + 30 days), `purged_at`, `object_deleted_at`. **Purging deletes the wrapped key** (crypto-shredding), so the object is unreadable everywhere, backups included. The worker then deletes the object itself, because the api's storage key is write-only.
 
-**trades** (normalised; one row per engine trade, all `TRADE_FIELDS` plus links):
-`id bigserial`, `report_id` / `analysis_id`, `user_id`, `seq`, `symbol`, `underlying`, `market`, `segment`, `kind`, `grp`, `family`, `direction`, `entry_date`, `exit_date`, `entry_hour`, `hold_days`, `expiry`, `expiry_type`, `weekday`, `qty numeric`, `avg_buy`, `buy`, `sell`, `pnl`, `net_est`, `pct` (all `numeric(20,6)`), `style`, `open_qty`, `n_legs`, `mult`, `is_opt`, `currency text`, `source_file_id`, `fingerprint`, `engine_version`. Indexed on `(user_id, exit_date)` and `(report_id)`.
+**analysis_files:** `analysis_id`, `file_id`, `user_id`, `position`. Composite foreign keys on `(id, user_id)` mean an analysis can never read another user's file. This replaces the draft's `report_files`: a report's files are those of its current analysis, and its lock is `reports.used_fingerprints`.
 
-**report_metrics:** `report_id` (or `analysis_id`), the scalar fields of `m` as columns (`n`, `wins`, `losses`, `win_rate`, `payoff`, `profit_factor`, `realized`, `charges`, `other`, `net`, `from_date`, `to_date`, `source`, `market`, `currency`), `progress_score`, `extra jsonb` (the rest of `m`), `engine_version`. This feeds Progress history (`fmt.history` in `render.js`) and later analytics.
+**parse_runs:** one row per file per engine run: `engine_version`, `detected_broker`, `detected_format`, `column_mapping` (headers only), `warnings`, `sheet_count`, `trade_count`, `duration_ms`, `outcome` (`ok|no_trades|error|timeout`), `error_code`. Lets old files be re-run when the engine improves, while the raw file still exists.
 
-**report_files:** `report_id`, `file_id`, `trade_fingerprints text[]`. This is the server-side "one report = a fixed set of files" record from HANDOFF §6.
+**trades:** one row per engine trade, all `TRADE_FIELDS` (`numeric(20,6)` for money and quantity, `date` for dates), plus `option_type` (generated from `kind`), `strike` / `broker` / `source_row` (nullable; the engine does not emit them yet), per-trade `fingerprint`, `engine_version`. `unique (analysis_id, seq)` makes the store step idempotent.
 
-**file_access_log:** `id`, `file_id`, `actor_kind` (`user|worker|admin|system`), `actor_user_id`, `action` (`write|read|decrypt|delete`), `reason`, `job_id`, `ip`, `created_at`. Roles can INSERT only; admins can SELECT.
+**fills:** raw executions from tradebooks (`side`, `qty`, `price`, `fees`, `trade_date`, `trade_time`, `exchange`, `order_ref`, …). The worker fills it in Phase 5 from the parsed sheets, because ReportV1 has no fills.
 
-**consents:** `id`, `user_id`, `purpose` (`processing|research`), `granted bool`, `policy_version`, `text_sha256`, `ip`, `user_agent`, `created_at`. Never updated; the latest row per purpose wins. Research defaults to "no row", which means off.
+**report_metrics:** per analysis: the scalar fields of `m` as columns, `progress_score`, `extra jsonb` (the rest of `m`). Feeds Progress history.
+
+**report_traits:** per analysis: `trait_id`, `area`, `name`, `score`, `level`, `is_primary` (traits vs more), `evidence jsonb` (`now`, `why`, `ideal`).
+
+**reports (new columns):** `analysis_id` (current), `engine_version`, `subscription_id`, `title` (rename, ≤ 120 chars), `month_label` (`MON-YY` of creation in IST, e.g. `OCT-26`), `used_fingerprints` (every statement ever accepted: removing a file never frees its place), `fingerprint` (hash of the current file set). New reports get `expires_at = 'infinity'` (D4).
+
+**file_access_log:** `file_id` (no FK, so the log outlives the file), `owner_user_id`, `actor_kind`, `actor_user_id`, `action` (`write|read|decrypt|delete`), `reason`, `job_id`, `ip`. Roles can only INSERT; `lens_app` can also SELECT, for the admin console.
+
+**consents:** `user_id`, `purpose` (`processing|research`), `granted`, `policy_version`, `text_sha256`, `ip_hash` (an HMAC of the IP, never the raw IP), `user_agent`, `created_at`. Never updated; the latest row wins. No research row means off.
+
+**data_requests:** `user_id`, `kind` (`export|delete`), `status` (`pending|processing|done|failed|cancelled`), `result_key`, `error_code`, timestamps. At most one open request of each kind per user.
+
+### Indexes (and the query each one serves)
+
+| Index | Query |
+|---|---|
+| `analyses (user_id, created_at desc)` | the user's analyses; D11 "20 per day" count |
+| `analyses (user_id) where status in (queued…storing)` | D11 "3 running at once" (tiny partial index) |
+| `analyses (expires_at) where claimed_at is null` | `purge_drafts()` |
+| `analyses (report_id) where report_id is not null` | report → analyses (delete, "+" history) |
+| `statement_files (user_id, created_at desc)` | the user's files, export |
+| `statement_files (delete_after) where purged_at is null` | `purge_raw_files()` (30 days) |
+| `statement_files (purged_at) where purged_at is not null and object_deleted_at is null` | the worker's object sweep |
+| `analysis_files (file_id)` | "is this file still used by any analysis?" |
+| `file_access_log (file_id, created_at)`, `(owner_user_id, created_at desc)` | a file's access history; the user's access history (admin, export) |
+| `parse_runs (file_id, created_at desc)`, `(engine_version, outcome)` | a file's runs; re-run campaigns ("files engine X failed on") |
+| `trades (analysis_id)` (+ unique `(analysis_id, seq)`) | a report's trades in order |
+| `trades (user_id, exit_date)` | a user's trade history by close date (Progress, analytics) |
+| `fills (analysis_id)` | a report's fills |
+| `report_metrics (user_id, to_date)` | Progress history |
+| `report_traits (user_id, trait_id)` | a trait over time for one user |
+| `consents (user_id, purpose, created_at desc, id desc)` | the latest consent per purpose |
+| `data_requests (user_id, requested_at desc)`, `(status, requested_at) where open`, unique `(user_id, kind) where open` | the user's requests; the worker queue; one open request per kind |
 
 ### Rendering source of truth
-`reports.report` (ReportV1 jsonb) stays the payload the UI renders, so the renderer and old reports keep working. `trades` and `report_metrics` are written from the **same engine run** in the same transaction, so they cannot disagree with the payload.
+`reports.report` (ReportV1 jsonb) stays the payload the UI renders, so the renderer and old reports keep working. `trades`, `report_metrics` and `report_traits` are written from the **same engine run** in the same transaction, so they cannot disagree with the payload. Phase 3 tests check this against all 21 golden reports.
 
 ### "Ready for AI" means only this
-Stable IDs, `engine_version` on every derived row, normalised numeric trades, per-file links, consent history, and a `research` schema whose views join `user_consent_current` (research = true) and replace `user_id` with an HMAC pseudonym. No model, feature store or training code. `lens_research` gets no login until a future, separately approved phase.
+Stable IDs, `engine_version` on every derived row, normalised numeric trades, per-file links, parse runs, consent history, and a `research` schema whose views include only users whose latest research consent is granted and whose account is active. In those views `user_id` is replaced with an HMAC pseudonym, and there is no email, name, file name, file id, source row or broker client id. No model, feature store or training code. `lens_research` gets no login until a future, separately approved phase.
 
 ### Roles
 
 | Role | Used by | Can |
 |---|---|---|
 | migrator (superuser) | `npm run db:migrate` only | DDL |
-| `lens_app` | api | As today, plus INSERT on files/analyses/consents/access log, SELECT on own-scope tables, EXECUTE on the new functions. No DELETE, no DDL. |
-| `lens_worker` | worker | SELECT `statement_files`; UPDATE `analyses` (status columns); INSERT `trades`, `report_metrics`, `file_access_log`, `error_events`; EXECUTE purge functions. Nothing on users, payments or credits. |
-| `lens_research` | nobody yet | SELECT on `research.*` views only |
+| `lens_app` | api (and web until Phase 6) | SELECT on its tables; INSERT on uploads, analyses, consents, data requests, access log; UPDATE of `reports.title` only; EXECUTE on the claim, add-files, delete, delete-account, manual-grant and webhook functions. No DELETE, no DDL, no direct writes to credits, subscriptions or report contents. |
+| `lens_worker` | worker | SELECT on jobs, files and links; UPDATE of job status columns, `statement_files.fingerprint` / `object_deleted_at`, `data_requests` status; INSERT on trades, fills, metrics, traits, parse runs, access log, error events; EXECUTE on purge jobs and `delete_account`. Nothing on users, payments, credits, subscriptions, consents or reports. |
+| `lens_research` | nobody yet (NOLOGIN) | SELECT on `research.subjects`, `research.trades`, `research.report_metrics`, `research.report_traits` only |
 
 ---
 
@@ -352,6 +389,22 @@ Wording: identical except the strings approved under D1/D4.
 | Transitional | `web` sits on the internal network and uses Postgres directly until the Phase 6 cutover (tested as such) |
 | Dev machine | Docker/WSL memory raised to 6 GB + 8 GB swap (`%USERPROFILE%\.wslconfig`); the first build crashed at 4 GB. The PC has 7.8 GB RAM, so builds are tight |
 
+### Phase 3 result (2026-10-12)
+
+Done on macOS (Apple Silicon); Phases 1–2 were re-verified on the same machine first, with no fixes needed.
+
+| Item | Result |
+|---|---|
+| Migrations | `0008`–`0014` as in §7. They apply on an empty DB from 0001 (`migrate` job: "14 migration(s) applied") and on top of a 0007 DB holding old reports, plans and credits. 0001–0007 unchanged (a test compares them with the baseline commit) |
+| Enforcement (rule 5, 6) | `create_report_from_analysis()` refuses `no_plan` (including balance-only credits, D6), `plan_expired`, `plan_used_up` and `too_many_files`; picks the plan that ends first; serialises claims per user. `add_analysis_to_report()` enforces the file-set lock. `admin_grant_plan()`: owner checked in the DB, reason required, audited |
+| Privacy (rule 7) | Purge with key shredding, draft purge, report delete, account delete (anonymises the user; keeps payments and consent proof; the email can sign up again), research views (consenting, active users only; pseudonymised) |
+| Typed queries | `packages/db/src`: Kysely 0.29.6 types, `createDb()` / `assertRole()` per role, queries for uploads, jobs, the idempotent store step, reports, plans, consents, data requests, purge and sweep; `normalise.ts` maps ReportV1 to rows; `tradeSetFingerprint()` matches the offline tool |
+| Seed (D6) | The dev user has a real Snapshot plan plus 5 credits |
+| Tests | `packages/db`: **128** (33 without a DB: normalise over 21 goldens and the fingerprint equal to the offline tool; 95 on Postgres: migrations, plan rules, both races, the file-set lock, 33 role denials, purge and delete, research views, the store step for every golden). The web `pg-store` integration test (always skipped before) passes on the new schema, and `tests/01_functions.sql` passes. `test:stack` **46/46** (2 new). `npm test` green; typecheck clean; lint 0 errors (11 old warnings) |
+| Test DB | `infra/compose.test.yml`: throwaway Postgres on 127.0.0.1:55432 (tmpfs, separate compose project), password `TEST_POSTGRES_PASSWORD` from `npm run stack:env`. `npm run db:test:up && npm run test:db`. DB tests skip when it is not running |
+| Bug caught by the tests | Views in `research` ran their inner security-invoker views and functions with the caller's rights, so `lens_research` was denied. Fixed: the research views now read base tables and compute the HMAC inline |
+| Not done here (by design) | Fills extraction and per-trade source file (Phase 5, worker); API routes (Phase 4); the old `create_report_with_credit()` path stays for apps/web until the Phase 6 cutover |
+
 ## 15. Risks
 
 | Risk | Mitigation |
@@ -364,3 +417,6 @@ Wording: identical except the strings approved under D1/D4.
 | Cutover breaks payments or sign-in | Old webhook and callback paths stay valid; payments are off at cutover anyway. |
 | Garage `replication_factor = 1` is described upstream as "test only" | Accepted for one VM: durability comes from the nightly offsite backup and the Phase 8 restore drill, the same as for Postgres. |
 | Dev laptop has 7.8 GB RAM | Images build one at a time if needed (`docker compose build web`). The production VM is sized separately (§12). |
+| Raw files are deleted after 30 days (D3), but the "+" button re-analyses a report's earlier files together with the new one | **Decision needed before Phase 5:** after 30 days, either refuse "+" on that report with a clear message, or keep the files of saved reports longer. The DB supports both: `delete_after` is per file |
+| Until the Phase 6 cutover, apps/web still saves reports through the old `create_report_with_credit()`, which checks credits only | Same behaviour as before v2; it goes away at cutover. The new functions are already the only path for the API |
+| The research pseudonym key is stored in the DB (and so in backups): pseudonymised, not anonymised data | Listed for the lawyer in PRIVACY_NOTES (Phase 6). `lens_research` has no login |

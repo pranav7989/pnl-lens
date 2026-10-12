@@ -79,7 +79,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 120 files._
+_Generated from file headers by `npm run docs:index` — 143 files._
 
 ### Pages
 
@@ -224,10 +224,26 @@ _Generated from file headers by `npm run docs:index` — 120 files._
 | `packages/db/migrations/0005_admin.sql` | Roles, events, error_events, support_tickets, costs (admin console). |
 | `packages/db/migrations/0006_admin_read_audit.sql` | Lets the app read the audit log for the support timeline. |
 | `packages/db/migrations/0007_payments_plans.sql` | subscriptions table and grant_plan() used by the Razorpay webhook. |
+| `packages/db/migrations/0008_roles_v2.sql` | Backend v2 roles: lens_worker (job worker) and lens_research (no login, for later). Base grants only. |
+| `packages/db/migrations/0009_files_analyses.sql` | Uploaded statement files (encrypted, 30-day life), analyses (server jobs), file links, file access log, parse runs. |
+| `packages/db/migrations/0010_trades_metrics.sql` | Normalised engine output: trades, fills, report_metrics, report_traits; new reports columns (title, MON-YY, file-set lock). |
+| `packages/db/migrations/0011_consents.sql` | Append-only consent history (processing / research), current-consent view, and data export/delete requests. |
+| `packages/db/migrations/0012_plans_v2.sql` | Server-side plan enforcement: create_report_from_analysis(), add_analysis_to_report() (file-set lock), owner-only admin_grant_plan(). |
+| `packages/db/migrations/0013_purge_v2.sql` | Retention and deletion: purge_raw_files() (30 days), purge_drafts() (24 h), purge_otp_codes(), delete_report_v2(), delete_account(). |
+| `packages/db/migrations/0014_research_ready.sql` | research schema: pseudonymised views over trades, metrics and traits, for users with research consent only. No ML. |
 | `packages/db/optional/pg_cron.sql` | Optional: schedule the purge inside Postgres if pg_cron is available. |
 | `packages/db/scripts/seed-dev.mjs` | Applies seed.sql (dev user with credits) — only when SEED_DEV_DATA=true (set by infra/compose.dev.yml only). |
 | `packages/db/scripts/setup-roles.mjs` | Creates/updates the login roles lens_app and lens_worker with passwords from env (runs after migrations, as superuser). |
-| `packages/db/seed.sql` | Local development seed (dev user with credits). Never run in production. |
+| `packages/db/seed.sql` | Local development seed (dev user with a Snapshot plan and matching credits). Never run in production. |
+| `packages/db/src/client.ts` | Kysely connection factory per role (lens_app for the api, lens_worker for the worker) with the existing SSL/CA env handling. |
+| `packages/db/src/errors.ts` | Typed errors for the business-rule codes raised by the SQL functions (P0001 'no_plan', 'report_files_full', …). |
+| `packages/db/src/index.ts` | Public entry of @pnl-lens/db: connection factory, table types, typed queries and errors for the api and worker. |
+| `packages/db/src/normalise.ts` | Maps one engine ReportV1 to rows for trades, report_metrics and report_traits (pure; used by the worker store step), plus the file-set fingerprint. |
+| `packages/db/src/queries/analyses.ts` | Uploads and analysis jobs: create an upload (api, lens_app), D11 counters, job status and the idempotent store step (worker, lens_worker). |
+| `packages/db/src/queries/plans.ts` | Plans: the user's plan card (allowance, validity, statements per report) and the owner-only manual grant (D5). |
+| `packages/db/src/queries/privacy.ts` | Consent history, data export/delete requests, account deletion, and the scheduled purge/sweep jobs (worker). |
+| `packages/db/src/queries/reports.ts` | Reports (api, lens_app): claim an analysis, add files (file-set lock), rename, delete, MON-YY history, Progress history, trades. |
+| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0014 (hand-written; every table is exercised through these types by test/db/*). |
 
 ### Ops
 
@@ -261,6 +277,13 @@ _Generated from file headers by `npm run docs:index` — 120 files._
 | `apps/web/tests/payments.test.ts` | Razorpay checkout and webhook signature verification. |
 | `apps/web/tests/pg-store.test.ts` | PostgreSQL store integration (needs TEST_DATABASE_URL). |
 | `apps/web/tests/rbac.test.ts` | Role permissions and error fingerprinting. |
+| `packages/db/test/db/harness.ts` | DB test harness: fresh database per suite on the throwaway test Postgres, real migrate + setup-roles scripts, role-scoped clients, fixtures. |
+| `packages/db/test/db/migrations.test.ts` | Migrations apply from 0001 on an empty database and on top of a 0007 database with old data; the old web flow keeps working. |
+| `packages/db/test/db/plans.test.ts` | Server-side plan rules: create_report_from_analysis (all refusal reasons, races), file-set lock, owner-only manual grant, webhook replay. |
+| `packages/db/test/db/privacy.test.ts` | Rule 7 in the database: consents, 30-day file purge with key shredding, draft purge, report delete, account delete, research views. |
+| `packages/db/test/db/roles.test.ts` | Least privilege (rule 4): what lens_app, lens_worker, lens_research and PUBLIC can and cannot do after migration 0014. |
+| `packages/db/test/db/store.test.ts` | Worker store step on a real database: every golden report stored as payload + trades + metrics + traits in one transaction, idempotent. |
+| `packages/db/test/normalise.test.ts` | Engine output -> table rows, for every golden report (no database needed); file fingerprint matches the offline tool. |
 | `packages/db/tests/01_functions.sql` | SQL tests for the database functions and the app role restrictions. |
 | `packages/engine/test/behaviour.test.ts` | 100-trait library: uniqueness, wording, variety. |
 | `packages/engine/test/engine.test.ts` | Engine: formats, accounting, symbols, auto-detection, combining files, progress. |
