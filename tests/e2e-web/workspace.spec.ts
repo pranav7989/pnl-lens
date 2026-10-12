@@ -5,7 +5,7 @@
  */
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
-import { signIn, givePlan, sql, FIX } from './helpers';
+import { signIn, givePlan, sql, FIX, cspViolations } from './helpers';
 
 const email = `e2e-${Date.now()}@pnllens.test`;
 
@@ -23,6 +23,7 @@ test('a trader without a plan gets the free preview, nothing is spent', async ({
 });
 
 test('the full workspace flow, and a second device sees the same report', async ({ page, browser }) => {
+  const csp = cspViolations(page);
   givePlan(email, 'snapshot', 5, 2);
   await signIn(page, email, '/upload');
   await page.setInputFiles('#file', path.join(FIX, 'zerodha_tradebook.csv'));
@@ -78,6 +79,7 @@ test('the full workspace flow, and a second device sees the same report', async 
   await page.goto(reportUrl);
   await expect(page.getByText('This report was deleted')).toBeVisible();
   expect(sql(`select string_agg(purpose || ':' || granted, ',' order by c.id) from consents c join users u on u.id = c.user_id where u.email = '${email}'`)).toContain('research:true');
+  expect(csp, 'CSP violations').toEqual([]);
 });
 
 test('the site no longer claims files stay in the browser (approved wording)', async ({ page }) => {

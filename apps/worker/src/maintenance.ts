@@ -10,6 +10,7 @@
  */
 import { purgeRawFiles, purgeDrafts, purgeOtpCodes, filesToSweep, markObjectDeleted, type Db } from '@pnl-lens/db';
 import type { WorkerStorage } from './storage.js';
+import { sweepExports } from './export.js';
 
 export interface SweepResult { deleted: number; failed: number }
 
@@ -32,11 +33,12 @@ export async function sweepStorage(db: Db, storage: WorkerStorage, batch = 500):
   return { deleted, failed };
 }
 
-export interface NightlyResult { rawFiles: number; drafts: number; otpCodes: number; sweep: SweepResult }
+export interface NightlyResult { rawFiles: number; drafts: number; otpCodes: number; exports: number; sweep: SweepResult }
 
 export async function nightly(db: Db, storage: WorkerStorage): Promise<NightlyResult> {
   const rawFiles = await purgeRawFiles(db);
   const drafts = await purgeDrafts(db);
   const otpCodes = await purgeOtpCodes(db);
-  return { rawFiles, drafts, otpCodes, sweep: await sweepStorage(db, storage) };
+  const exports = await sweepExports(db, storage);
+  return { rawFiles, drafts, otpCodes, exports, sweep: await sweepStorage(db, storage) };
 }

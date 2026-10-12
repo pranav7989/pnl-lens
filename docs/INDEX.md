@@ -81,7 +81,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 158 files._
+_Generated from file headers by `npm run docs:index` — 164 files._
 
 ### Pages
 
@@ -129,9 +129,10 @@ _Generated from file headers by `npm run docs:index` — 158 files._
 |---|---|
 | `apps/api/src/routes/analyses.ts` | POST /analyses (alias /uploads): consent, type sniffing, size/plan/D11 limits, encrypt, store, queue. GET /analyses/:id and /reports/:id/status. |
 | `apps/api/src/routes/reports.ts` | Reports: list (MON-YY history), save an analysis (spends one report from a valid plan), "+" add files (file-set lock), get, rename, delete. |
-| `apps/web/app/(app)/dashboard/page.tsx` | Signed-in dashboard: plan card, report history grouped by month (MON-YY) with rename, credits. |
+| `apps/web/app/(app)/dashboard/page.tsx` | Signed-in dashboard: plan card, report history grouped by month (MON-YY) with rename; your data (research opt-in, export, delete account). |
 | `apps/web/app/(app)/report/[id]/page.tsx` | One report in the workspace: file tabs, All files, +, ×, the five dashboard tabs; a "deleted" page once removed. |
 | `apps/web/app/(app)/upload/page.tsx` | New report: the workspace upload view (consent, files, loader; the API and worker read the files). |
+| `apps/web/components/workspace/DataRights.tsx` | "Your data" panel: research opt-in (off by default, change anytime), export my data (ZIP, kept 7 days), delete my account. |
 | `apps/web/components/workspace/History.tsx` | Report history grouped by month (MON-YY) with Progress score; rename in the history list only (PATCH /api/v1/reports/:id). |
 | `apps/web/components/workspace/model.ts` | Workspace data types (from the API) and the offline tool's wording, labels and plan rules, kept word for word. |
 | `apps/web/components/workspace/PlanCard.tsx` | Plan card (sidebar) and plan strip (upload view): reports used, statements per report, valid till MON-YY — as in the offline tool. |
@@ -201,11 +202,13 @@ _Generated from file headers by `npm run docs:index` — 158 files._
 | `apps/worker/src/engine-child.ts` | Child process that runs the engine on one job's decrypted files (memory-capped, killed on timeout); returns the report, per-file fingerprints, fills and parse info. |
 | `apps/worker/src/engine-runner.ts` | Starts engine-child.js per job with a memory cap and a timeout; a hung or crashing parse fails that file, not the worker (plan D10). |
 | `apps/worker/src/engine-version.ts` | engine_version written on every derived row: a hash of the engine's source files and package.json (fixed at build time in the image). |
+| `apps/worker/src/export.ts` | "Export my data": builds the user's archive (all data as JSON + original statements still stored), encrypts it, stores it for 7 days; expiry sweep. |
 | `apps/worker/src/main.ts` | Worker process: BullMQ consumer for analysis jobs (retries, dead-letter on final failure), schedules for nightly purge and storage sweep, local health endpoint. |
 | `apps/worker/src/maintenance.ts` | Scheduled jobs: nightly purge (raw files after 30 days, unsaved drafts after 24 h, old sign-in codes) and the storage sweep that deletes shredded objects. |
 | `apps/worker/src/pipeline.ts` | One analysis job: fetch + decrypt files (logged) → engine in a child process → store payload, trades, fills, metrics, traits, parse runs in one transaction. |
 | `apps/worker/src/queue-worker.ts` | BullMQ consumer for analysis jobs: runs the pipeline, retries infrastructure errors, and on the final failure marks the analysis failed (dead letter). |
 | `apps/worker/src/storage.ts` | Object storage for the worker (S3 API on Garage): read encrypted files, delete shredded ones. In-memory version for tests. |
+| `apps/worker/src/zip.ts` | Minimal ZIP writer (deflate, CRC-32 from node:zlib) for the data-export archive; no third-party dependency. |
 
 ### Core
 
@@ -251,6 +254,7 @@ _Generated from file headers by `npm run docs:index` — 158 files._
 | `packages/db/migrations/0014_research_ready.sql` | research schema: pseudonymised views over trades, metrics and traits, for users with research consent only. No ML. |
 | `packages/db/migrations/0015_analysis_error_message.sql` | analyses.error_message: the engine's own user-facing text for a failed file (e.g. scanned PDF), shown word for word. |
 | `packages/db/migrations/0016_analysis_file_reports.sql` | Per-file dashboards: each statement's own report (ReportV1) for analyses with 2+ files, shown as file tabs next to "All files". |
+| `packages/db/migrations/0017_data_export.sql` | "Export my data": export_user_data(request) for the worker (only for a real export request in progress) and the archive's key columns. |
 | `packages/db/optional/pg_cron.sql` | Optional: schedule the purge inside Postgres if pg_cron is available. |
 | `packages/db/scripts/seed-dev.mjs` | Applies seed.sql (dev user with credits) — only when SEED_DEV_DATA=true (set by infra/compose.dev.yml only). |
 | `packages/db/scripts/setup-roles.mjs` | Creates/updates the login roles lens_app and lens_worker with passwords from env (runs after migrations, as superuser). |
@@ -263,7 +267,7 @@ _Generated from file headers by `npm run docs:index` — 158 files._
 | `packages/db/src/queries/plans.ts` | Plans: the user's plan card (allowance, validity, statements per report) and the owner-only manual grant (D5). |
 | `packages/db/src/queries/privacy.ts` | Consent history, data export/delete requests, account deletion, and the scheduled purge/sweep jobs (worker). |
 | `packages/db/src/queries/reports.ts` | Reports (api, lens_app): claim an analysis, add files (file-set lock), rename, delete, MON-YY history, Progress history, trades. |
-| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0016 (hand-written; every table is exercised through these types by test/db/*). |
+| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0017 (hand-written; every table is exercised through these types by test/db/*). |
 
 ### Ops
 
@@ -300,6 +304,7 @@ _Generated from file headers by `npm run docs:index` — 158 files._
 | `apps/api/test/payments-admin.test.ts` | Payments (off mode, Checkout verify, webhook signature, replay idempotency, legacy path) and admin RBAC (tabs, roles, audit, owner-only grant). |
 | `apps/api/test/sniff.test.ts` | Upload type check: every engine fixture is accepted with the engine's kind; executables, images, wrong ZIPs and binaries posing as CSV are refused. |
 | `apps/api/test/uploads.test.ts` | Uploads and reports on real Postgres: consent, type/size/plan/D11 limits, encryption at rest, queueing, status, save (credits), "+" lock, rename, delete. |
+| `apps/worker/test/export.test.ts` | "Export my data" on a real database: complete archive (JSON + original statements), encrypted at rest, access logged, expires after 7 days. |
 | `apps/worker/test/global-setup.ts` | Builds the worker bundles once before the tests (the engine child process runs from dist/, as in the image). |
 | `apps/worker/test/helpers.ts` | Worker test helpers: encrypted uploads of real fixtures (as the API stores them), pipeline deps with the real engine child, golden cases. |
 | `apps/worker/test/hostile.test.ts` | Hostile files: a parse that runs too long is killed, one that exhausts memory crashes only its child; the worker carries on and the job fails cleanly. |
@@ -321,6 +326,7 @@ _Generated from file headers by `npm run docs:index` — 158 files._
 | `packages/shared/test/payments.test.ts` | Razorpay checkout and webhook signature verification. |
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
+| `tests/e2e-web/privacy.spec.ts` | Data rights in the browser: research opt-in toggle, export my data (worker builds the ZIP, download works), delete my account. |
 | `tests/e2e-web/workspace.spec.ts` | Browser end to end on the stack: sign in → upload with consent → loader → report (5 tabs) → "+" → file tabs/All files → rename in history → second device → remove → delete. |
 | `tests/stack/stack.test.ts` | Dev stack checks: all services healthy, only Caddy published, internal network isolated, least-privilege DB/Redis/storage. |
 | `tests/visual/capture.mjs` | Screenshots of every page at 1440 and 390 px (before/after comparisons for "keep the UI exactly", rule 8). |

@@ -345,3 +345,55 @@ describe('worker on the stack (Phase 5)', () => {
     expect(rep.summary.monthLabel).toMatch(/^[A-Z]{3}-\d{2}$/);
   });
 });
+
+describe('exports bucket (Phase 7)', () => {
+  const key = `probe/${Date.now()}`;
+  const API = [env.S3_API_ACCESS_KEY_ID, env.S3_API_SECRET_ACCESS_KEY] as const;
+  const WORKER = [env.S3_WORKER_ACCESS_KEY_ID, env.S3_WORKER_SECRET_ACCESS_KEY] as const;
+  it('worker key can write an archive but cannot read it back', () => {
+    expect(aws(...WORKER, ['s3', 'cp', '-', `s3://exports/${key}`], 'archive').code).toBe(0);
+    expect(aws(...WORKER, ['s3', 'cp', `s3://exports/${key}`, '-']).code).not.toBe(0);
+  });
+  it('api key can read archives (downloads) but cannot write', () => {
+    const r = aws(...API, ['s3', 'cp', `s3://exports/${key}`, '-']);
+    expect(r.code, r.err).toBe(0);
+    expect(r.out).toBe('archive');
+    expect(aws(...API, ['s3', 'cp', '-', `s3://exports/${key}-x`], 'nope').code).not.toBe(0);
+  });
+  it('worker key can delete expired archives; anonymous access is refused', () => {
+    expect(aws(null, null, ['s3', 'cp', `s3://exports/${key}`, '-']).code).not.toBe(0);
+    expect(aws(...WORKER, ['s3', 'rm', `s3://exports/${key}`]).code).toBe(0);
+  });
+});
+
+describe('hardening (Phase 7)', () => {
+  const inspect = (svc: string) => {
+    const id = dc('ps', '-q', svc).out.split(/\r?\n/)[0];
+    return JSON.parse(run('docker', ['inspect', id]).out)[0];
+  };
+  for (const svc of ['caddy', 'web', 'api', 'worker']) {
+    it(`${svc}: read-only root filesystem, no new privileges, all capabilities dropped, memory limit`, () => {
+      const c = inspect(svc);
+      expect(c.HostConfig.ReadonlyRootfs).toBe(true);
+      expect(c.HostConfig.SecurityOpt).toContain('no-new-privileges:true');
+      expect(c.HostConfig.CapDrop).toEqual(['ALL']);
+      expect(c.HostConfig.Memory).toBeGreaterThan(0);
+    });
+  }
+  for (const svc of ['web', 'api', 'worker']) {
+    it(`${svc} runs as a non-root user`, () => {
+      expect(dc('exec', '-T', svc, 'id', '-u').out).not.toBe('0');
+    });
+  }
+  it('security headers and CSP on every response (pages and API)', async () => {
+    for (const p of ['/', '/api/v1/health']) {
+      const h = (await fetch(`${BASE}${p}`)).headers;
+      expect(h.get('content-security-policy'), p).toContain("default-src 'self'");
+      expect(h.get('content-security-policy'), p).toContain("frame-ancestors 'none'");
+      expect(h.get('x-frame-options'), p).toBe('DENY');
+      expect(h.get('x-content-type-options'), p).toBe('nosniff');
+      expect(h.get('strict-transport-security'), p).toMatch(/max-age=\d+/);
+      expect(h.get('server'), p).toBeNull();
+    }
+  });
+});

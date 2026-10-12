@@ -47,3 +47,10 @@ export function givePlan(email: string, plan = 'snapshot', reports = 5, files = 
        select id, '${plan}', ${reports}, ${files}, now() + interval '183 days', 'e2e' from users where email = '${email}'`);
   sql(`update credits set balance = balance + ${reports} where user_id = (select id from users where email = '${email}')`);
 }
+
+/** Collects Content-Security-Policy violations on a page; assert it stays empty. */
+export function cspViolations(page: Page): string[] {
+  const seen: string[] = [];
+  page.on('console', (m) => { if (/Content Security Policy|Refused to (load|execute|connect|frame)/i.test(m.text())) seen.push(m.text()); });
+  return seen;
+}

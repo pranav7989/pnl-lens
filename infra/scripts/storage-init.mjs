@@ -22,11 +22,18 @@ const env = (k, d) => {
 const ADMIN = env('GARAGE_ADMIN_URL', 'http://garage:3903');
 const TOKEN = env('GARAGE_ADMIN_TOKEN');
 const BUCKET = env('S3_BUCKET', 'statements');
+const EXPORT_BUCKET = env('S3_EXPORT_BUCKET', 'exports');
 const CAPACITY = Number(env('STORAGE_CAPACITY_BYTES', String(10_000_000_000)));
 const KEYS = [
-  { name: 'pnl-lens-api', id: env('S3_API_ACCESS_KEY_ID'), secret: env('S3_API_SECRET_ACCESS_KEY'), allow: { write: true }, deny: { read: true, owner: true } },
-  { name: 'pnl-lens-worker', id: env('S3_WORKER_ACCESS_KEY_ID'), secret: env('S3_WORKER_SECRET_ACCESS_KEY'), allow: { read: true, write: true }, deny: { owner: true } },
+  { name: 'pnl-lens-api', id: env('S3_API_ACCESS_KEY_ID'), secret: env('S3_API_SECRET_ACCESS_KEY') },
+  { name: 'pnl-lens-worker', id: env('S3_WORKER_ACCESS_KEY_ID'), secret: env('S3_WORKER_SECRET_ACCESS_KEY') },
 ];
+// Least privilege per bucket. statements: the api can only upload; the worker reads and deletes (purge).
+// exports (Phase 7, "export my data"): the worker writes and deletes expired archives; the api can only read them.
+const GRANTS = {
+  [BUCKET]: { 'pnl-lens-api': { allow: { write: true }, deny: { read: true, owner: true } }, 'pnl-lens-worker': { allow: { read: true, write: true }, deny: { owner: true } } },
+  [EXPORT_BUCKET]: { 'pnl-lens-api': { allow: { read: true }, deny: { write: true, owner: true } }, 'pnl-lens-worker': { allow: { write: true }, deny: { read: true, owner: true } } },
+};
 
 async function call(method, op, { query, body } = {}) {
   const url = `${ADMIN}/v2/${op}${query ? '?' + new URLSearchParams(query) : ''}`;
@@ -64,11 +71,15 @@ if (!node.role) {
   log(`layout applied (node ${node.id.slice(0, 16)}…, ${CAPACITY} bytes)`);
 } else log('layout already set');
 
-// 2. bucket
-let bucket = await call('GET', 'GetBucketInfo', { query: { globalAlias: BUCKET } });
-if (bucket.status === 200) { bucket = bucket.data; log(`bucket ${BUCKET} exists`); }
-else { bucket = await must('POST', 'CreateBucket', { body: { globalAlias: BUCKET } }); log(`bucket ${BUCKET} created`); }
-if (bucket.websiteAccess) throw new Error(`bucket ${BUCKET} has website (public) access enabled — refusing`);
+// 2. buckets (private)
+const buckets = {};
+for (const name of Object.keys(GRANTS)) {
+  let b = await call('GET', 'GetBucketInfo', { query: { globalAlias: name } });
+  if (b.status === 200) { b = b.data; log(`bucket ${name} exists`); }
+  else { b = await must('POST', 'CreateBucket', { body: { globalAlias: name } }); log(`bucket ${name} created`); }
+  if (b.websiteAccess) throw new Error(`bucket ${name} has website (public) access enabled — refusing`);
+  buckets[name] = b;
+}
 
 // 3. keys + permissions
 for (const k of KEYS) {
@@ -81,8 +92,11 @@ for (const k of KEYS) {
     await must('POST', 'ImportKey', { body: { accessKeyId: k.id, secretAccessKey: k.secret, name: k.name } });
     log(`key ${k.name} imported`);
   }
-  await must('POST', 'DenyBucketKey', { body: { bucketId: bucket.id, accessKeyId: k.id, permissions: k.deny } });
-  await must('POST', 'AllowBucketKey', { body: { bucketId: bucket.id, accessKeyId: k.id, permissions: k.allow } });
-  log(`key ${k.name}: ${Object.keys(k.allow).join('+')} on ${BUCKET}`);
+  for (const [name, perKey] of Object.entries(GRANTS)) {
+    const g = perKey[k.name];
+    await must('POST', 'DenyBucketKey', { body: { bucketId: buckets[name].id, accessKeyId: k.id, permissions: g.deny } });
+    await must('POST', 'AllowBucketKey', { body: { bucketId: buckets[name].id, accessKeyId: k.id, permissions: g.allow } });
+    log(`key ${k.name}: ${Object.keys(g.allow).join('+')} on ${name}`);
+  }
 }
 log('done');

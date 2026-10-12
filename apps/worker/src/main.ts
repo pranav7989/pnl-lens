@@ -16,6 +16,8 @@ import { s3WorkerStorage } from './storage.js';
 import { runEngineIsolated } from './engine-runner.js';
 import { engineVersion } from './engine-version.js';
 import { createAnalysisWorker } from './queue-worker.js';
+import { DATA_QUEUE, type ExportJobData } from '@pnl-lens/shared/jobs';
+import { processExport, failExport, sweepExports } from './export.js';
 import { nightly, sweepStorage } from './maintenance.js';
 
 const MAINTENANCE_QUEUE = 'maintenance';
@@ -34,12 +36,24 @@ const deps = {
 
 const analyses = createAnalysisWorker(deps, pool, connection, { concurrency: cfg.concurrency, lockDurationMs: Math.max(60_000, cfg.engineTimeoutMs * 2), log });
 
+// "Export my data" requests (Phase 7): one at a time; final failure marks the request failed.
+const exportsWorker = new Worker<ExportJobData>(DATA_QUEUE, async (job) => {
+  const outcome = await processExport({ db, storage, keks: cfg.keks, currentKek: cfg.currentKek }, job.data.requestId, job.id);
+  log('export_done', { requestId: job.data.requestId, outcome });
+  return { outcome };
+}, { connection, concurrency: 1, lockDuration: 300_000 });
+exportsWorker.on('failed', async (job, err) => {
+  if (!job || job.attemptsMade < (job.opts.attempts ?? 1)) return;
+  log('export_dead_letter', { requestId: job.data.requestId, error: err.message });
+  await failExport(db, job.data.requestId).catch(() => {});
+});
+
 // Schedules (02:00 IST nightly purge; storage sweep every 15 minutes). Upserting is idempotent across restarts.
 const maintenanceQueue = new Queue(MAINTENANCE_QUEUE, { connection });
 await maintenanceQueue.upsertJobScheduler('nightly-purge', { pattern: '0 2 * * *', tz: 'Asia/Kolkata' }, { name: 'nightly' });
 await maintenanceQueue.upsertJobScheduler('storage-sweep', { every: 15 * 60_000 }, { name: 'sweep' });
 const maintenance = new Worker(MAINTENANCE_QUEUE, async (job) => {
-  const result = job.name === 'nightly' ? await nightly(db, storage) : await sweepStorage(db, storage);
+  const result = job.name === 'nightly' ? await nightly(db, storage) : { files: await sweepStorage(db, storage), exports: await sweepExports(db, storage) };
   log(`maintenance_${job.name}`, { result });
   return result;
 }, { connection, concurrency: 1 });
@@ -81,6 +95,7 @@ const shutdown = async () => {
   server.close();
   await analyses.close().catch(() => {});                              // lets running jobs finish
   await maintenance.close().catch(() => {});
+  await exportsWorker.close().catch(() => {});
   await maintenanceQueue.close().catch(() => {});
   await db.destroy().catch(() => {});
   connection.disconnect();

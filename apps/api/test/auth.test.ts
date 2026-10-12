@@ -116,6 +116,30 @@ describe.skipIf(!ok)('auth, me and privacy routes', () => {
     const e2 = await x.app.inject({ method: 'POST', url: '/api/v1/me/export', headers: h });
     expect(e1.statusCode).toBe(202);
     expect(e2.json().request.id).toBe(e1.json().request.id);
+    const id = e1.json().request.id;
+    expect(x.queue.exports).toContain(id);
+    // not ready yet
+    expect((await x.app.inject({ method: 'GET', url: `/api/v1/me/export/${id}`, headers: h })).json().error).toBe('not_ready');
+    // what the worker does: an encrypted archive in the exports bucket, keys on the request row
+    const { encryptFile } = await import('@pnl-lens/shared/file-crypto');
+    const { KEK } = await import('./helpers.js');
+    const zipBytes = Buffer.from('PK\u0003\u0004 fake archive bytes');
+    const enc = encryptFile(zipBytes, KEK);
+    x.storage.exports.set('x/test', enc.body);
+    await x.t.admin.query(`update data_requests set status = 'done', result_key = 'x/test', enc_key_id = $2, wrapped_dek = $3, iv = $4, size_bytes = $5, completed_at = now(), expires_at = now() + interval '7 days' where id = $1`,
+      [id, enc.encKeyId, enc.wrappedDek, enc.iv, zipBytes.length]);
+    const list = (await x.app.inject({ method: 'GET', url: '/api/v1/me/exports', headers: h })).json().exports;
+    expect(list[0]).toMatchObject({ id, status: 'done', downloadable: true, sizeBytes: zipBytes.length });
+    const dl = await x.app.inject({ method: 'GET', url: `/api/v1/me/export/${id}`, headers: h });
+    expect(dl.statusCode).toBe(200);
+    expect(dl.headers['content-type']).toBe('application/zip');
+    expect(dl.rawPayload.equals(zipBytes)).toBe(true);
+    expect((await x.t.admin.query(`select count(*)::int as n from audit_log where action = 'data_export_downloaded' and user_id = $1`, [u])).rows[0].n).toBe(1);
+    // nobody else can download it; after 7 days it is gone
+    const other = await as(await makeUser(x.t));
+    expect((await x.app.inject({ method: 'GET', url: `/api/v1/me/export/${id}`, headers: other })).statusCode).toBe(404);
+    await x.t.admin.query(`update data_requests set expires_at = now() - interval '1 second' where id = $1`, [id]);
+    expect((await x.app.inject({ method: 'GET', url: `/api/v1/me/export/${id}`, headers: h })).statusCode).toBe(410);
 
     expect((await x.app.inject({ method: 'POST', url: '/api/v1/me/delete', headers: h, payload: {} })).json().error).toBe('confirm_required');
     const del = await x.app.inject({ method: 'DELETE', url: '/api/v1/me', headers: h, payload: { confirm: true } });

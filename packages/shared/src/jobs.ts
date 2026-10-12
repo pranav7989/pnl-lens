@@ -8,3 +8,9 @@ export const ANALYSE_JOB = 'analyse';
 export interface AnalyseJobData { analysisId: string }
 /** Job id = analysis id: enqueueing the same analysis twice is a no-op (idempotent). */
 export const analyseJobId = (analysisId: string) => `analysis-${analysisId}`;
+
+/** "Export my data" requests (Phase 7): one job per data_requests row. */
+export const DATA_QUEUE = 'data-requests';
+export const EXPORT_JOB = 'export';
+export interface ExportJobData { requestId: string }
+export const exportJobId = (requestId: string) => `export-${requestId}`;

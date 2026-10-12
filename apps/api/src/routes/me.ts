@@ -10,8 +10,9 @@ import { clientCountry } from '@pnl-lens/shared/auth/request';
 import { SESSION_COOKIE } from '@pnl-lens/shared/auth/session';
 import { CONSENT_POLICY_VERSION, consentTextSha256 } from '@pnl-lens/shared/consent';
 import { userPlans, currentConsents, recordConsent, requestData, deleteAccount } from '@pnl-lens/db';
+import { decryptFile } from '@pnl-lens/shared/file-crypto';
 import type { App, Deps } from '../app.js';
-import { fail, ok, requireUser, sessionUser, asFetchLike, ipHash, ipOf } from '../lib/http.js';
+import { fail, ok, requireUser, sessionUser, asFetchLike, ipHash, ipOf, UUID } from '../lib/http.js';
 
 export async function meRoutes(app: App, deps: Deps) {
   /** Current user + credits; also records daily activity for DAU/MAU (same as GET /api/me). */
@@ -58,7 +59,37 @@ export async function meRoutes(app: App, deps: Deps) {
   app.post('/me/export', { schema: { tags: ['privacy'], summary: 'Request an export of my data', security: [{ session: [] }] } }, async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     const r = await requestData(deps.db, user.id, 'export');
+    await deps.queue.enqueueExport(r.id);
     return ok(reply, { request: { id: r.id, status: r.status, requestedAt: r.requested_at } }, 202);
+  });
+
+  /** My export requests, newest first, with whether the archive can still be downloaded (7 days). */
+  app.get('/me/exports', { schema: { tags: ['privacy'], summary: 'My data-export requests', security: [{ session: [] }] } }, async (req, reply) => {
+    const user = await requireUser(req, reply); if (!user) return;
+    const rows = await deps.db.selectFrom('data_requests').select(['id', 'status', 'requested_at', 'completed_at', 'expires_at', 'size_bytes', 'result_key'])
+      .where('user_id', '=', user.id).where('kind', '=', 'export').orderBy('requested_at', 'desc').limit(10).execute();
+    return ok(reply, { exports: rows.map((r) => ({
+      id: r.id, status: r.status, requestedAt: r.requested_at, completedAt: r.completed_at, expiresAt: r.expires_at,
+      sizeBytes: r.size_bytes == null ? null : Number(r.size_bytes),
+      downloadable: r.status === 'done' && !!r.result_key && !!r.expires_at && new Date(r.expires_at) > new Date(),
+    })) });
+  });
+
+  /** Download my export archive (owner only; decrypted on the fly; recorded in the audit log). */
+  app.get('/me/export/:id', { schema: { tags: ['privacy'], summary: 'Download my data export (ZIP)', security: [{ session: [] }], params: z.object({ id: z.string() }) } }, async (req, reply) => {
+    const user = await requireUser(req, reply); if (!user) return;
+    if (!UUID.test(req.params.id)) return fail(reply, 404, 'not_found');
+    const r = await deps.db.selectFrom('data_requests').select(['id', 'status', 'result_key', 'enc_key_id', 'wrapped_dek', 'iv', 'expires_at'])
+      .where('id', '=', req.params.id).where('user_id', '=', user.id).where('kind', '=', 'export').executeTakeFirst();
+    if (!r) return fail(reply, 404, 'not_found');
+    if (r.status !== 'done') return fail(reply, 409, 'not_ready', 'Your export is still being prepared. Try again in a minute.');
+    if (!r.result_key || !r.wrapped_dek || !r.iv || !r.expires_at || new Date(r.expires_at) <= new Date()) return fail(reply, 410, 'expired', 'This export has expired. Request a new one.');
+    const kek = deps.config.keks.all.get(r.enc_key_id || '');
+    if (!kek) throw new Error(`export key ${r.enc_key_id} is not configured`);
+    const zip = decryptFile(await deps.storage.getExport(r.result_key), r.iv, r.wrapped_dek, kek);
+    await deps.pool.query(`insert into public.audit_log (user_id, action, meta, ip) values ($1, 'data_export_downloaded', $2, $3::inet)`, [user.id, JSON.stringify({ request: r.id }), ipOf(req)]);
+    return reply.header('Content-Type', 'application/zip').header('Cache-Control', 'no-store')
+      .header('Content-Disposition', `attachment; filename="pnl-lens-export-${new Date().toISOString().slice(0, 10)}.zip"`).send(zip);
   });
 
   /** Closes the account now: reports, trades and files go; payments and consent proof stay (billing law). */

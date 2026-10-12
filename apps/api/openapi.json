@@ -334,6 +334,52 @@
         }
       }
     },
+    "/api/v1/me/exports": {
+      "get": {
+        "summary": "My data-export requests",
+        "tags": [
+          "privacy"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/me/export/{id}": {
+      "get": {
+        "summary": "Download my data export (ZIP)",
+        "tags": [
+          "privacy"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/me/delete": {
       "post": {
         "summary": "Delete my account and data",
