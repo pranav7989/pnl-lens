@@ -16,7 +16,8 @@ const COLS = 'id, created_at, expires_at, file_names, market, currency, trade_co
 const toSummary = (r: any): ReportSummary => ({
   id: r.id,
   createdAt: new Date(r.created_at).toISOString(),
-  expiresAt: new Date(r.expires_at).toISOString(),
+  // v2 reports never expire (expires_at = 'infinity', plan D4): new Date(Infinity) would throw
+  expiresAt: Number.isFinite(new Date(r.expires_at).getTime()) ? new Date(r.expires_at).toISOString() : '9999-12-31T00:00:00.000Z',
   fileNames: r.file_names,
   market: r.market,
   currency: r.currency ? String(r.currency).trim() : null,
