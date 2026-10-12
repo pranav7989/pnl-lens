@@ -32,7 +32,9 @@
     "db:test:down": "docker compose --env-file .env -f infra/compose.test.yml down -v",
     "test:db": "npm run test:db -w @pnl-lens/db",
     "test:e2e": "playwright test",
-    "stack:e2e": "docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.e2e.yml up -d --build --wait"
+    "stack:e2e": "docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.e2e.yml up -d --build --wait",
+    "audit:prod": "node infra/scripts/audit.mjs",
+    "check:secrets": "bash infra/scripts/check-secrets.sh"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

@@ -1,7 +1,7 @@
 /**
  * @file  packages/db/src/types.ts
  * @area  Database
- * @what  Kysely table types for the schema after migration 0017 (hand-written; every table is exercised through these types by test/db/*).
+ * @what  Kysely table types for the schema after migration 0018 (hand-written; every table is exercised through these types by test/db/*).
  */
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
 

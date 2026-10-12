@@ -6,6 +6,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { apiServer } from '@/lib/api-client';
+import { safeNext } from '@pnl-lens/shared/auth/next';
 import LoginForm from '@/components/auth/LoginForm';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,7 @@ export default async function Login(props: { searchParams: Promise<{ error?: str
   const searchParams = await props.searchParams;
   if (await getSessionUser()) redirect('/dashboard');
   const providers = await apiServer<{ google: boolean }>('/auth/providers');
-  const next = searchParams.next?.startsWith('/') && !searchParams.next.startsWith('//') ? searchParams.next : '/dashboard';
+  const next = safeNext(searchParams.next);
   return (
     <div className="panel center-card">
       <h3>Sign in or create an account</h3>

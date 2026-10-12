@@ -157,4 +157,18 @@ describe.skipIf(!ok)('privacy and retention', () => {
     expect(await asRole(t, 'lens_research', 'select * from research.subjects')).toHaveLength(0);
     await expectPgError(asRole(t, 'lens_app', 'select * from research.trades'), '42501');
   });
+
+  it('log retention: usage/error events after 12 months, audit and file-access logs after 24 months', async () => {
+    const { purgeLogs } = await import('../../src/queries/privacy.js');
+    const u = await makeUser(t);
+    await t.admin.query(`insert into events (user_id, name, created_at) values ($1, 'old', now() - interval '13 months'), ($1, 'new', now())`, [u]);
+    await t.admin.query(`insert into error_events (fingerprint, message, source, created_at) values ('f', 'old', 'server', now() - interval '13 months')`);
+    await t.admin.query(`insert into audit_log (user_id, action, created_at) values ($1, 'old', now() - interval '25 months'), ($1, 'kept', now() - interval '13 months')`, [u]);
+    await t.admin.query(`insert into file_access_log (file_id, actor_kind, action, created_at) values (gen_random_uuid(), 'system', 'read', now() - interval '25 months')`);
+    const r = await purgeLogs(t.worker);
+    expect(r).toMatchObject({ events: 1, error_events: 1, audit_log: 1, file_access_log: 1 });
+    expect((await t.admin.query(`select name from events where user_id = $1`, [u])).rows).toEqual([{ name: 'new' }]);
+    expect((await t.admin.query(`select action from audit_log where user_id = $1 and action in ('old', 'kept')`, [u])).rows).toEqual([{ action: 'kept' }]);
+    await expectPgError(asRole(t, 'lens_app', 'select purge_logs()'), '42501');
+  });
 });

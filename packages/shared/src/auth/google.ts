@@ -5,6 +5,7 @@
  */
 import crypto from 'node:crypto';
 import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose';
+import { safeNext } from './next';
 
 /**
  * "Sign in with Google" — OpenID Connect authorization-code flow with PKCE, state and nonce.
@@ -30,7 +31,7 @@ export async function startGoogle(origin: string, next: string) {
     client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: redirectUri(origin), response_type: 'code',
     scope: 'openid email profile', state, nonce, code_challenge: challenge, code_challenge_method: 'S256', prompt: 'select_account',
   }).toString();
-  const cookie = await new SignJWT({ state, nonce, verifier, next }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('10m').sign(secret());
+  const cookie = await new SignJWT({ state, nonce, verifier, next: safeNext(next) }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('10m').sign(secret());
   return { url: url.toString(), cookie };
 }
 
@@ -59,6 +60,6 @@ export async function finishGoogle(p: { origin: string; code: string; state: str
   if (payload.email_verified !== true || typeof payload.email !== 'string') throw new Error('email_not_verified');
   return {
     profile: { sub: String(payload.sub), email: payload.email.toLowerCase(), name: typeof payload.name === 'string' ? payload.name.slice(0, 120) : null },
-    next: typeof c.next === 'string' && c.next.startsWith('/') && !c.next.startsWith('//') ? c.next : '/dashboard',
+    next: safeNext(c.next),
   };
 }

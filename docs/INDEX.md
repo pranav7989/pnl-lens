@@ -81,7 +81,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 164 files._
+_Generated from file headers by `npm run docs:index` — 170 files._
 
 ### Pages
 
@@ -117,6 +117,7 @@ _Generated from file headers by `npm run docs:index` — 164 files._
 | `apps/web/components/auth/LogoutButton.tsx` | Log-out button. |
 | `apps/web/lib/auth/session.ts` | The signed-in user for server components, asked from the API (GET /api/v1/me with the visitor's cookie). |
 | `packages/shared/src/auth/google.ts` | Google OpenID Connect flow (PKCE, state, nonce, ID-token verification). |
+| `packages/shared/src/auth/next.ts` | safeNext(): the only way a "next" URL after sign-in is accepted — a path on this site, never another host. |
 | `packages/shared/src/auth/origin.ts` | Public origin for redirects behind the load balancer (APP_URL). |
 | `packages/shared/src/auth/otp.ts` | Email one-time codes: generation, hashing (HMAC), checks, email normalisation. |
 | `packages/shared/src/auth/pg-auth-store.ts` | Auth store on PostgreSQL (users, OTP codes, audit log); the connection is passed in (web pool or API pool). |
@@ -255,6 +256,7 @@ _Generated from file headers by `npm run docs:index` — 164 files._
 | `packages/db/migrations/0015_analysis_error_message.sql` | analyses.error_message: the engine's own user-facing text for a failed file (e.g. scanned PDF), shown word for word. |
 | `packages/db/migrations/0016_analysis_file_reports.sql` | Per-file dashboards: each statement's own report (ReportV1) for analyses with 2+ files, shown as file tabs next to "All files". |
 | `packages/db/migrations/0017_data_export.sql` | "Export my data": export_user_data(request) for the worker (only for a real export request in progress) and the archive's key columns. |
+| `packages/db/migrations/0018_log_retention.sql` | Retention for logs (privacy policy draft): product/error events after 12 months, audit and file-access logs after 24 months. |
 | `packages/db/optional/pg_cron.sql` | Optional: schedule the purge inside Postgres if pg_cron is available. |
 | `packages/db/scripts/seed-dev.mjs` | Applies seed.sql (dev user with credits) — only when SEED_DEV_DATA=true (set by infra/compose.dev.yml only). |
 | `packages/db/scripts/setup-roles.mjs` | Creates/updates the login roles lens_app and lens_worker with passwords from env (runs after migrations, as superuser). |
@@ -267,7 +269,7 @@ _Generated from file headers by `npm run docs:index` — 164 files._
 | `packages/db/src/queries/plans.ts` | Plans: the user's plan card (allowance, validity, statements per report) and the owner-only manual grant (D5). |
 | `packages/db/src/queries/privacy.ts` | Consent history, data export/delete requests, account deletion, and the scheduled purge/sweep jobs (worker). |
 | `packages/db/src/queries/reports.ts` | Reports (api, lens_app): claim an analysis, add files (file-set lock), rename, delete, MON-YY history, Progress history, trades. |
-| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0017 (hand-written; every table is exercised through these types by test/db/*). |
+| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0018 (hand-written; every table is exercised through these types by test/db/*). |
 
 ### Ops
 
@@ -276,10 +278,12 @@ _Generated from file headers by `npm run docs:index` — 164 files._
 | `apps/api/scripts/build.mjs` | Bundles apps/api with esbuild into dist/main.js: workspace packages (db, shared, engine/extract) inlined, npm dependencies left external. |
 | `apps/web/app/healthz/route.ts` | Liveness of the web container (Docker healthcheck). The web app has no database; readiness of the system is GET /api/v1/ready. |
 | `apps/worker/scripts/build.mjs` | Bundles the worker (dist/main.js) and the engine child process (dist/engine-child.js) with esbuild; engine_version fixed from the engine sources. |
+| `infra/scripts/audit.mjs` | Production dependency audit for CI: fails on high/critical advisories unless allow-listed with a reason and an end date (infra/security/audit-allowlist.json). |
 | `infra/scripts/gen-env.mjs` | Fills .env with random secrets for every stack variable that is missing. Never changes or prints existing values. |
 | `infra/scripts/storage-init.mjs` | One-off, idempotent Garage setup via its admin API: node layout, private bucket, and least-privilege S3 keys. |
 | `packages/db/scripts/migrate.mjs` | Applies packages/db/migrations in order (runs as the pre-deploy job). |
 | `packages/db/scripts/purge.mjs` | Nightly purge of expired reports (DigitalOcean scheduled job). |
+| `packages/db/scripts/rewrap-keys.mjs` | Key rotation: re-wraps every file and export key from older FILE_KEK_<ID>s to the current FILE_KEK_ID. Objects in storage are not touched. |
 | `packages/db/scripts/seed-admin-demo.mjs` | Fills a local database with demo admin data (refuses production). |
 | `scripts/gen-index.mjs` | Regenerates the file table in docs/INDEX.md from the @file/@area/@what headers. Run: npm run docs:index |
 
@@ -314,6 +318,7 @@ _Generated from file headers by `npm run docs:index` — 164 files._
 | `packages/db/test/db/migrations.test.ts` | Migrations apply from 0001 on an empty database and on top of a 0007 database with old data; the old web flow keeps working. |
 | `packages/db/test/db/plans.test.ts` | Server-side plan rules: create_report_from_analysis (all refusal reasons, races), file-set lock, owner-only manual grant, webhook replay. |
 | `packages/db/test/db/privacy.test.ts` | Rule 7 in the database: consents, 30-day file purge with key shredding, draft purge, report delete, account delete, research views. |
+| `packages/db/test/db/rewrap.test.ts` | Key rotation: rewrap-keys.mjs moves every file key from k1 to k2; files still decrypt; dry run changes nothing; re-running is safe. |
 | `packages/db/test/db/roles.test.ts` | Least privilege (rule 4): what lens_app, lens_worker, lens_research and PUBLIC can and cannot do after migration 0014. |
 | `packages/db/test/db/store.test.ts` | Worker store step on a real database: every golden report stored as payload + trades + metrics + traits in one transaction, idempotent. |
 | `packages/db/test/normalise.test.ts` | Engine output -> table rows, for every golden report (no database needed); file fingerprint matches the offline tool. |
@@ -322,6 +327,7 @@ _Generated from file headers by `npm run docs:index` — 164 files._
 | `packages/engine/test/engine.test.ts` | Engine: formats, accounting, symbols, auto-detection, combining files, progress. |
 | `packages/engine/test/extract.test.ts` | PDF, DOCX and legacy DOC reading matches the CSV originals. |
 | `packages/engine/test/golden.test.ts` | Engine parity: every fixture through the Node runner must equal the stored golden JSON byte for byte. |
+| `packages/shared/test/next.test.ts` | safeNext(): same-site paths pass; every off-site trick (//, /\, tabs/newlines, schemes) falls back. |
 | `packages/shared/test/otp.test.ts` | Email one-time code helpers. |
 | `packages/shared/test/payments.test.ts` | Razorpay checkout and webhook signature verification. |
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |

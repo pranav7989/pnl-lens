@@ -10,6 +10,9 @@ Run from the repo root (npm workspaces). Node 22.13+.
 | Engine only (formats, PDF/Word, behaviour, **golden parity**) | `npm test -w @pnl-lens/engine` | nothing |
 | Shared code (sign-in codes, Razorpay signatures, roles) | `npm test -w @pnl-lens/shared` | nothing |
 | **Browser end to end** (Playwright: email-code sign-in, upload with consent, loader, 5 tabs, "+", All files, rename, second device, remove, delete, wording) | `npm run stack:e2e` then `npm run test:e2e` | Docker; Chromium via `npx playwright install chromium`. `stack:e2e` restarts the stack in jwt mode (`infra/compose.e2e.yml`); `npm run stack:up` returns to dev mode |
+| Dependency audit (fails on unaccepted high/critical production advisories) | `npm run audit:prod` (allow-list with reasons and end dates: `infra/security/audit-allowlist.json`) | network |
+| Secret scan (git history + working tree) | `npm run check:secrets` (gitleaks, pinned image) | Docker |
+| Key rotation | part of `npm run test:db` (`packages/db/test/db/rewrap.test.ts`) | test Postgres |
 | Visual comparison (UI unchanged) | `node tests/visual/capture.mjs <dir>` before and after, then `node tests/visual/compare.mjs <before> <after>` | the stack running |
 | **API** (routes on real Postgres: sign-in, CSRF, uploads, limits, encryption, reports, credits, file-set lock, webhook replay, RBAC; plus type check, encryption, OpenAPI, rate limit) | `npm run db:test:up` then `npm test -w @pnl-lens/api` | the test Postgres for the route suites (they skip without it) |
 | **Worker** (all 22 golden cases through the real pipeline, byte-identical; failures cost no credit; idempotency; retries + dead letter on real Redis; hostile files; purge + sweep) | `npm run db:test:up` then `npm test -w @pnl-lens/worker` | test Postgres + Redis (DB/queue suites skip without them); builds `apps/worker/dist` first |

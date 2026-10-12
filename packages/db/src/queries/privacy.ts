@@ -57,6 +57,12 @@ export async function purgeDrafts(db: Db, limit = 1000): Promise<number> {
   return rows[0].n;
 }
 
+/** Log retention (0018): usage/error events after usageMonths, audit + file-access logs after auditMonths. */
+export async function purgeLogs(db: Db, usageMonths = 12, auditMonths = 24): Promise<Record<string, number>> {
+  const { rows } = await sql<{ r: Record<string, number> }>`select public.purge_logs(${usageMonths}::int, ${auditMonths}::int) as r`.execute(db);
+  return rows[0].r;
+}
+
 export async function purgeOtpCodes(db: Db): Promise<number> {
   const { rows } = await sql<{ n: number }>`select public.purge_otp_codes() as n`.execute(db);
   return rows[0].n;

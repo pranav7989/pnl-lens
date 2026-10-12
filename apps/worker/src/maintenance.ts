@@ -8,7 +8,7 @@
  * module then deletes the objects themselves: the api's storage key is write-only, so only the worker can.
  * Reports and trades are never purged by time (D4).
  */
-import { purgeRawFiles, purgeDrafts, purgeOtpCodes, filesToSweep, markObjectDeleted, type Db } from '@pnl-lens/db';
+import { purgeRawFiles, purgeDrafts, purgeOtpCodes, purgeLogs, filesToSweep, markObjectDeleted, type Db } from '@pnl-lens/db';
 import type { WorkerStorage } from './storage.js';
 import { sweepExports } from './export.js';
 
@@ -33,12 +33,14 @@ export async function sweepStorage(db: Db, storage: WorkerStorage, batch = 500):
   return { deleted, failed };
 }
 
-export interface NightlyResult { rawFiles: number; drafts: number; otpCodes: number; exports: number; sweep: SweepResult }
+export interface NightlyResult { rawFiles: number; drafts: number; otpCodes: number; exports: number; logs: Record<string, number>; sweep: SweepResult }
 
 export async function nightly(db: Db, storage: WorkerStorage): Promise<NightlyResult> {
   const rawFiles = await purgeRawFiles(db);
   const drafts = await purgeDrafts(db);
   const otpCodes = await purgeOtpCodes(db);
   const exports = await sweepExports(db, storage);
-  return { rawFiles, drafts, otpCodes, exports, sweep: await sweepStorage(db, storage) };
+  // log retention (privacy policy; periods are lawyer-confirmed values, overridable in env)
+  const logs = await purgeLogs(db, Number(process.env.RETENTION_USAGE_MONTHS || 12), Number(process.env.RETENTION_AUDIT_MONTHS || 24));
+  return { rawFiles, drafts, otpCodes, exports, logs, sweep: await sweepStorage(db, storage) };
 }

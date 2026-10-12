@@ -64,6 +64,29 @@ describe.skipIf(!ok)('auth, me and privacy routes', () => {
     expect(x.mail.filter((m) => m.to === email)).toHaveLength(0);
   });
 
+  it('a blocked or deleted account\'s session stops working at once', async () => {
+    const u = await makeUser(x.t);
+    const h = await as(u);
+    expect((await x.app.inject({ method: 'GET', url: '/api/v1/me', headers: h })).statusCode).toBe(200);
+    await x.t.admin.query(`update users set status = 'blocked' where id = $1`, [u]);
+    expect((await x.app.inject({ method: 'GET', url: '/api/v1/me', headers: h })).statusCode).toBe(401);
+    expect((await x.app.inject({ method: 'GET', url: '/api/v1/reports', headers: h })).statusCode).toBe(401);
+    await x.t.admin.query(`update users set status = 'active' where id = $1`, [u]);
+    await x.app.inject({ method: 'DELETE', url: '/api/v1/me', headers: h, payload: { confirm: true } });
+    expect((await x.app.inject({ method: 'GET', url: '/api/v1/me', headers: h })).statusCode).toBe(401);
+  });
+
+  it('Google sign-in never redirects off-site (next is checked)', async () => {
+    process.env.GOOGLE_CLIENT_ID = 'test-client'; process.env.GOOGLE_CLIENT_SECRET = 'test-secret';
+    try {
+      const r = await x.app.inject({ method: 'GET', url: '/api/v1/auth/google/start?next=' + encodeURIComponent('/\\evil.com') });
+      expect(r.statusCode).toBe(302);
+      const cookie = String(r.headers['set-cookie']).split(';')[0].split('=')[1];
+      const claims = JSON.parse(Buffer.from(cookie.split('.')[1], 'base64url').toString());
+      expect(claims.next).toBe('/dashboard');
+    } finally { delete process.env.GOOGLE_CLIENT_ID; delete process.env.GOOGLE_CLIENT_SECRET; }
+  });
+
   it('protected routes need a session: 401 with the old body', async () => {
     const r = await x.app.inject({ method: 'GET', url: '/api/v1/me' });
     expect(r.statusCode).toBe(401);

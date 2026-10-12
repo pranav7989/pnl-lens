@@ -22,7 +22,8 @@
     "./admin/telemetry": "./src/admin/telemetry.ts",
     "./payments/config": "./src/payments/config.ts",
     "./payments/razorpay": "./src/payments/razorpay.ts",
-    "./file-crypto": "./src/file-crypto.ts"
+    "./file-crypto": "./src/file-crypto.ts",
+    "./auth/next": "./src/auth/next.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

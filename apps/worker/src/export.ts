@@ -30,6 +30,8 @@ statements/          the original files you uploaded that are still stored
 Questions: support@pnllens.com
 `;
 
+// control characters are stripped on purpose (archive member names)
+// eslint-disable-next-line no-control-regex
 const safeName = (s: string) => s.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').slice(0, 120) || 'file';
 
 export async function processExport(deps: ExportDeps, requestId: string, jobId?: string): Promise<'done' | 'skipped'> {

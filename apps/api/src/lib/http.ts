@@ -31,8 +31,16 @@ export function asFetchLike(req: FastifyRequest) {
 /** Client IP: Fastify resolves X-Forwarded-For (trustProxy). Validated like the old clientIp(). */
 export const ipOf = (req: FastifyRequest) => (req.ip && /^[0-9a-f:.]+$/i.test(req.ip) ? req.ip : null);
 
+/**
+ * The signed-in user, or null. A valid token is not enough: the account must still be active, so blocking or
+ * deleting an account ends its sessions at once (the token itself lives 30 days).
+ */
 export async function sessionUser(req: FastifyRequest): Promise<SessionUser | null> {
-  return sessionFromToken(req.cookies?.[SESSION_COOKIE]);
+  const u = await sessionFromToken(req.cookies?.[SESSION_COOKIE]);
+  if (!u) return null;
+  const db = (req.server as any).deps.db as import('@pnl-lens/db').Db;     // fail closed: no DB, no session
+  const row = await db.selectFrom('users').select('status').where('id', '=', u.id).executeTakeFirst();
+  return row?.status === 'active' ? u : null;
 }
 
 /** For handlers: the signed-in user, or sends the old 401 and returns null. */

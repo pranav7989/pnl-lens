@@ -78,7 +78,7 @@ A **file** is one P&L statement or tradebook downloaded from your broker (Excel,
 
 To keep PnL Lens fast and safe for everyone, you agree not to:
 
-- run more than **20 analyses per day** or **3 at the same time** (limits may change, see below) **BUILD CHECK**
+- run more than **20 analyses per day** or **3 at the same time** (limits may change, see below) **BUILT ✓**
 - upload malware, files designed to harm our systems, or files that are not genuine broker statements
 - scrape, overload, probe or attack the Service, or bypass its limits or security
 - copy, resell or re-publish the Service or its reports as your own product, or use them to build a competing product
@@ -94,7 +94,7 @@ We may change usage limits to protect the Service. If a change reduces what a pa
 
 ## 9. Suspending or closing accounts
 
-- You can close your account at any time: **[Settings → Delete account]** **BUILD CHECK**. Closing an account does not refund unused plan fees (section 6).
+- You can close your account at any time: **Dashboard → Your data → Delete my account** **BUILT ✓**. Closing an account does not refund unused plan fees (section 6).
 - We may suspend or close an account that breaks these terms, or where the law requires it. Where reasonable, we will tell you first and give you the chance to download your reports. If we close the Service entirely, we will give at least **[30 days']** notice and refund the unused part of active plans. **LAWYER CHECK**
 
 ## 10. Availability and changes to the Service
