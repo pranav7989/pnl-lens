@@ -150,7 +150,7 @@ describe('through Caddy', () => {
 describe('worker', () => {
   it('is ready: Postgres as lens_worker, Redis, storage, queue consumer', () => {
     const r = dc('exec', '-T', 'worker', 'node', '-e', "fetch('http://127.0.0.1:4100/health').then(r=>r.text()).then(t=>console.log(t))");
-    expect(JSON.parse(r.out).checks).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok' });
+    expect(JSON.parse(r.out).checks).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok', engine: 'ok' });
   });
   it('runs in the pinned timezone Asia/Kolkata (plan D9)', () => {
     const r = dc('exec', '-T', 'worker', 'node', '-e', 'console.log(new Date(2024,0,1).getTimezoneOffset())');
@@ -306,7 +306,7 @@ describe('worker on the stack (Phase 5)', () => {
 
   it('worker is ready: Postgres as lens_worker, Redis, storage, queue', () => {
     const r = dc('exec', '-T', 'worker', 'node', '-e', "fetch('http://127.0.0.1:4100/health').then(r=>r.json()).then(j=>console.log(JSON.stringify(j.checks)))");
-    expect(JSON.parse(r.out)).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok' });
+    expect(JSON.parse(r.out)).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok', engine: 'ok' });
   });
   it('two statements uploaded through Caddy become a ready analysis equal to the golden combined report', async () => {
     const fd = new FormData();

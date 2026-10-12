@@ -76,7 +76,8 @@ export async function processAnalysis(deps: PipelineDeps, analysisId: string, jo
       await deps.db.insertInto('parse_runs').values(job.files.map((f) => ({ file_id: f.id, analysis_id: analysisId, engine_version: deps.engineVersion, outcome: 'timeout' as const, error_code: 'timeout' }))).execute();
       return fail('timeout', FAILURE_MESSAGES.timeout);
     }
-    return fail('too_complex', FAILURE_MESSAGES.too_complex);
+    if (r.kind === 'crashed' && r.oom) return fail('too_complex', FAILURE_MESSAGES.too_complex);
+    throw new Error(`engine child crashed (not a file problem): ${r.message}`);   // infrastructure: retried, then dead letter
   }
 
   const parseRuns = r.files.map((pf) => ({

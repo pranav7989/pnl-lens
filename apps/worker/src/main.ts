@@ -44,6 +44,16 @@ const maintenance = new Worker(MAINTENANCE_QUEUE, async (job) => {
   return result;
 }, { connection, concurrency: 1 });
 
+// ---- engine self-test: a broken image (missing parser library) must not report healthy -------------
+const SELFTEST = new TextEncoder().encode('symbol,trade_date,trade_type,quantity,price\nTEST,2025-01-06,buy,1,100\nTEST,2025-01-07,sell,1,110\n');
+let engineCheck = 'pending';
+const selfTest = async () => {
+  const r = await deps.runEngine({ files: [{ name: 'selftest.csv', data: SELFTEST }] });
+  engineCheck = r.ok && r.report?.m.n === 1 ? 'ok' : `failed:${r.ok ? 'unexpected_result' : r.message}`.slice(0, 200);
+  if (engineCheck !== 'ok') log('engine_selftest_failed', { result: engineCheck });
+};
+await selfTest().catch((e) => { engineCheck = `failed:${(e as Error).message}`.slice(0, 200); });
+
 // ---- health ---------------------------------------------------------------------
 let last: { ok: boolean; checks: Record<string, string>; at: string; engineVersion: string } = { ok: false, checks: {}, at: '', engineVersion: version };
 async function check() {
@@ -52,6 +62,7 @@ async function check() {
   try { checks.redis = (await connection.ping()) === 'PONG' ? 'ok' : 'bad_reply'; } catch { checks.redis = 'down'; }
   checks.storage = await storage.check();
   checks.queue = analyses.isRunning() ? 'ok' : 'stopped';
+  checks.engine = engineCheck;
   const ok = Object.values(checks).every((v) => v === 'ok');
   if (ok !== last.ok) log(ok ? 'ready' : 'not_ready', { checks });
   last = { ok, checks, at: new Date().toISOString(), engineVersion: version };

@@ -22,7 +22,7 @@ Status moves `queued` → `parsing` → `analysing` → `storing` → `ready` | 
 | Kind | Example | What happens |
 |---|---|---|
 | The file | unreadable or scanned PDF, no closed trades, parse longer than 60 s, parse out of memory, files purged after 30 days | `failed` with `error_code` (`read_error`, `no_closed_trades`, `timeout`, `too_complex`, `files_expired`) and the engine's own sentence (or a fixed text) in `error_message`. **Final: not retried** |
-| The infrastructure | storage or database down, a missing file key | The job throws; BullMQ retries it 3 times with exponential backoff. After the last attempt (the dead letter) the job stays in BullMQ's failed set for 7 days, the analysis becomes `failed` / `internal_error`, and the error is written to `error_events` (admin Errors tab) |
+| The infrastructure | storage or database down, a missing file key, the engine child dying for any reason other than running out of memory (for example a library missing from the image) | The job throws; BullMQ retries it 3 times with exponential backoff. After the last attempt (the dead letter) the job stays in BullMQ's failed set for 7 days, the analysis becomes `failed` / `internal_error`, and the error is written to `error_events` (admin Errors tab) |
 
 **A failed file never costs a credit.** A report can only be created from a `ready` analysis (`create_report_from_analysis`), and the plan allowance is spent only then.
 
@@ -37,11 +37,11 @@ Reports and trades are never purged by time (D4).
 
 ## engine_version
 
-Every derived row carries `engine_version` = `e1-` plus the first 12 hex characters of a SHA-256 over the engine sources (`engine.js`, `behaviour.js`, `extract.js`, `index.ts`, `node.ts`). The build script fixes it in the image; dev and tests compute it from the files. Any engine change gives a new version, so rows from an older engine can be found, and their files re-run while they still exist (`parse_runs`).
+Every derived row carries `engine_version` = `e1-` plus the first 12 hex characters of a SHA-256 over the engine sources (`engine.js`, `behaviour.js`, `extract.js`, `index.ts`, `node.ts`) and the engine's `package.json`, so a parser-library change (for example SheetJS) also gives a new version. The build script fixes it in the image; dev and tests compute it from the files. Any engine change gives a new version, so rows from an older engine can be found, and their files re-run while they still exist (`parse_runs`).
 
 ## Settings
 
-`DATABASE_URL` (lens_worker), `REDIS_URL`, `S3_*` (worker key: read and delete), `FILE_KEK_ID` and `FILE_KEK_<ID>` (every key still in use), `WORKER_CONCURRENCY` (2), `ENGINE_TIMEOUT_MS` (60000), `ENGINE_MEMORY_MB` (512). Health: `GET http://127.0.0.1:4100/health` inside the container.
+`DATABASE_URL` (lens_worker), `REDIS_URL`, `S3_*` (worker key: read and delete), `FILE_KEK_ID` and `FILE_KEK_<ID>` (every key still in use), `WORKER_CONCURRENCY` (2), `ENGINE_TIMEOUT_MS` (60000), `ENGINE_MEMORY_MB` (512). Health: `GET http://127.0.0.1:4100/health` inside the container. It checks the DB role, Redis, storage, the queue consumer, and an **engine self-test**: at start-up a two-line CSV goes through a real child process, so an image with a missing parser library never reports healthy.
 
 ## Code map
 
