@@ -48,6 +48,7 @@ Both files are git-ignored. `docker compose` refuses to start if a secret in `.e
 | `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` | api, worker | from compose | Object storage (Garage). The api's key is write-only |
 | `REDIS_URL` | api, worker | from compose | BullMQ queue and the rate-limit store |
 | `WORKER_CONCURRENCY` | worker | `2` | Analysis jobs at once per worker container |
+| `API_INTERNAL_URL` | web | `http://api:4000` | Where the website's server side reaches the API (private network); the web app has no DB or session secrets since Phase 6 |
 | `ENGINE_TIMEOUT_MS` / `ENGINE_MEMORY_MB` | worker | `60000` / `512` | Limits for the engine child process (a file past them fails as `timeout` / `too_complex`) |
 | `TEST_REDIS_PASSWORD` / `TEST_REDIS_PORT` | test services (`.env`) | random / `56379` | Throwaway Redis for the worker queue tests (`infra/compose.test.yml`) |
 | `DATABASE_URL`, `REDIS_URL`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | api / worker containers | built in `compose.dev.yml` from the values above | Per-service connection settings |

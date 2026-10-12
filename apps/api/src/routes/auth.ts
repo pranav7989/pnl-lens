@@ -111,6 +111,10 @@ export async function authRoutes(app: App, deps: Deps, opts: { googleCallbackOnl
     return reply.setCookie(OAUTH_COOKIE, cookie, { httpOnly: true, secure: true, sameSite: 'lax', path: OAUTH_PATH, maxAge: 600 }).redirect(url);
   });
 
+  /** Which sign-in methods are configured (the login page shows the Google button only when it works). */
+  app.get('/auth/providers', { schema: { tags: ['auth'], summary: 'Configured sign-in methods' } }, async (_req, reply) =>
+    ok(reply, { google: googleEnabled(), email: true }));
+
   /** POST — clears the session cookie. */
   app.post('/auth/logout', { schema: { tags: ['auth'], summary: 'Sign out' } }, async (_req, reply) =>
     reply.clearCookie(SESSION_COOKIE, { path: '/' }).send({ ok: true }));

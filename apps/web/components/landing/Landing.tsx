@@ -109,7 +109,7 @@ const PLAN_COPY: Record<string, { tag: string; per: string; feat: string[]; cta:
 
 const faq = (single: string, snapshot: string, region: Region) => [
   ['Which file should I upload?', 'Your broker’s P&L statement or tradebook, as Excel, CSV, PDF or Word. The tradebook gives the richest view because it includes the time of each trade.'],
-  ['Are my files stored?', 'No. Files are read inside your browser and never uploaded. Only the finished report is saved to your account, and it is removed when your plan’s access period ends.'],
+  ['Are my files stored?', 'Yes, safely. Your files are encrypted and processed on our secure servers to build your report. The original files are deleted automatically after 30 days, and you can delete your files, reports or whole account anytime.'],
   ['Do I need to connect my broker?', 'No. There is no broker login, password or API key. Download the file from your broker and add it here.'],
   ['Which brokers are supported?', region === 'IN' ? 'Indian brokers such as Zerodha, Dhan, Groww, Fyers, Upstox and Angel One; international brokers such as Interactive Brokers and Schwab; and crypto exchanges such as Binance and Coinbase. Columns are recognised automatically.' : 'US brokers such as Interactive Brokers, Schwab, Fidelity and Robinhood; European brokers such as Trading 212, DEGIRO, eToro and Saxo; and crypto exchanges such as Binance, Coinbase and Kraken. Columns are recognised automatically.'],
   ['Does PnL Lens give tips?', 'No. It never suggests trades. It only looks at trades you have already made and shows the patterns in them.'],
@@ -159,7 +159,7 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
               <a className="lp-btn lg" href={start}>Analyse my trades</a>
               <a className="lp-btn lg ghost" href="#report">See a sample report</a>
             </div>
-            <p className="lp-trustline">Private, read in your browser <span>/</span> Any broker, any market <span>/</span> No tips or signals</p>
+            <p className="lp-trustline">Private and encrypted <span>/</span> Any broker, any market <span>/</span> No tips or signals</p>
           </div>
           <figure className="lp-scan" aria-label="Example: PnL Lens reviewing a week of trades">
             <div className="lp-scan-head"><span>A week of trades</span><span className="muted">Example</span></div>
@@ -228,7 +228,7 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
           <header className="lp-head"><h2 className="lp-h2">Three steps. Two minutes.</h2><p className="lp-sub">No account linking, no setup, no waiting.</p></header>
           <ol className="lp-grid g3 lp-steps">
             <li className="lp-card" data-reveal><h3>Download</h3><p>Export your P&amp;L statement or tradebook from your broker.</p></li>
-            <li className="lp-card" data-reveal><h3>Add statements</h3><p>One file per broker statement. Read on your device.</p></li>
+            <li className="lp-card" data-reveal><h3>Add statements</h3><p>One file per broker statement. Encrypted on upload.</p></li>
             <li className="lp-card" data-reveal><h3>Review</h3><p>Your dashboard, insights and next steps, ready instantly.</p></li>
           </ol>
         </section>
@@ -236,7 +236,7 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
         <section className="lp-section">
           <header className="lp-head"><h2 className="lp-h2">Private and principled</h2><p className="lp-sub">Your data stays yours, and the review stays objective.</p></header>
           <div className="lp-grid g3">
-            <article className="lp-card" data-reveal><h3>Private by design</h3><p>Files are read in your browser. Reports are removed when your plan ends.</p></article>
+            <article className="lp-card" data-reveal><h3>Private by design</h3><p>Your files are encrypted, processed on our secure servers, and you can delete them anytime.</p></article>
             <article className="lp-card" data-reveal><h3>No broker access</h3><p>No passwords, no API keys, no connection to your account.</p></article>
             <article className="lp-card" data-reveal><h3>No tips, ever</h3><p>We describe what your trades show. Decisions remain yours.</p></article>
           </div>

@@ -25,7 +25,8 @@
     "./file-crypto": "./src/file-crypto.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "jose": "^5.9.0",

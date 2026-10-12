@@ -16,7 +16,7 @@ describe('OpenAPI', () => {
     const doc: any = JSON.parse(JSON.stringify(await openApiDocument()));
     const paths = Object.keys(doc.paths);
     for (const p of ['/api/v1/health', '/api/v1/ready', '/api/v1/auth/otp/request', '/api/v1/auth/otp/verify', '/api/v1/auth/google/start',
-      '/api/v1/auth/logout', '/api/v1/me', '/api/v1/plans', '/api/v1/me/consents', '/api/v1/me/export', '/api/v1/me/delete',
+      '/api/v1/auth/logout', '/api/v1/auth/providers', '/api/v1/me', '/api/v1/plans', '/api/v1/me/consents', '/api/v1/me/export', '/api/v1/me/delete',
       '/api/v1/analyses', '/api/v1/uploads', '/api/v1/analyses/{id}', '/api/v1/reports', '/api/v1/reports/{id}', '/api/v1/reports/{id}/files', '/api/v1/reports/{id}/files/remove',
       '/api/v1/reports/{id}/status', '/api/v1/payments/config', '/api/v1/payments/order', '/api/v1/payments/verify', '/api/v1/payments/webhook',
       '/api/v1/admin/metrics', '/api/v1/admin/roles', '/api/v1/admin/tickets', '/api/v1/admin/user', '/api/v1/admin/grants', '/api/v1/events', '/api/v1/errors']) {

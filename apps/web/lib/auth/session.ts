@@ -1,22 +1,16 @@
 /**
  * @file  apps/web/lib/auth/session.ts
  * @area  Auth
- * @what  Session cookie (signed JWT) read/write for Next route handlers; token logic lives in packages/shared/src/auth/session.ts.
+ * @what  The signed-in user for server components, asked from the API (GET /api/v1/me with the visitor's cookie).
  */
-import { cookies } from 'next/headers';
-import { sessionFromToken, createSessionToken, SESSION_COOKIE, sessionCookieOptions, type SessionUser } from '@pnl-lens/shared/auth/session';
+/**
+ * Since the Phase 6 cutover the API owns sessions (sign-in, the lens_session cookie, verification). The web app only
+ * asks who is signed in; it holds no session secret and no database access.
+ */
+import { getMe } from '@/lib/api-client';
 
-export { SESSION_COOKIE, SESSION_DAYS, sessionCookieOptions, createSessionToken, type SessionUser } from '@pnl-lens/shared/auth/session';
+export interface SessionUser { id: string; country: string | null }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  return sessionFromToken((await cookies()).get(SESSION_COOKIE)?.value);
-}
-
-/** Sets the session cookie on the current response (route handlers / server actions). */
-export async function issueSession(user: SessionUser) {
-  (await cookies()).set(SESSION_COOKIE, await createSessionToken(user), sessionCookieOptions);
-}
-
-export async function clearSession() {
-  (await cookies()).delete(SESSION_COOKIE);
+  return (await getMe())?.user ?? null;
 }

@@ -99,7 +99,10 @@ export async function reportRoutes(app: App, deps: Deps) {
     // file tabs: each statement with its own dashboard (2+ files); a single-file report's tab is the report itself
     const all = await reportFiles(deps.db, user.id, r.id);
     const files = all.map((f) => ({ id: f.id, name: f.name, position: f.position, stored: f.stored, report: all.length > 1 ? f.report : null }));
-    return ok(reply, { summary: sm, report: r.report, history, files });
+    // file places: how many statements this report's plan allows, and how many it has ever used (lock)
+    const sub = r.subscription_id ? await deps.db.selectFrom('subscriptions').select('files_per_report').where('id', '=', r.subscription_id).executeTakeFirst() : undefined;
+    const places = { total: sub?.files_per_report ?? files.length, used: r.used_fingerprints?.length ?? files.length };
+    return ok(reply, { summary: sm, report: r.report, history, files, places });
   });
 
   /** Rename (history only). An empty title clears it. */

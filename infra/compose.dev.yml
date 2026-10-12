@@ -35,18 +35,13 @@ services:
     image: pnl-lens/web:dev
     environment:
       <<: *tz
-      AUTH_MODE: dev
-      ALLOW_DEV_AUTH_IN_PROD: "true"          # dev stack only: the image runs NODE_ENV=production
-      STORE_DRIVER: pg
-      DATABASE_URL: postgres://lens_app:${LENS_APP_PASSWORD:?run npm run stack:env}@postgres:5432/lens
+      AUTH_MODE: dev                          # shows/hides the logout button only; the API owns sessions
+      API_INTERNAL_URL: http://api:4000       # server-side calls to the API (forwarding the visitor's cookie)
       APP_URL: http://localhost:${HTTP_PORT:-8080}
-      MAIL_DRIVER: console
-      PAYMENTS_MODE: "off"
-    # Transitional until the Phase 6 cutover: the web app still holds today's API routes and talks to
-    # Postgres directly, so it sits on the internal network too. After Phase 6 it is edge-only.
-    networks: [edge, internal]
+    # Since the Phase 6 cutover the web app has no database access and no API routes: edge network only.
+    networks: [edge]
     depends_on:
-      migrate: { condition: service_completed_successfully }
+      api: { condition: service_healthy }
     restart: unless-stopped
 
   api:

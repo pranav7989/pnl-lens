@@ -81,13 +81,13 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 200 files._
+_Generated from file headers by `npm run docs:index` — 158 files._
 
 ### Pages
 
 | File | What it does |
 |---|---|
-| `apps/web/app/layout.tsx` | Root layout: fonts (Manrope + ₹ glyph), header with logo and credits, browser error reporter. |
+| `apps/web/app/layout.tsx` | Root layout: fonts (Manrope + ₹ glyph), header with logo and credits (from the API), browser error reporter. |
 | `apps/web/app/not-found.tsx` | 404 page. |
 | `apps/web/components/nav/NavLinks.tsx` | Header navigation links (active-state aware). |
 
@@ -113,22 +113,9 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 | `apps/api/src/routes/me.ts` | GET /me (ported), GET /plans, consents (GET/POST /me/consents), POST /me/export, POST /me/delete and DELETE /me. |
 | `apps/web/app/(auth)/login/page.tsx` | Sign-in page: Google button + email one-time code (LoginForm). New users are created on first sign-in. |
 | `apps/web/app/(auth)/signup/page.tsx` | Redirects /signup to /login (one page for new and returning users). |
-| `apps/web/app/api/auth/google/callback/route.ts` | GET — finishes Google sign-in, verifies the ID token, links by verified email, sets the session. |
-| `apps/web/app/api/auth/google/start/route.ts` | GET — starts Google sign-in (OIDC + PKCE + state + nonce). |
-| `apps/web/app/api/auth/logout/route.ts` | POST — clears the session cookie. |
-| `apps/web/app/api/auth/otp/request/route.ts` | POST — emails a 6-digit sign-in code (rate-limited per email and per IP). |
-| `apps/web/app/api/auth/otp/verify/route.ts` | POST — checks the code (5 attempts, single use), creates/loads the user, sets the session cookie. |
-| `apps/web/app/api/me/route.ts` | GET /api/me — current user + credits; also records daily activity for DAU/MAU. |
 | `apps/web/components/auth/LoginForm.tsx` | Sign-in form: Google button + email code (two steps). |
 | `apps/web/components/auth/LogoutButton.tsx` | Log-out button. |
-| `apps/web/lib/auth/file-auth-store.ts` | Auth store on a local JSON file (development only). |
-| `apps/web/lib/auth/google.ts` | Re-export of @pnl-lens/shared/auth/google (moved to packages/shared in backend-v2 Phase 4 so apps/api uses the same code). |
-| `apps/web/lib/auth/origin.ts` | Re-export of @pnl-lens/shared/auth/origin (moved to packages/shared in backend-v2 Phase 4 so apps/api uses the same code). |
-| `apps/web/lib/auth/otp.ts` | Re-export of @pnl-lens/shared/auth/otp (moved to packages/shared in backend-v2 Phase 4 so apps/api uses the same code). |
-| `apps/web/lib/auth/pg-auth-store.ts` | Auth store on PostgreSQL: the shared PgAuthStore bound to the web app's pool. |
-| `apps/web/lib/auth/session.ts` | Session cookie (signed JWT) read/write for Next route handlers; token logic lives in packages/shared/src/auth/session.ts. |
-| `apps/web/lib/auth/store.ts` | Picks the auth store (file for local dev, Postgres in production). |
-| `apps/web/lib/auth/types.ts` | Re-export of @pnl-lens/shared/auth/types (moved to packages/shared in backend-v2 Phase 4 so apps/api uses the same code). |
+| `apps/web/lib/auth/session.ts` | The signed-in user for server components, asked from the API (GET /api/v1/me with the visitor's cookie). |
 | `packages/shared/src/auth/google.ts` | Google OpenID Connect flow (PKCE, state, nonce, ID-token verification). |
 | `packages/shared/src/auth/origin.ts` | Public origin for redirects behind the load balancer (APP_URL). |
 | `packages/shared/src/auth/otp.ts` | Email one-time codes: generation, hashing (HMAC), checks, email normalisation. |
@@ -142,25 +129,19 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 |---|---|
 | `apps/api/src/routes/analyses.ts` | POST /analyses (alias /uploads): consent, type sniffing, size/plan/D11 limits, encrypt, store, queue. GET /analyses/:id and /reports/:id/status. |
 | `apps/api/src/routes/reports.ts` | Reports: list (MON-YY history), save an analysis (spends one report from a valid plan), "+" add files (file-set lock), get, rename, delete. |
-| `apps/web/app/(app)/dashboard/page.tsx` | Signed-in dashboard: list of saved reports, expiry countdown, credits. |
-| `apps/web/app/(app)/report/[id]/page.tsx` | One saved report: loads the report JSON (owner only) and renders ReportView; shows an expiry page when purged. |
-| `apps/web/app/(app)/upload/page.tsx` | Upload page wrapper: renders UploadClient (browser-side parsing and analysis). |
-| `apps/web/app/api/reports/[id]/route.ts` | GET one report / DELETE (soft-delete: payload nulled, row kept for billing history). |
-| `apps/web/app/api/reports/route.ts` | GET list / POST create report. POST validates the JSON and spends one credit atomically (create_report_with_credit). |
-| `apps/web/components/DeleteReportButton.tsx` | Delete-report button with confirmation. |
-| `apps/web/components/ReportView.tsx` | Mounts the shared report renderer (lib/report-ui/render.js) and adds CSV/PDF/delete actions. |
-| `apps/web/components/UploadClient.tsx` | Upload flow: pick files, parse in a Web Worker (PDFs via pdf.js), preview, save (spends a credit). |
-| `apps/web/lib/api/validate.ts` | Validates report JSON posted by the browser before it is stored. |
-| `apps/web/lib/store/file-store.ts` | Report store on a local JSON file (development only). |
-| `apps/web/lib/store/index.ts` | Picks the report store (file or Postgres). |
-| `apps/web/lib/store/pg-store.ts` | Report store on PostgreSQL (credits, reports, purge, delete). |
-| `apps/web/lib/store/types.ts` | Report store interface. |
+| `apps/web/app/(app)/dashboard/page.tsx` | Signed-in dashboard: plan card, report history grouped by month (MON-YY) with rename, credits. |
+| `apps/web/app/(app)/report/[id]/page.tsx` | One report in the workspace: file tabs, All files, +, ×, the five dashboard tabs; a "deleted" page once removed. |
+| `apps/web/app/(app)/upload/page.tsx` | New report: the workspace upload view (consent, files, loader; the API and worker read the files). |
+| `apps/web/components/workspace/History.tsx` | Report history grouped by month (MON-YY) with Progress score; rename in the history list only (PATCH /api/v1/reports/:id). |
+| `apps/web/components/workspace/model.ts` | Workspace data types (from the API) and the offline tool's wording, labels and plan rules, kept word for word. |
+| `apps/web/components/workspace/PlanCard.tsx` | Plan card (sidebar) and plan strip (upload view): reports used, statements per report, valid till MON-YY — as in the offline tool. |
+| `apps/web/components/workspace/Workspace.tsx` | The report workspace (ported from the offline tool, now on the API): upload with consent, loader, file tabs + All files, "+" and ×, plan card, MON-YY history. |
+| `apps/web/lib/workspace-data.ts` | Server-side loaders for the workspace pages: my plans and my report history from the API, in the shapes the workspace uses. |
 
 ### Engine
 
 | File | What it does |
 |---|---|
-| `apps/web/workers/analyze.worker.ts` | Web Worker: parses spreadsheets/Word files and runs the engine off the main thread. |
 | `packages/engine/src/behaviour.js` | 100 behavioural traits (data-triggered) and per-tile "now vs ideal" hover text. |
 | `packages/engine/src/engine.js` | Analysis engine: column detection (incl. automatic inference), trade rebuilding, clusters, leaks, rules, progress. Runs in the browser. |
 | `packages/engine/src/extract.js` | Reads PDF (pdf.js), Word .docx/.doc and RTF into table rows for the engine. |
@@ -180,14 +161,8 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 | File | What it does |
 |---|---|
 | `apps/api/src/routes/payments.ts` | Payments ported from apps/web/app/api/payments/*: config, order, verify, and the Razorpay webhook (the ONLY place a plan is granted). |
-| `apps/web/app/api/payments/config/route.ts` | GET — active payment mode and per-plan link availability for the pricing page. |
-| `apps/web/app/api/payments/order/route.ts` | POST { planId } — off: 503 · link: pasted Razorpay URL · razorpay: creates an Order for Checkout. |
-| `apps/web/app/api/payments/verify/route.ts` | POST — verifies the Checkout signature and marks the payment authorized (plan is granted by the webhook). |
-| `apps/web/app/api/payments/webhook/route.ts` | POST — Razorpay webhook. Verifies signature; payment.captured/order.paid grant the plan (idempotent). |
 | `apps/web/app/pricing/page.tsx` | Pricing page: 4 plans priced by country, each with a BuyButton (off / link / razorpay modes). |
-| `apps/web/components/payments/BuyButton.tsx` | Buy button for every payment mode: opening soon / Razorpay link / Razorpay Checkout. |
-| `apps/web/lib/payments/config.ts` | PAYMENTS_MODE switch (off \| link \| razorpay) and pasted Razorpay links. |
-| `apps/web/lib/payments/razorpay.ts` | Re-export of @pnl-lens/shared/payments/razorpay (moved to packages/shared in backend-v2 Phase 4 so apps/api uses the same code). |
+| `apps/web/components/payments/BuyButton.tsx` | Buy button for both payment modes: opening soon / Razorpay Checkout (link mode removed, plan D5). |
 | `packages/shared/src/payments/config.ts` | PAYMENTS_MODE for backend v2 (off \| razorpay; link mode removed, plan D5) and the Razorpay keys. |
 | `packages/shared/src/payments/razorpay.ts` | Razorpay Orders API, Checkout signature and webhook signature verification (no SDK). |
 | `packages/shared/src/pricing.ts` | Plans and prices (single source of truth): reports, statements per report, validity, ₹/$ by country. |
@@ -198,18 +173,9 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 |---|---|
 | `apps/api/src/routes/admin.ts` | Admin console API ported from apps/web/app/api/admin/* (role read from the DB each request, every read audited) plus the owner-only manual plan grant (D5). |
 | `apps/api/src/routes/telemetry.ts` | POST /events (allow-listed product events) and POST /errors (browser errors), ported from apps/web; always 204. |
-| `apps/web/app/admin/page.tsx` | Admin console route (/admin). Staff only; role read from the database; renders AdminConsole with the role's tabs. |
-| `apps/web/app/api/admin/metrics/route.ts` | GET ?tab=users\|finance\|errors\|support\|product — metrics for one admin tab (permission checked per tab). |
-| `apps/web/app/api/admin/roles/route.ts` | POST — assign a role (owners: any; admins: not owner; nobody changes their own). |
-| `apps/web/app/api/admin/tickets/route.ts` | PATCH — update a support ticket status/notes. |
-| `apps/web/app/api/admin/user/route.ts` | GET ?email= — support lookup: profile, likely cause and full timeline for one user. |
-| `apps/web/app/api/errors/route.ts` | POST — browser errors for the admin error center. |
-| `apps/web/app/api/events/route.ts` | POST — allow-listed product events from the browser (upload failures, tab views…). |
+| `apps/web/app/admin/page.tsx` | Admin console page: staff only (role from the API, read from the database on every request). |
 | `apps/web/components/admin/AdminConsole.tsx` | Admin console UI: Users, Finance, Errors, Support, Product tabs (shown per role). |
-| `apps/web/components/ErrorReporter.tsx` | Sends browser errors to /api/errors (max 5 per page load). |
-| `apps/web/lib/admin/queries.ts` | SQL behind each admin tab, from packages/shared/src/admin/queries.ts, bound to the web app's pool. |
-| `apps/web/lib/admin/rbac.ts` | requirePerm() guard for web admin routes; the roles and permissions live in packages/shared/src/admin/rbac.ts. |
-| `apps/web/lib/admin/telemetry.ts` | Product events and error capture (best-effort; never breaks a request), bound to the web app's pool. |
+| `apps/web/components/ErrorReporter.tsx` | Sends browser errors to /api/v1/errors (max 5 per page load). |
 | `packages/shared/src/admin/queries.ts` | SQL behind each admin tab (DAU/MAU, revenue, errors, tickets, product). |
 | `packages/shared/src/admin/rbac.ts` | Roles and permissions (owner, admin, support, finance, analyst): the rules only. The guards live in apps/web and apps/api. |
 | `packages/shared/src/admin/telemetry.ts` | Product events and error capture over an injected connection (best-effort; never breaks a request). |
@@ -245,11 +211,9 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 
 | File | What it does |
 |---|---|
-| `apps/web/lib/api/http.ts` | API helpers: json(), fail(), requireUser(). |
+| `apps/web/lib/api-browser.ts` | Browser-side calls to the API (/api/v1 on the same site): JSON helper and multipart upload; errors keep the API's { error, message }. |
+| `apps/web/lib/api-client.ts` | How the website talks to the API: server components call it over the private network with the visitor's cookie; the browser calls /api/v1 on the same site. |
 | `apps/web/lib/auth/country.ts` | Visitor country for server components (Cloudflare CF-IPCountry / CloudFront / X-Country). |
-| `apps/web/lib/auth/request.ts` | Re-export of @pnl-lens/shared/auth/request (moved to packages/shared in backend-v2 Phase 4 so apps/api uses the same code). |
-| `apps/web/lib/db.ts` | PostgreSQL connection pool with SSL + CA certificate support (DigitalOcean / RDS). |
-| `apps/web/lib/mail/index.ts` | Re-export of @pnl-lens/shared/mail (moved to packages/shared in backend-v2 Phase 4 so apps/api uses the same code). |
 | `packages/shared/src/auth/request.ts` | Client IP and country for API routes. |
 | `packages/shared/src/consent.ts` | Upload consent wording (plan D2, W9/W10) and its version; the hash of the exact text is stored with each consent row. |
 | `packages/shared/src/db.ts` | Minimal query interface (pg.Pool / pg.Client satisfy it) so shared SQL helpers work with the web pool and the API pool. |
@@ -265,6 +229,7 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 | `apps/web/app/globals.css` | Base app styles: colours, header, panels, buttons, forms, print rules. |
 | `apps/web/app/landing.css` | Landing page styles: one system of centred titles, equal cards, sample dashboard, plans. |
 | `apps/web/app/report.css` | Report, Progress tab, analysing loader and admin console styles (shared by website and offline tool). |
+| `apps/web/app/workspace.css` | Workspace styles (file tabs, All files, +, plan card, MON-YY history with rename, lock message), ported from the offline tool. |
 
 ### Database
 
@@ -305,9 +270,7 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 | File | What it does |
 |---|---|
 | `apps/api/scripts/build.mjs` | Bundles apps/api with esbuild into dist/main.js: workspace packages (db, shared, engine/extract) inlined, npm dependencies left external. |
-| `apps/web/app/api/cron/purge/route.ts` | POST /api/cron/purge — optional HTTP trigger for the nightly purge (needs CRON_SECRET). The scheduled job uses scripts/purge.mjs. |
-| `apps/web/app/api/health/route.ts` | GET /api/health — liveness check used by DigitalOcean App Platform. |
-| `apps/web/scripts/copy-pdf-worker.mjs` | postinstall: copies the pdf.js worker into public/. |
+| `apps/web/app/healthz/route.ts` | Liveness of the web container (Docker healthcheck). The web app has no database; readiness of the system is GET /api/v1/ready. |
 | `apps/worker/scripts/build.mjs` | Bundles the worker (dist/main.js) and the engine child process (dist/engine-child.js) with esbuild; engine_version fixed from the engine sources. |
 | `infra/scripts/gen-env.mjs` | Fills .env with random secrets for every stack variable that is missing. Never changes or prints existing values. |
 | `infra/scripts/storage-init.mjs` | One-off, idempotent Garage setup via its admin API: node layout, private bucket, and least-privilege S3 keys. |
@@ -337,10 +300,6 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 | `apps/api/test/payments-admin.test.ts` | Payments (off mode, Checkout verify, webhook signature, replay idempotency, legacy path) and admin RBAC (tabs, roles, audit, owner-only grant). |
 | `apps/api/test/sniff.test.ts` | Upload type check: every engine fixture is accepted with the engine's kind; executables, images, wrong ZIPs and binaries posing as CSV are refused. |
 | `apps/api/test/uploads.test.ts` | Uploads and reports on real Postgres: consent, type/size/plan/D11 limits, encryption at rest, queueing, status, save (credits), "+" lock, rename, delete. |
-| `apps/web/tests/otp.test.ts` | Email one-time code helpers. |
-| `apps/web/tests/payments.test.ts` | Razorpay checkout and webhook signature verification. |
-| `apps/web/tests/pg-store.test.ts` | PostgreSQL store integration (needs TEST_DATABASE_URL). |
-| `apps/web/tests/rbac.test.ts` | Role permissions and error fingerprinting. |
 | `apps/worker/test/global-setup.ts` | Builds the worker bundles once before the tests (the engine child process runs from dist/, as in the image). |
 | `apps/worker/test/helpers.ts` | Worker test helpers: encrypted uploads of real fixtures (as the API stores them), pipeline deps with the real engine child, golden cases. |
 | `apps/worker/test/hostile.test.ts` | Hostile files: a parse that runs too long is killed, one that exhausts memory crashes only its child; the worker carries on and the job fails cleanly. |
@@ -358,12 +317,11 @@ _Generated from file headers by `npm run docs:index` — 200 files._
 | `packages/engine/test/engine.test.ts` | Engine: formats, accounting, symbols, auto-detection, combining files, progress. |
 | `packages/engine/test/extract.test.ts` | PDF, DOCX and legacy DOC reading matches the CSV originals. |
 | `packages/engine/test/golden.test.ts` | Engine parity: every fixture through the Node runner must equal the stored golden JSON byte for byte. |
-| `tests/e2e/admin.py` | Browser E2E: admin console across all five roles. |
-| `tests/e2e/auth.py` | Browser E2E: email code + Google sign-in (with mock provider). |
-| `tests/e2e/flow.py` | Browser E2E: upload → report → dashboard → credits → delete → expiry. |
-| `tests/e2e/mock-google.mjs` | Mock Google OpenID provider used by the sign-in E2E. |
-| `tests/e2e/payments.py` | Payments E2E: off / link modes and the signed webhook path. |
-| `tests/e2e/v2.py` | Browser E2E: report tabs, hover cards, behaviour, clusters, PDF/Word uploads. |
+| `packages/shared/test/otp.test.ts` | Email one-time code helpers. |
+| `packages/shared/test/payments.test.ts` | Razorpay checkout and webhook signature verification. |
+| `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
+| `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
+| `tests/e2e-web/workspace.spec.ts` | Browser end to end on the stack: sign in → upload with consent → loader → report (5 tabs) → "+" → file tabs/All files → rename in history → second device → remove → delete. |
 | `tests/stack/stack.test.ts` | Dev stack checks: all services healthy, only Caddy published, internal network isolated, least-privilege DB/Redis/storage. |
 | `tests/visual/capture.mjs` | Screenshots of every page at 1440 and 390 px (before/after comparisons for "keep the UI exactly", rule 8). |
 | `tests/visual/compare.mjs` | Pixel comparison of two screenshot folders (from capture.mjs); writes diff images and prints the share of changed pixels per page. |

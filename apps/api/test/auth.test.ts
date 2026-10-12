@@ -32,7 +32,8 @@ describe.skipIf(!ok)('auth, me and privacy routes', () => {
     const cookie = set.split(';')[0];
     const me = await x.app.inject({ method: 'GET', url: '/api/v1/me', headers: { cookie } });
     expect(me.statusCode).toBe(200);
-    expect(me.json()).toMatchObject({ user: { id: expect.any(String) }, credits: 0 });
+    expect(me.json()).toMatchObject({ user: { id: expect.any(String) }, credits: 0, role: 'user' });
+    expect((await x.app.inject({ method: 'GET', url: '/api/v1/auth/providers' })).json()).toEqual({ google: false, email: true });
     // a used code cannot be used again
     expect((await post('/api/v1/auth/otp/verify', { email, code })).statusCode).toBe(401);
   });

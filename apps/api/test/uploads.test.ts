@@ -202,6 +202,7 @@ describe.skipIf(!ok)('uploads and reports', () => {
     const r = (await x.app.inject({ method: 'GET', url: `/api/v1/reports/${id}`, headers: h })).json();
     expect(r.files.map((f: any) => [f.name, f.stored, !!f.report])).toEqual([['zerodha_tradebook.csv', true, true], ['groww_pnl.csv', true, false]]);
     expect(r.files[0].report.m.n).toBe(golden('zerodha_tradebook_csv').m.n);
+    expect(r.places).toEqual({ total: 2, used: 2 });
 
     // remove the second statement: a new analysis over the first only, applied without spending a report
     const rm = await x.app.inject({ method: 'POST', url: `/api/v1/reports/${id}/files/remove`, headers: h, payload: { fileId: files[1].file_id } });

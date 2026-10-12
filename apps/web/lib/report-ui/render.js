@@ -180,7 +180,7 @@ export function mountReport(root, R, fmt) {
       goals: { now: 'Targets set from your weakest habits this month.', ideal: 'Work on one or two goals at a time. Small, steady improvements compound.' },
       heatmap: { now: 'Each habit scored month by month. Brighter cells are stronger habits.', ideal: 'Rows turning brighter from left to right, with no column suddenly dark.' },
       saved: { now: P.saved ? `Habit-related losses ${P.saved.total >= 0 ? 'fell' : 'rose'} by ${inr(Math.abs(P.saved.total))} since your first month.` : 'Needs two or more months of trades.', ideal: 'Habit-related losses shrinking every month, so more of each gain is kept.' },
-      checkups: { now: H.length ? `${H.length} check-up${H.length === 1 ? '' : 's'} saved on this device.` : 'No earlier check-ups saved yet.', ideal: 'A check-up every month, on the same day, with the full month\'s tradebook.' },
+      checkups: { now: H.length ? `${H.length} check-up${H.length === 1 ? '' : 's'} saved ${fmt.historyWhere || 'on this device'}.` : 'No earlier check-ups saved yet.', ideal: 'A check-up every month, on the same day, with the full month\'s tradebook.' },
     });
   }
   function ring(score, delta) {

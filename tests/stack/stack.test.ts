@@ -105,7 +105,7 @@ describe('exposure: only Caddy is reachable from outside the Docker networks', (
     const E = `${PROJECT}_edge`, I = INTERNAL;
     expect(nets('caddy')).toEqual([E]);
     expect(nets('api')).toEqual([E, I].sort());
-    expect(nets('web')).toEqual([E, I].sort());          // transitional until Phase 6
+    expect(nets('web')).toEqual([E]);                    // Phase 6: no database access, talks only to the api
     for (const s of ['worker', 'postgres', 'redis', 'garage']) expect(nets(s), s).toEqual([I]);
   });
   it('the worker cannot reach the internet', () => {
@@ -125,14 +125,18 @@ describe('through Caddy', () => {
     expect(await res.text()).toContain('PnL Lens');
     expect(res.headers.get('server')).toBeNull();
   });
-  it('web app health checks Postgres', async () => {
-    const res = await fetch(`${BASE}/api/health`);
-    expect(res.status).toBe(200);
+  it('every /api/* path goes to the API; the web app has no API routes or DB credentials (Phase 6)', async () => {
+    const me = await (await fetch(`${BASE}/api/me`)).json();           // old web route: now answered by the API (404 shape)
+    expect(me.error).toBeDefined();
+    const v1 = await (await fetch(`${BASE}/api/v1/me`)).json();
+    expect(v1.user.id).toBe('00000000-0000-0000-0000-000000000001');
+    const env = dc('exec', '-T', 'web', 'sh', '-c', 'env').out;
+    expect(env).not.toMatch(/DATABASE_URL|LENS_APP_PASSWORD|SESSION_SECRET|FILE_KEK/);
   });
-  it('web app reads the seeded dev user from Postgres (as lens_app)', async () => {
-    const me = await (await fetch(`${BASE}/api/me`)).json();
-    expect(me.user.id).toBe('00000000-0000-0000-0000-000000000001');
-    expect(typeof me.credits).toBe('number');
+  it('the web app renders pages from API data (the dev user\'s dashboard)', async () => {
+    const res = await fetch(`${BASE}/dashboard`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('Your reports stay here until you delete them.');
   });
   it('routes /api/v1/* to the API', async () => {
     const res = await fetch(`${BASE}/api/v1/health`);

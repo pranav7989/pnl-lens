@@ -13,8 +13,9 @@
 	encode zstd gzip
 	header -Server
 
-	# New API (Fastify). Until the Phase 6 cutover, the existing /api/* routes are still served by the web app.
-	handle /api/v1/* {
+	# Every /api/* request goes to the API (Fastify): /api/v1/* plus the two old external URLs it still answers
+	# (/api/payments/webhook for Razorpay, /api/auth/google/callback for Google). The web app has no API routes.
+	handle /api/* {
 		reverse_proxy api:4000
 	}
 	handle {

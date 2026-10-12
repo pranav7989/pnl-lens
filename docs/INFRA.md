@@ -7,9 +7,9 @@ Dev stack: `infra/compose.dev.yml` (Phase 2). Production compose, TLS, backups a
 host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──► api     (Fastify)
                                          └── everything ──► web     (Next.js)
   network edge      : caddy · web · api                       (has internet: email, Google, Razorpay)
-  network internal  : web* · api · worker · postgres · redis · garage · migrate · storage-init
+  network internal  : api · worker · postgres · redis · garage · migrate · storage-init
                       (Docker "internal: true" — no route to the internet)
-  * web is on internal only until the Phase 6 cutover (it still holds today's API routes + DB access)
+  web has no database access and no API routes (Phase 6): it calls the api at http://api:4000
 ```
 
 ## Services
@@ -17,7 +17,7 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 | Service | Image | Networks | Purpose |
 |---|---|---|---|
 | caddy | `caddy:2.11.4-alpine` | edge | Reverse proxy; the only published port. 35 MB body limit, no `Server` header, JSON access logs |
-| web | `infra/docker/web.Dockerfile` (node 22.23.2 alpine) | edge, internal | Next.js app (unchanged UI) |
+| web | `infra/docker/web.Dockerfile` (node 22.23.2 alpine) | edge | Next.js website (workspace UI); reads and writes through the api only |
 | api | `infra/docker/api.Dockerfile` (node 22.23.2 bookworm-slim) | edge, internal | Fastify API (`/api/v1`, see `docs/API.md`), bundled with esbuild |
 | worker | `infra/docker/worker.Dockerfile` (node 22.23.2 bookworm-slim) | internal | Job worker: engine in an isolated child process, store, purge and sweep (`docs/WORKER.md`). `TZ=Asia/Kolkata` (plan D9) |
 | postgres | `postgres:16.14-bookworm` | internal | Database `lens`. Apps log in as `lens_app` / `lens_worker`, never the superuser |
@@ -32,7 +32,7 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 |---|---|---|---|
 | api | `lens_app`: no DDL, no DELETE; since 0012 no direct writes to credits, subscriptions or report contents (only `title`); plans and reports change through SECURITY DEFINER functions | password | **write only**: can upload, cannot read back or list |
 | worker | `lens_worker` (0008–0013): reads jobs and file metadata, writes engine results, runs purge jobs; nothing on users, payments, credits, subscriptions, consents or reports | password | read + write (S3 needs write to delete for purge) |
-| web (until Phase 6) | `lens_app` | — | — |
+| web | none (no DB, no storage, no secrets) | — | — |
 | research (future) | `lens_research`: NOLOGIN; SELECT on the pseudonymised `research.*` views only (0014) | — | — |
 | anyone else | `PUBLIC` has no CONNECT on the database | refused | anonymous refused; bucket has no website/public access |
 
@@ -47,6 +47,7 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 | Stop (keeps data) | `npm run stack:down` |
 | Stop and **delete all data** | `docker compose --env-file .env -f infra/compose.dev.yml down -v` |
 | Rebuild api/worker on code change | `docker compose --env-file .env -f infra/compose.dev.yml watch` |
+| Browser e2e: restart in jwt mode, then run | `npm run stack:e2e` → `npm run test:e2e` (back to dev mode: `npm run stack:up`) |
 | Database, API and worker tests (throwaway Postgres on 127.0.0.1:55432 and Redis on 127.0.0.1:56379) | `npm run db:test:up` → `npm run test:db` → `npm run db:test:down` |
 | Debug ports on 127.0.0.1 (Postgres 5432, Redis 6379, S3 3900) | add `-f infra/compose.dev.ports.yml` to the compose command |
 

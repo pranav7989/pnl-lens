@@ -20,15 +20,16 @@ Built in backend-v2 Phase 4. The web app still uses its own Next routes until th
 | Area | Method and path | Notes |
 |---|---|---|
 | Ops | `GET /health`, `GET /ready` | Ready checks Postgres (and that the role is `lens_app`), Redis and storage |
-| Auth | `POST /auth/otp/request`, `POST /auth/otp/verify`, `GET /auth/google/start`, `GET /auth/google/callback`, `POST /auth/logout` | Ported 1:1 |
-| Me | `GET /me` | `{ user, credits }`, unchanged |
+| Auth | `POST /auth/otp/request`, `POST /auth/otp/verify`, `GET /auth/google/start`, `GET /auth/google/callback`, `POST /auth/logout`, `GET /auth/providers` | Ported 1:1; providers tells the login page whether Google sign-in is configured |
+| Me | `GET /me` | `{ user, credits, role }` (role read from the DB; the web uses it for the admin page) |
 | Plans | `GET /plans` | Prices for the visitor's country (server-side); `mine` = the signed-in user's plans with usage and validity |
 | Uploads | `POST /analyses` (alias `POST /uploads`) | Multipart fields below. Answers `202 { analysisId, status: "queued" }` |
 | | `GET /analyses/:id` | `status`: `queued` → `parsing` → `analysing` → `storing` → `ready`, or `failed`. When ready, a `preview` with the numbers the upload screen shows. When failed, `message` is the engine's own sentence or the upload screen's text |
 | Reports | `GET /reports` | History, newest first. Each item has `monthLabel` (`MON-YY`), `title`, `progressScore`, and `expiresAt: null` for v2 reports (D4) |
 | | `POST /reports { analysisId, title? }` | Saves an analysis and spends one report from a valid plan. 402 `no_plan` / `plan_used_up` / `plan_expired` / `too_many_files` |
 | | `POST /reports/:id/files { analysisId }` | The "+" button: the report now shows the new analysis of its old and new statements. Spends nothing. 402 `report_files_full` (file-set lock) |
-| | `GET /reports/:id` | `{ summary, report, history }`; 410 `{ error: "expired" }` once deleted |
+| | `GET /reports/:id` | `{ summary, report, history, files, places }`: `files` = the statements with each one's own dashboard (2+ files), `places` = statements allowed / ever used (file-set lock); 410 `{ error: "expired" }` once deleted |
+| | `POST /reports/:id/files/remove { fileId }` | × in the workspace: re-analyses the other statements (202 + analysisId); apply with `POST /reports/:id/files`. The removed statement keeps its place |
 | | `GET /reports/:id/status` | The latest job for that report |
 | | `PATCH /reports/:id { title }` | Rename (history only) |
 | | `DELETE /reports/:id` | Removes the payload, trades and metrics, and shreds the files |
@@ -40,7 +41,7 @@ Built in backend-v2 Phase 4. The web app still uses its own Next routes until th
 | | `POST /me/delete` or `DELETE /me` with `{ confirm: true }` | Deletes the account now: reports, trades and files are removed; payments and consent proof are kept |
 | Telemetry | `POST /events`, `POST /errors` | Always 204 |
 
-The old external URLs `/api/payments/webhook` and `/api/auth/google/callback` are registered too, so the Razorpay dashboard and the Google console need no change. Caddy starts sending them to the API at the Phase 6 cutover.
+The old external URLs `/api/payments/webhook` and `/api/auth/google/callback` are registered too, so the Razorpay dashboard and the Google console need no change. Since the Phase 6 cutover Caddy sends every `/api/*` path to the API; the website has no API routes.
 
 ### Upload fields (`POST /analyses`)
 
