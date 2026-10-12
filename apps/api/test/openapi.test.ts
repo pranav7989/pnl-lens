@@ -40,4 +40,14 @@ describe('rate limits (no database needed)', () => {
       expect(r.json()).toMatchObject({ error: 'rate_limited' });
     } finally { await app.close(); }
   });
+
+  it('load-test exemption: only the listed IPs skip the limits', async () => {
+    const app = await offlineApp({ rateLimitExemptIps: ['198.51.100.0/24'] });
+    try {
+      const hit = (ip: string) => app.inject({ method: 'POST', url: '/api/v1/auth/otp/request', payload: { email: 'bad' }, headers: { origin: ORIGIN }, remoteAddress: ip });
+      for (let i = 0; i < 25; i++) expect((await hit('198.51.100.7')).statusCode).toBe(400);
+      for (let i = 0; i < 20; i++) await hit('203.0.113.10');
+      expect((await hit('203.0.113.10')).statusCode).toBe(429);
+    } finally { await app.close(); }
+  });
 });

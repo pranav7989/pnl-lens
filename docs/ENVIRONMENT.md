@@ -30,6 +30,7 @@ Everything lives in one `.env` file at the repo root (git-ignored). `npm run sta
 | `PRICING_DEFAULT_COUNTRY` | api, web | Price when the country is unknown (default `US`) |
 | `RESTIC_REPOSITORY` / `RESTIC_PASSWORD` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `backup.sh` | Off-site encrypted backups (e.g. DigitalOcean Spaces) |
 | `ALERT_EMAIL` | `healthcheck.sh` | Where uptime and disk alerts go |
+| `IMAGE_REGISTRY` | `deploy.sh` (prod) | Pull images `<registry>/<svc>:<tag>` built by GitHub Actions, e.g. `ghcr.io/<owner>/pnl-lens`; unset = build on the server |
 | `DOMAIN` / `TLS_MODE` | caddy (prod) | Site name; `cloudflare` (origin certificate in `infra/certs/`) or `internal` (self-signed, for the VM test) |
 
 ## Settings with defaults
@@ -39,6 +40,8 @@ Everything lives in one `.env` file at the repo root (git-ignored). `npm run sta
 | `TZ` | `Asia/Kolkata` (set in images) | Pinned server timezone (D9) |
 | `AUTH_MODE` | `jwt` in prod; `dev` in the dev stack | `dev` signs everyone in as the seeded dev user; never in production |
 | `WORKER_CONCURRENCY` / `ENGINE_TIMEOUT_MS` / `ENGINE_MEMORY_MB` | `2` / `60000` / `512` | Worker throughput and per-job engine limits |
+| `WORKER_MEM_LIMIT` | `2g` | Worker container memory (concurrency × engine memory + ~300 MB; `docs/LOAD_TEST.md`) |
+| `RATE_LIMIT_EXEMPT_IPS` | — | Load tests only (`infra/compose.load.yml`): IPs/CIDRs the rate limiter skips. `compose.prod.yml` never passes it |
 | `RETENTION_USAGE_MONTHS` / `RETENTION_AUDIT_MONTHS` | `12` / `24` | Log retention (`purge_logs`, LAWYER CHECK) |
 | `EXTRA_ALLOWED_ORIGINS` | — | More origins allowed to send state-changing requests |
 | `EXPOSE_OPENAPI` | `true` in dev only | Serves `/api/v1/openapi.json` |

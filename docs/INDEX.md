@@ -8,16 +8,20 @@ Start here. Every source file starts with a 3-line header (`@file`, `@area`, `@w
 |---|---|---|
 | 1 | `docs/INDEX.md` (this file) | Map of the code and where to change things |
 | 2 | `docs/ARCHITECTURE.md` | How the pieces fit, request flows, security model |
-| 3 | `docs/DEPLOYMENT_DIGITALOCEAN.md` | Step-by-step deployment for pnllens.com |
+| 3 | `docs/BACKEND_V2_PLAN.md` | The approved backend-v2 plan, decisions and the result of every phase |
 | 4 | `docs/ENVIRONMENT.md` | Every environment variable |
-| 5 | `docs/PAYMENTS_RAZORPAY.md` | Payment modes and the Razorpay integration (with official doc links) |
-| 6 | `docs/TESTING.md` | How to run every test suite |
-| 7 | `docs/HANDOFF_HISTORY.md` | Detailed change log and decisions |
-| 8 | `docs/BACKEND_V2_PLAN.md` | Plan for moving parsing/analysis to the server (backend-v2, approved; phase status inside) |
-| 9 | `docs/INFRA.md` | Docker Compose stack: services, networks, least privilege, secrets, commands |
-| 10 | `docs/API.md` | The API (`/api/v1`): conventions, every endpoint, upload fields, code map |
-| 11 | `docs/WORKER.md` | The worker: one job step by step, failure rules, schedules, settings |
-| 12 | `docs/legal/` | **Drafts, not in force:** Privacy Policy and Terms of Service for backend-v2, with LAWYER CHECK / BUILD CHECK markers |
+| 5 | `docs/TESTING.md` | How to run every test suite |
+| 6 | `docs/INFRA.md` | Docker Compose stacks: services, networks, least privilege, secrets, commands |
+| 7 | `docs/API.md` | The API (`/api/v1`): conventions, every endpoint, upload fields, code map |
+| 8 | `docs/WORKER.md` | The worker: one job step by step, failure rules, schedules, settings |
+| 9 | `docs/DEPLOYMENT_VM.md` | Production: DigitalOcean Droplet + Spaces + Cloudflare, step by step |
+| 10 | `docs/RUNBOOK.md` | Operating production: deploy, roll back, backups, restore, rotate secrets and keys, faults |
+| 11 | `docs/GO_LIVE_CHECKLIST.md` | What is left before launch (owner tasks, dated items, legal) |
+| 12 | `docs/PRIVACY_NOTES.md` | What is stored, where, for how long, who can read it (basis for the privacy policy) |
+| 13 | `docs/PAYMENTS_RAZORPAY.md` | Payment modes and the Razorpay integration |
+| 14 | `docs/LOAD_TEST.md` · `docs/RESTORE_DRILL.md` | Load-test results and the backup/restore rehearsal |
+| 15 | `docs/legal/` | **Drafts, not in force:** Privacy Policy and Terms of Service, with LAWYER CHECK / BUILD CHECK markers |
+| 16 | `docs/HANDOFF_HISTORY.md` | Change log and decisions from before backend-v2 |
 
 ## 2. Folder map
 
@@ -25,27 +29,20 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 
 | Folder | Contains |
 |---|---|
-| `apps/web/` | The Next.js app (unchanged behaviour; the engine still runs in the browser until Phase 6) |
-| `apps/web/app/` | Next.js routes: pages (`page.tsx`) and API endpoints (`api/**/route.ts`), global CSS, `icon.svg` |
-| `apps/web/components/` | React components: landing, upload, report view, admin console, auth, payments |
+| `apps/web/` | Next.js website. **No database access and no API routes**: pages call the API (`lib/api-client.ts` on the server with the visitor's cookie, `lib/api-browser.ts` in the browser) |
+| `apps/web/app/` | Pages: landing, pricing, login/signup, dashboard, upload (workspace), report, admin; global CSS and fonts |
+| `apps/web/components/` | React components: landing, workspace (upload, loader, file tabs, history, plan card, your data), admin console, auth, payments |
 | `apps/web/lib/report-ui/` | Report renderer + "analysing" loader (shared by website and offline tool) |
-| `apps/web/lib/auth/` | Sessions, email codes, Google sign-in, country detection |
-| `apps/web/lib/payments/` | Payment mode switch and Razorpay provider |
-| `apps/web/lib/admin/` | Roles/permissions, telemetry, admin SQL |
-| `apps/web/lib/store/` | Report storage (Postgres in production, JSON file locally) |
-| `apps/web/workers/` | Web Worker that parses files off the main thread |
 | `apps/web/offline/` | Builders for the single-file offline HTML (sites, tool, admin demo) |
-| `apps/web/tests/` | Web unit tests (sign-in codes, payments, roles, Postgres store) |
-| `packages/engine/` | The analysis engine, **moved unchanged** (`src/`), its Node runner (`src/node.ts`), tests, fixtures and **golden parity files** (`test/golden/`) |
-| `packages/shared/` | Plans and prices, limits, auth (codes, Google, sessions), payments, RBAC rules, telemetry, mail, consent text, file encryption, job names — used by web and api |
 | `apps/api/` | Fastify API (`/api/v1`): sign-in, uploads, reports, plans, payments, admin, privacy. See `docs/API.md` and `apps/api/openapi.json` |
-| `apps/worker/` | Job worker (BullMQ): decrypt, engine in an isolated child process, store; nightly purge and storage sweep. See `docs/WORKER.md` |
-| `packages/db/` | SQL migrations (run in order), seed for local dev, SQL tests, migrate / role-setup / purge / demo-data scripts |
-| `infra/` | Docker Compose stack (`compose.dev.yml`), Dockerfiles (`docker/`), `caddy/Caddyfile`, `garage/garage.toml`, setup scripts (`scripts/`) — see `docs/INFRA.md` |
+| `apps/worker/` | Job worker (BullMQ): decrypt, engine in an isolated child process, store; data exports; nightly purge and storage sweep. See `docs/WORKER.md` |
+| `packages/engine/` | The analysis engine, **moved unchanged** (`src/`), its Node runner (`src/node.ts`), tests, fixtures and **golden parity files** (`test/golden/`) |
+| `packages/db/` | SQL migrations (run in order), typed queries (Kysely), migrate / role-setup / purge / key-rotation / demo-data scripts, DB tests |
+| `packages/shared/` | Plans and prices, limits, auth (codes, Google, sessions, safe redirects), payments, RBAC rules, telemetry, mail, consent text, file encryption, job names |
+| `infra/` | Compose files (`compose.dev.yml`, `compose.prod.yml`, overlays for tests/e2e/load), Dockerfiles, Caddy (dev + prod), Garage, server scripts (`scripts/`: provision, deploy, backup, restore, healthcheck), audit allow-list and gitleaks config (`security/`) |
+| `.github/workflows/` | `ci.yml` (every push) and `deploy.yml` (`v*` tag → GHCR → server) |
+| `tests/` | `stack/` (running Docker stack), `e2e-web/` (Playwright), `load/` (k6), `visual/` (screenshot comparison) |
 | `scripts/` | Index generator |
-| `tests/e2e/` | Browser end-to-end tests (`*.py`) for the whole system |
-| `tests/stack/` | Stack tests against the running Docker stack (`npm run test:stack`) |
-| `.do/app.yaml` | DigitalOcean App Platform spec (stale; retired in backend-v2 Phase 8) |
 | `docs/` | All documentation |
 
 ## 3. Where do I change…?
@@ -53,35 +50,42 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 | I want to… | Edit |
 |---|---|
 | Prices, plans, reports per plan, statements per report | `packages/shared/src/pricing.ts` (and `apps/web/offline/app_offline.js` → `PLANS` for the offline tool) |
-| Turn payments on / paste Razorpay links | Environment: `PAYMENTS_MODE`, `PAYMENT_LINK_*` (see `docs/PAYMENTS_RAZORPAY.md`; link mode is removed in backend-v2) |
+| Turn payments on | `.env`: `PAYMENTS_MODE=razorpay` + `RAZORPAY_*` (`docs/PAYMENTS_RAZORPAY.md`) |
 | Landing page text (India / Global) | `apps/web/components/landing/Landing.tsx`, sample dashboard `apps/web/components/landing/Showcase.tsx` |
 | Landing look | `apps/web/app/landing.css` |
 | Report tabs, hover cards, Progress tab | `apps/web/lib/report-ui/render.js`, styles in `apps/web/app/report.css` |
-| Insight / leak / rule wording ⚠ engine | `packages/engine/src/engine.js` (search `buildLeaks`, `buildRules`) — any engine edit changes the goldens; see `docs/TESTING.md` |
+| Workspace (upload, "+", file tabs, history) | `apps/web/components/workspace/` |
+| Insight / leak / rule wording ⚠ engine | `packages/engine/src/engine.js` (search `buildLeaks`, `buildRules`). Any engine edit changes the goldens; see `docs/TESTING.md` |
 | Behavioural traits (100) ⚠ engine | `packages/engine/src/behaviour.js` |
 | Progress score, goals, badges ⚠ engine | `packages/engine/src/engine.js` → `buildProgress` |
 | Broker column names / detection ⚠ engine | `packages/engine/src/engine.js` → `SYN`, `matchHeader`, `inferTable` |
 | PDF / Word reading ⚠ engine | `packages/engine/src/extract.js` |
-| Sign-in emails | `apps/web/lib/mail/index.ts` |
-| Roles and who sees which admin tab | `apps/web/lib/admin/rbac.ts` |
-| Admin metrics | `apps/web/lib/admin/queries.ts` (SQL), `apps/web/components/admin/AdminConsole.tsx` (UI) |
-| Database tables | Add a new file in `packages/db/migrations/` (never edit 0001–0007 or any applied migration) |
+| Upload limits, file types | `packages/shared/src/limits.ts`, `apps/api/src/routes/analyses.ts` (daily/running limits), `apps/api/src/lib/sniff.ts` |
+| Sign-in emails | `packages/shared/src/mail.ts` |
+| Roles and who sees which admin tab | `packages/shared/src/admin/rbac.ts` |
+| Admin metrics | `packages/shared/src/admin/queries.ts` (SQL), `apps/web/components/admin/AdminConsole.tsx` (UI) |
+| Security headers / CSP | `infra/caddy/Caddyfile` (dev) and `infra/caddy/Caddyfile.prod` |
+| Database tables or rules | A new file in `packages/db/migrations/` (never edit 0001–0007 or any applied migration) |
+| Retention periods | `.env` `RETENTION_*`; raw files 30 days in `packages/db/migrations/0013_purge_v2.sql` (new migration to change) |
 
 ## 4. Main flows (one line each)
 
 | Flow | Path through the code |
 |---|---|
-| Analyse statements | `UploadClient` → `workers/analyze.worker.ts` → `lib/engine` → preview → `POST /api/reports` (spends a credit) |
-| View a report | `/report/[id]` → `ReportView` → `lib/report-ui/render.js` |
-| Sign in | `/login` → `/api/auth/otp/*` or `/api/auth/google/*` → session cookie (`lib/auth/session.ts`) |
-| Buy a plan | `/pricing` → `BuyButton` → `/api/payments/order` → Razorpay Checkout → `/api/payments/verify` → **webhook** `/api/payments/webhook` → `grant_plan()` |
-| Admin | `/admin` → `AdminConsole` → `/api/admin/metrics?tab=` (role checked) → `lib/admin/queries.ts` |
-| Nightly clean-up | DigitalOcean scheduled job → `packages/db/scripts/purge.mjs` → `purge_expired_reports()` |
+| Analyse statements | workspace → `POST /api/v1/analyses` (consent, sniff, encrypt, Garage, queue) → worker (`pipeline.ts` → `engine-child.ts`) → one-transaction store → `GET /analyses/:id` → `POST /reports` (`create_report_from_analysis()`) |
+| Add / remove a statement | "+" → upload with `reportId` → `POST /reports/:id/files` (file-set lock) · × → `POST /reports/:id/files/remove` |
+| View a report | `/report/[id]` → `GET /api/v1/reports/:id` → `lib/report-ui/render.js` |
+| Sign in | `/login` → `/api/v1/auth/otp/*` or `/api/v1/auth/google/*` → `lens_session` cookie (`packages/shared/src/auth/session.ts`) |
+| Buy a plan | `/pricing` → `BuyButton` → `/api/v1/payments/order` → Razorpay Checkout → **webhook** `/api/v1/payments/webhook` → `grant_plan()` |
+| Admin | `/admin` → `AdminConsole` → `/api/v1/admin/*` (role checked in the API and the DB) |
+| Your data | dashboard → `/api/v1/me/consents`, `/me/export` (worker builds an encrypted ZIP), `/me/delete` |
+| Nightly clean-up | worker schedule 02:00 IST → `purge_raw_files`, `purge_drafts`, `purge_otp_codes`, `purge_logs`; storage sweep every 15 minutes |
+| Deploy | tag `v*` → `deploy.yml` → GHCR → `infra/scripts/deploy.sh` (migrate, start, ready check, rollback) |
 
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 170 files._
+_Generated from file headers by `npm run docs:index` — 172 files._
 
 ### Pages
 
@@ -334,6 +338,8 @@ _Generated from file headers by `npm run docs:index` — 170 files._
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
 | `tests/e2e-web/privacy.spec.ts` | Data rights in the browser: research opt-in toggle, export my data (worker builds the ZIP, download works), delete my account. |
 | `tests/e2e-web/workspace.spec.ts` | Browser end to end on the stack: sign in → upload with consent → loader → report (5 tabs) → "+" → file tabs/All files → rename in history → second device → remove → delete. |
+| `tests/load/prepare.mjs` | Load test setup: creates N test accounts (load-NN@load.invalid) in the running dev stack and writes a session token for each to .load/tokens.json. |
+| `tests/load/uploads.js` | k6 scenario: N users each upload statements at the same moment and follow their analysis to ready (latency, time to ready, failures). |
 | `tests/stack/stack.test.ts` | Dev stack checks: all services healthy, only Caddy published, internal network isolated, least-privilege DB/Redis/storage. |
 | `tests/visual/capture.mjs` | Screenshots of every page at 1440 and 390 px (before/after comparisons for "keep the UI exactly", rule 8). |
 | `tests/visual/compare.mjs` | Pixel comparison of two screenshot folders (from capture.mjs); writes diff images and prints the share of changed pixels per page. |

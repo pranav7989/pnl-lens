@@ -1,6 +1,6 @@
 # Backend v2 — Plan
 
-**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11), **Phase 3 done**, **Phase 4 done**, **Phase 5 done**, **Phase 6 done**, **Phase 7 done** (2026-10-12, branch `backend-v2`); Phase 8 in progress.
+**Status:** APPROVED 2026-10-11, with the changes recorded in §2. **Phase 1 done**, **Phase 2 done** (2026-10-11), **Phase 3 done**, **Phase 4 done**, **Phase 5 done**, **Phase 6 done**, **Phase 7 done**, **Phase 8 done** (2026-10-12, branch `backend-v2`) except the steps that need the owner: `provision.sh` on a real Ubuntu machine and the go-live checklist (`docs/GO_LIVE_CHECKLIST.md`).
 **Goal:** move parsing and analysis from the browser to the server, and store raw files, normalised trades and computed metrics. Everything runs on one Ubuntu 24.04 VM with Docker Compose. AI/ML is out of scope; the data model is only made ready for it.
 
 Sections: 1 Findings · 2 Decisions needed · 3 Architecture · 4 Services and network · 5 Engine and parity · 6 Pipeline · 7 Data model · 8 API · 9 Enforcement · 10 Privacy and security · 11 Front end · 12 Infra and operations · 13 Testing · 14 Phases · 15 Risks
@@ -333,7 +333,7 @@ Wording: identical except the strings approved under D1/D4.
 - **compose.dev.yml:** all services, bind mounts and hot reload; Postgres, MinIO console and Redis on `127.0.0.1` only; seed data.
 - **compose.prod.yml:** pinned image digests, `restart: unless-stopped`, health checks, resource limits, read-only root filesystems where possible, no published ports except Caddy.
 - **Deploy:** GitHub Actions builds and pushes images to GHCR, then SSHes to the VM: `docker compose pull`, a `migrate` one-off container (superuser URL taken from VM env), then `up -d`. Rollback = previous image tag. Fresh start (D7): no data migration. `.do/app.yaml` and the DO workflow are removed.
-- **Backups:** nightly `pg_dump` (custom format) plus the MinIO bucket, both through `restic` to offsite storage (D12), keeping 7 daily, 4 weekly and 6 monthly. **A restore drill is part of Phase 8's definition of done.** Raw files stay encrypted in backups, because they are ciphertext and the KEK is not in the backup.
+- **Backups:** nightly `pg_dump` (custom format) plus the `statements` bucket (Garage, D14), both through `restic` to offsite storage (D12), keeping 14 daily, 8 weekly and 12 monthly (owner decision 2026-10-12). **A restore drill is part of Phase 8's definition of done.** Raw files stay encrypted in backups, because they are ciphertext and the KEK is not in the backup.
 - **Monitoring:** `/ready` checked by an external uptime monitor; worker queue depth and failed-job count go to `error_events`; the admin console Errors tab works unchanged. Disk-space alert.
 
 ---
@@ -473,6 +473,20 @@ Done on macOS (Apple Silicon); Phases 1–2 were re-verified on the same machine
 | Fixes | Playwright output had been committed (synthetic test data only, never pushed): untracked and git-ignored |
 | Docs | `docs/PRIVACY_NOTES.md` (what, where, how long, who, plus 11 lawyer items); legal drafts: BUILD CHECKs marked BUILT ✓ where true (13 genuinely open items remain); `ARCHITECTURE.md` and `ENVIRONMENT.md` rewritten for v2; `.env.example`, `PAYMENTS_RAZORPAY.md` (link mode removed), `README`, `TESTING` updated |
 | Tests | api 59, worker 41, db 132 (99 on Postgres, incl. rewrap and retention), shared 14, engine 74; stack 66/66; e2e 4/4 |
+
+### Phase 8 result (2026-10-12)
+
+| Item | Result |
+|---|---|
+| Production compose | `infra/compose.prod.yml`: same services and networks as dev; TLS on 80/443 only; `AUTH_MODE=jwt`, no seed, no OpenAPI; restart policies, health checks, log rotation, hardening and memory limits; optional second file key for rotation; images from GHCR (`IMAGE_REGISTRY`) or built on the server |
+| Caddy | `infra/caddy/Caddyfile.prod`: Cloudflare origin certificate (`TLS_MODE=cloudflare`) or self-signed (`internal`); client IP only from Cloudflare ranges; same headers and CSP; `www` and `http` → `https://pnllens.com`. Validated in both modes |
+| Scripts | `provision.sh` (Ubuntu 24.04 hardening, Docker, deploy user, ufw, fail2ban, swap, cron), `deploy.sh` (tag checkout, pull/build, migrate, Caddy reload, ready check through Caddy, automatic rollback), `backup.sh` (dump + statements → restic, 14/8/12, weekly partial verify), `restore.sh`, `healthcheck.sh` (ready + disk, one email per change via Resend). shellcheck clean |
+| CI/CD | `.github/workflows/ci.yml`: lint, typecheck, docs index, all unit/DB/API/worker tests on real Postgres 16 + Redis 7, audit, gitleaks, full Docker stack + stack tests + Playwright e2e, prod compose check, shellcheck. `deploy.yml`: `v*` tag → 4 images to GHCR → SSH → `deploy.sh`. The old AWS workflow is removed. actionlint clean |
+| Load test | k6, 50 users at once (`docs/LOAD_TEST.md`): 0 failures in 150 analyses and 6,266 requests; upload p95 0.47 s (normal files) and 2.1 s (5 MB files); worker concurrency 2 kept (4 was only 17% faster with twice the memory); production api limit raised to 1 GiB |
+| Drill | `docs/RESTORE_DRILL.md`: deploy → HTTPS smoke → backup → wipe all volumes → restore → data, sessions and file decryption intact → broken deploy rolled back by itself → alerts. Found and fixed 7 bugs (Caddy config never reloading on deploy, cert mount, restic lock, restore role order, image tag, secrets in `ps`, bash 3.2) |
+| Load-test support | `RATE_LIMIT_EXEMPT_IPS` (CIDR list, empty by default; never passed by `compose.prod.yml`) with a test |
+| Docs | `docs/DEPLOYMENT_VM.md` (DigitalOcean + Spaces + Cloudflare), `docs/RUNBOOK.md`, `docs/GO_LIVE_CHECKLIST.md`, `docs/LOAD_TEST.md`, `docs/RESTORE_DRILL.md`; `INDEX`, `INFRA`, `ENVIRONMENT`, `TESTING` updated; `.do/app.yaml` and the App Platform guide removed; the AWS guide marked outdated |
+| Open (owner) | Run `provision.sh` on a Multipass VM or the Droplet; the go-live checklist (accounts, keys, lawyer, the 2026-10-14 dependency bump) |
 
 ## 15. Risks
 

@@ -201,7 +201,8 @@ describe('Postgres least privilege', () => {
     expect(r.code, r.err).toBe(0);
   });
   it('the migrate job applied every migration (0014 or later) and the dev user has a plan (D6)', () => {
-    expect(psql('lens_app', env.LENS_APP_PASSWORD, "select count(*) from public.subscriptions where user_id = '00000000-0000-0000-0000-000000000001' and ends_at > now()").out).toBe('1');
+    // at least one: the save test below tops the dev user up with a second plan once the seeded one is used up
+    expect(Number(psql('lens_app', env.LENS_APP_PASSWORD, "select count(*) from public.subscriptions where user_id = '00000000-0000-0000-0000-000000000001' and ends_at > now()").out)).toBeGreaterThanOrEqual(1);
     const r = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, "select max(name) from public.schema_migrations");
     expect(r.out >= '0014_').toBe(true);
   });

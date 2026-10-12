@@ -1,7 +1,7 @@
 # Infrastructure (Docker Compose)
 
 The backend-v2 stack: one machine, Docker Compose, two private networks, and **only Caddy reachable from outside**.
-Dev stack: `infra/compose.dev.yml` (Phase 2). Production compose, TLS, backups and deploys arrive in Phase 8.
+Dev stack: `infra/compose.dev.yml`. Production: `infra/compose.prod.yml` (same services and networks; TLS on 80/443, `AUTH_MODE=jwt`, no dev seed, restart policies, log rotation). Production setup: `docs/DEPLOYMENT_VM.md`; operations: `docs/RUNBOOK.md`.
 
 ```
 host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──► api     (Fastify)
@@ -50,6 +50,19 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 | Browser e2e: restart in jwt mode, then run | `npm run stack:e2e` → `npm run test:e2e` (back to dev mode: `npm run stack:up`) |
 | Database, API and worker tests (throwaway Postgres on 127.0.0.1:55432 and Redis on 127.0.0.1:56379) | `npm run db:test:up` → `npm run test:db` → `npm run db:test:down` |
 | Debug ports on 127.0.0.1 (Postgres 5432, Redis 6379, S3 3900) | add `-f infra/compose.dev.ports.yml` to the compose command |
+| Load test (k6, 50 users) | `docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.load.yml up -d --build --wait` → `node tests/load/prepare.mjs` → `tests/load/run.sh` (`docs/LOAD_TEST.md`) |
+| Check the production compose file | `docker compose --env-file <filled .env> -f infra/compose.prod.yml config --quiet` |
+
+## Production scripts (`infra/scripts/`, run on the server)
+
+| Script | Does |
+|---|---|
+| `provision.sh` | Fresh Ubuntu 24.04 → Docker, `deploy` user, SSH keys only, ufw, fail2ban, automatic updates, swap, cron (root, once; idempotent) |
+| `deploy.sh <tag>` | Check out the tag → pull/build → migrate → start → ready through Caddy → automatic rollback |
+| `backup.sh` | Nightly: database dump + statements bucket → restic (encrypted) → Spaces; 14 daily / 8 weekly / 12 monthly |
+| `restore.sh [snapshot]` | Database + statements from a snapshot, then migrate, start, ready check |
+| `healthcheck.sh` | Every 5 minutes: readiness + disk; email alert via Resend (once per change) |
+| `lib.sh` | Shared helpers (`.env` read literally, never sourced; compose wrapper; JSON log lines) |
 
 Windows: Docker Desktop must show **Engine running**. Compose reads `.env` from the repo root because the scripts pass `--env-file .env`.
 

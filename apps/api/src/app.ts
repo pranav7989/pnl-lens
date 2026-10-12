@@ -7,6 +7,7 @@ import Fastify, { type FastifyInstance, type FastifyBaseLogger, type RawServerDe
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
+import { BlockList } from 'node:net';
 import swagger from '@fastify/swagger';
 import { serializerCompiler, validatorCompiler, jsonSchemaTransform, type ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { Redis } from 'ioredis';
@@ -45,6 +46,18 @@ export type App = FastifyInstance<RawServerDefault, RawRequestDefaultExpression,
 const CSRF_EXEMPT = new Set(['/api/v1/payments/webhook', '/api/payments/webhook']);
 const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+/** Load tests only: addresses or CIDR ranges the rate limiter skips (RATE_LIMIT_EXEMPT_IPS; never set in compose.prod.yml). */
+function exemptList(entries: string[] | undefined): BlockList | null {
+  if (!entries?.length) return null;
+  const list = new BlockList();
+  for (const e of entries) {
+    const [addr, bits] = e.split('/');
+    const type = addr.includes(':') ? 'ipv6' : 'ipv4';
+    if (bits) list.addSubnet(addr, Number(bits), type); else list.addAddress(addr, type);
+  }
+  return list;
+}
+
 export async function buildApp(deps: Deps): Promise<App> {
   const app = Fastify({
     logger: process.env.NODE_ENV === 'test' ? false : {
@@ -72,12 +85,14 @@ export async function buildApp(deps: Deps): Promise<App> {
   await app.register(multipart, {
     limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES, fields: 10, fieldSize: 1024, parts: MAX_FILES + 10, headerPairs: 200 },
   });
+  const exempt = exemptList(deps.config.rateLimitExemptIps);
   await app.register(rateLimit, {
     global: true,
     max: 300,
     timeWindow: '1 minute',
     ...(deps.redis ? { redis: deps.redis, nameSpace: 'rl:api:' } : {}),
     keyGenerator: (req) => req.ip,
+    ...(exempt ? { allowList: (req: { ip: string }) => exempt.check(req.ip.replace(/^::ffff:/, ''), req.ip.includes(':') && !req.ip.startsWith('::ffff:') ? 'ipv6' : 'ipv4') } : {}),
     errorResponseBuilder: (_req, ctx) => ({ statusCode: ctx.statusCode, error: 'rate_limited', message: 'Too many requests. Try again in a minute.' }),
   });
 

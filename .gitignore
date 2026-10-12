@@ -9,3 +9,6 @@ test-results/
 playwright-report/
 infra/certs/
 .deploy/
+.load/
+.backup/
+.restore/

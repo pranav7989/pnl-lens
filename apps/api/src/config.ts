@@ -21,6 +21,8 @@ export interface Config {
   production: boolean;
   /** Serve /api/v1/openapi.json (dev only, plan §8). */
   exposeOpenApi: boolean;
+  /** Client IPs or CIDR ranges the rate limiter skips. Load tests only (infra/compose.load.yml); compose.prod.yml never passes it. */
+  rateLimitExemptIps?: string[];
 }
 
 const req = (env: NodeJS.ProcessEnv, k: string) => {
@@ -50,5 +52,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     authMode,
     production,
     exposeOpenApi: !production || env.EXPOSE_OPENAPI === 'true',
+    rateLimitExemptIps: (env.RATE_LIMIT_EXEMPT_IPS || '').split(',').map((s) => s.trim()).filter(Boolean),
   };
 }

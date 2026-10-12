@@ -1,6 +1,6 @@
 # Testing
 
-Run from the repo root (npm workspaces). Node 22.13+.
+Run from the repo root (npm workspaces). Node 22.13+. CI (`.github/workflows/ci.yml`) runs everything below except the visual comparison, the load test and the drill.
 
 | Suite | Command | Needs |
 |---|---|---|
@@ -13,6 +13,9 @@ Run from the repo root (npm workspaces). Node 22.13+.
 | Dependency audit (fails on unaccepted high/critical production advisories) | `npm run audit:prod` (allow-list with reasons and end dates: `infra/security/audit-allowlist.json`) | network |
 | Secret scan (git history + working tree) | `npm run check:secrets` (gitleaks, pinned image) | Docker |
 | Key rotation | part of `npm run test:db` (`packages/db/test/db/rewrap.test.ts`) | test Postgres |
+| Production scripts and workflows | `docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 -x infra/scripts/*.sh tests/load/run.sh` · `docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.12` · `docker compose --env-file <filled .env> -f infra/compose.prod.yml config --quiet` (all also in CI) | Docker |
+| **Load test** (k6, 50 users uploading at once) | `docs/LOAD_TEST.md` (overlay `infra/compose.load.yml`, `tests/load/prepare.mjs`, `tests/load/run.sh [--heavy]`) | Docker |
+| **Deploy / backup / restore / rollback drill** | `docs/RESTORE_DRILL.md` (production compose + real scripts in a throwaway clone) | Docker |
 | Visual comparison (UI unchanged) | `node tests/visual/capture.mjs <dir>` before and after, then `node tests/visual/compare.mjs <before> <after>` | the stack running |
 | **API** (routes on real Postgres: sign-in, CSRF, uploads, limits, encryption, reports, credits, file-set lock, webhook replay, RBAC; plus type check, encryption, OpenAPI, rate limit) | `npm run db:test:up` then `npm test -w @pnl-lens/api` | the test Postgres for the route suites (they skip without it) |
 | **Worker** (all 22 golden cases through the real pipeline, byte-identical; failures cost no credit; idempotency; retries + dead letter on real Redis; hostile files; purge + sweep) | `npm run db:test:up` then `npm test -w @pnl-lens/worker` | test Postgres + Redis (DB/queue suites skip without them); builds `apps/worker/dist` first |
