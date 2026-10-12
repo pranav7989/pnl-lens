@@ -143,6 +143,35 @@ export async function analysisRoutes(app: App, deps: Deps) {
   app.post('/analyses', { schema: uploadSchema, config: uploadLimit }, upload);
   app.post('/uploads', { schema: { ...uploadSchema, summary: 'Alias of POST /analyses (master prompt name)' }, config: uploadLimit }, upload);
 
+  /**
+   * Remove a statement from a report: starts an analysis over the remaining statements (no upload). Applying it with
+   * POST /reports/:id/files keeps the removed statement's place (file-set lock), as in the offline tool.
+   */
+  app.post('/reports/:id/files/remove', {
+    schema: { tags: ['reports'], summary: 'Re-analyse a report without one of its statements', security: [{ session: [] }],
+      params: z.object({ id: z.string() }), body: z.object({ fileId: z.string().regex(UUID) }) },
+    config: uploadLimit,
+  }, async (req, reply) => {
+    const user = await requireUser(req, reply); if (!user) return;
+    if (!UUID.test(req.params.id)) return fail(reply, 404, 'not_found');
+    const counts = await analysisCounts(deps.db, user.id);
+    if (counts.running >= RUNNING_ANALYSES) return fail(reply, 429, 'too_many_running', 'Wait for your current files to finish, then try again.');
+    if (counts.today >= DAILY_ANALYSES) return fail(reply, 429, 'daily_limit', `You can analyse up to ${DAILY_ANALYSES} uploads a day. Try again tomorrow.`);
+    const r = await deps.db.selectFrom('reports').select(['id', 'analysis_id']).where('id', '=', req.params.id).where('user_id', '=', user.id).where('purged_at', 'is', null).executeTakeFirst();
+    if (!r?.analysis_id) return fail(reply, 404, 'not_found');
+    const files = await deps.db.selectFrom('analysis_files as af').innerJoin('statement_files as f', 'f.id', 'af.file_id')
+      .select(['f.id', 'f.status']).where('af.analysis_id', '=', r.analysis_id).orderBy('af.position').execute();
+    if (!files.some((f) => f.id === req.body.fileId)) return fail(reply, 404, 'not_found');
+    if (files.length < 2) return fail(reply, 400, 'last_file', 'A report needs at least one statement. Delete the report instead.');
+    const keep = files.filter((f) => f.id !== req.body.fileId);
+    if (keep.some((f) => f.status !== 'stored')) {
+      return fail(reply, 409, 'files_expired', 'The statements in this report were deleted after 30 days, so it can’t be changed. Start a new report instead.');
+    }
+    const { analysisId } = await createUpload(deps.db, { userId: user.id, files: [], targetReportId: r.id, existingFileIds: keep.map((f) => f.id), ip: ipOf(req) });
+    await deps.queue.enqueue(analysisId);
+    return ok(reply, { analysisId, status: 'queued' }, 202);
+  });
+
   app.get('/analyses/:id', {
     schema: { tags: ['analyses'], summary: 'Job status (queued / parsing / analysing / storing / ready / failed) and preview', security: [{ session: [] }], params: z.object({ id: z.string() }) },
   }, async (req, reply) => {

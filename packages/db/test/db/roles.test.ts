@@ -43,6 +43,7 @@ describe.skipIf(!ok)('database roles', () => {
       ['update analyses', `update analyses set status = 'ready'`],
       ['insert trades', `insert into trades (analysis_id, user_id, seq, symbol, kind, qty, pnl, currency, engine_version) select id, user_id, 999, 'X', 'EQ', 1, 1, 'INR', 'x' from analyses limit 1`],
       ['update consents', 'update consents set granted = true'],
+      ['write per-file reports', `insert into analysis_file_reports (analysis_id, position, file_id, user_id) select analysis_id, 0, file_id, user_id from analysis_files limit 1`],
       ['update the file access log', 'update file_access_log set reason = null'],
       ['delete the file access log', 'delete from file_access_log'],
       ['run purge jobs', 'select purge_raw_files()'],

@@ -20,6 +20,8 @@ export interface ChildFill { symbol: string; side: 'buy' | 'sell'; qty: number; 
 export interface ChildFile {
   index: number; fingerprint: string; tradeCount: number; sheetCount: number; durationMs: number;
   outcome: 'ok' | 'no_trades'; format: string | null; mapping: unknown[]; fills: ChildFill[];
+  /** this file's own report (only when the job has 2+ files; the workspace shows it as the file's tab) */
+  report?: ReportV1 | null;
 }
 export type ChildOutput =
   | { ok: true; report: ReportV1 | null; files: ChildFile[]; durationMs: number }
@@ -58,6 +60,7 @@ export async function runEngine(input: ChildInput): Promise<ChildOutput> {
       format: alone.report?.m.source ?? null,
       mapping: (alone.result as any)?.mapping ?? [],
       fills,
+      ...(input.files.length > 1 ? { report: alone.report } : {}),
     });
   }
   const { report } = analyzeRaw(allRaw, opts);

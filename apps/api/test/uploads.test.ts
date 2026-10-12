@@ -188,4 +188,33 @@ describe.skipIf(!ok)('uploads and reports', () => {
     expect(full.statusCode).toBe(413);                                                // JSON bodies are capped at 64 KB
     expect((await x.t.admin.query('select count(*)::int as n from reports where user_id = $1', [u])).rows[0].n).toBe(0);
   });
+
+  it('file tabs: a 2-file report lists each statement with its own dashboard; removing one keeps its place', async () => {
+    const u = await makeUser(x.t), h = await as(u);
+    await givePlan(x.t, u, { files: 2 });
+    const a = (await upload(u, [consent, fixture('zerodha_tradebook.csv'), fixture('groww_pnl.csv')])).json().analysisId;
+    const files = (await x.t.admin.query('select file_id, position from analysis_files where analysis_id = $1 order by position', [a])).rows;
+    // what the worker stores for a 2-file analysis (per-file reports from analysing each file alone)
+    await finish(a);
+    await x.t.admin.query(`insert into analysis_file_reports (analysis_id, position, file_id, user_id, payload) values ($1, 0, $2, $4, $5), ($1, 1, $3, $4, null)`,
+      [a, files[0].file_id, files[1].file_id, u, JSON.stringify(golden('zerodha_tradebook_csv'))]);
+    const id = (await x.app.inject({ method: 'POST', url: '/api/v1/reports', headers: h, payload: { analysisId: a } })).json().id;
+    const r = (await x.app.inject({ method: 'GET', url: `/api/v1/reports/${id}`, headers: h })).json();
+    expect(r.files.map((f: any) => [f.name, f.stored, !!f.report])).toEqual([['zerodha_tradebook.csv', true, true], ['groww_pnl.csv', true, false]]);
+    expect(r.files[0].report.m.n).toBe(golden('zerodha_tradebook_csv').m.n);
+
+    // remove the second statement: a new analysis over the first only, applied without spending a report
+    const rm = await x.app.inject({ method: 'POST', url: `/api/v1/reports/${id}/files/remove`, headers: h, payload: { fileId: files[1].file_id } });
+    expect(rm.statusCode).toBe(202);
+    const a2 = rm.json().analysisId;
+    expect(x.queue.jobs).toContain(a2);
+    expect((await x.t.admin.query('select file_id from analysis_files where analysis_id = $1', [a2])).rows).toEqual([{ file_id: files[0].file_id }]);
+    await finish(a2);
+    expect((await x.app.inject({ method: 'POST', url: `/api/v1/reports/${id}/files`, headers: h, payload: { analysisId: a2 } })).statusCode).toBe(200);
+    const after = (await x.app.inject({ method: 'GET', url: `/api/v1/reports/${id}`, headers: h })).json();
+    expect(after.files.map((f: any) => f.name)).toEqual(['zerodha_tradebook.csv']);
+    expect((await x.t.admin.query('select used_fingerprints from reports where id = $1', [id])).rows[0].used_fingerprints).toHaveLength(2);
+    expect((await x.app.inject({ method: 'POST', url: `/api/v1/reports/${id}/files/remove`, headers: h, payload: { fileId: files[0].file_id } })).json().error).toBe('last_file');
+    expect((await x.t.admin.query('select reports_used from subscriptions where user_id = $1', [u])).rows[0].reports_used).toBe(1);
+  });
 });

@@ -77,3 +77,22 @@ export async function reportTrades(db: Db, userId: string, reportId: string) {
     .orderBy('t.seq')
     .execute();
 }
+
+/**
+ * The statements behind a report's current analysis, in upload order, each with its own dashboard: for a single-file
+ * report that is the report itself; otherwise the stored per-file report (null = no closed trades in that file).
+ */
+export async function reportFiles(db: Db, userId: string, reportId: string) {
+  const r = await db.selectFrom('reports').select(['analysis_id', 'report']).where('id', '=', reportId).where('user_id', '=', userId)
+    .where('purged_at', 'is', null).executeTakeFirst();
+  if (!r?.analysis_id) return [];
+  const rows = await db.selectFrom('analysis_files as af')
+    .innerJoin('statement_files as f', 'f.id', 'af.file_id')
+    .leftJoin('analysis_file_reports as fr', (j) => j.onRef('fr.analysis_id', '=', 'af.analysis_id').onRef('fr.position', '=', 'af.position'))
+    .select(['af.position', 'f.id', 'f.original_name', 'f.status', 'fr.payload'])
+    .where('af.analysis_id', '=', r.analysis_id).orderBy('af.position').execute();
+  return rows.map((x) => ({
+    id: x.id, name: x.original_name, position: x.position, stored: x.status === 'stored',
+    report: rows.length === 1 ? r.report : (x.payload ?? null),
+  }));
+}

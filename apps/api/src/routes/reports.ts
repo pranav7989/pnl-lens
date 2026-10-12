@@ -10,7 +10,7 @@
  */
 import { z } from 'zod';
 import { trackWith } from '@pnl-lens/shared/admin/telemetry';
-import { createReportFromAnalysis, addAnalysisToReport, listReports, getReport, renameReport, deleteReport, progressHistory, isDbError, type DbErrorCode } from '@pnl-lens/db';
+import { createReportFromAnalysis, addAnalysisToReport, listReports, getReport, renameReport, deleteReport, progressHistory, reportFiles, isDbError, type DbErrorCode } from '@pnl-lens/db';
 import type { App, Deps } from '../app.js';
 import { fail, ok, requireUser, UUID } from '../lib/http.js';
 
@@ -96,7 +96,10 @@ export async function reportRoutes(app: App, deps: Deps) {
     const history = (await progressHistory(deps.db, user.id)).map((h) => ({
       id: h.id, createdAt: h.created_at, from: h.from_date, to: h.to_date, score: h.progress_score == null ? null : Number(h.progress_score),
     }));
-    return ok(reply, { summary: sm, report: r.report, history });
+    // file tabs: each statement with its own dashboard (2+ files); a single-file report's tab is the report itself
+    const all = await reportFiles(deps.db, user.id, r.id);
+    const files = all.map((f) => ({ id: f.id, name: f.name, position: f.position, stored: f.stored, report: all.length > 1 ? f.report : null }));
+    return ok(reply, { summary: sm, report: r.report, history, files });
   });
 
   /** Rename (history only). An empty title clears it. */

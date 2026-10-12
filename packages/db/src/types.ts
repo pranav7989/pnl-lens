@@ -1,7 +1,7 @@
 /**
  * @file  packages/db/src/types.ts
  * @area  Database
- * @what  Kysely table types for the schema after migration 0015 (hand-written; every table is exercised through these types by test/db/*).
+ * @what  Kysely table types for the schema after migration 0016 (hand-written; every table is exercised through these types by test/db/*).
  */
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
 
@@ -135,6 +135,14 @@ export interface AnalysisFilesTable {
   file_id: string;
   user_id: string;
   position: number;
+}
+
+export interface AnalysisFileReportsTable {
+  analysis_id: string;
+  position: number;
+  file_id: string;
+  user_id: string;
+  payload: JsonNull;
 }
 
 export interface FileAccessLogTable {
@@ -319,6 +327,7 @@ export interface Database {
   analyses: AnalysesTable;
   statement_files: StatementFilesTable;
   analysis_files: AnalysisFilesTable;
+  analysis_file_reports: AnalysisFileReportsTable;
   file_access_log: FileAccessLogTable;
   parse_runs: ParseRunsTable;
   trades: TradesTable;

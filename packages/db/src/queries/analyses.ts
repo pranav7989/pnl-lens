@@ -136,6 +136,8 @@ export interface StoreResultInput {
   fileFingerprints?: Record<string, string>;
   parseRuns?: Omit<NewParseRun, 'analysis_id' | 'engine_version'>[];
   fills?: Omit<NewFill, 'analysis_id' | 'user_id' | 'engine_version'>[];
+  /** each file's own report, for analyses with 2+ files (position → ReportV1, or null when that file has no closed trades) */
+  fileReports?: { position: number; fileId: string; report: ReportV1 | null }[];
 }
 
 /**
@@ -172,6 +174,11 @@ export async function storeAnalysisResult(db: Db, input: StoreResultInput): Prom
       await tx.insertInto('parse_runs')
         .values(input.parseRuns.map((p) => ({ ...p, analysis_id: a.id, engine_version: input.engineVersion })))
         .execute();
+    }
+    if (input.fileReports?.length && files.length > 1) {
+      await tx.insertInto('analysis_file_reports')
+        .values(input.fileReports.map((f) => ({ analysis_id: a.id, position: f.position, file_id: f.fileId, user_id: a.user_id, payload: f.report ? JSON.stringify(f.report) : null })))
+        .onConflict((oc) => oc.columns(['analysis_id', 'position']).doNothing()).execute();
     }
     for (const [fileId, fp] of Object.entries(input.fileFingerprints ?? {})) {
       await tx.updateTable('statement_files').set({ fingerprint: fp }).where('id', '=', fileId).execute();

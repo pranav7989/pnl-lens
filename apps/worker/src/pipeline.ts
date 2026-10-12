@@ -103,6 +103,7 @@ export async function processAnalysis(deps: PipelineDeps, analysisId: string, jo
     analysisId, engineVersion: deps.engineVersion, report: r.report,
     fileFingerprints: Object.fromEntries(r.files.map((pf) => [job.files[pf.index].id, pf.fingerprint])),
     parseRuns, fills,
+    fileReports: r.files.length > 1 ? r.files.map((pf) => ({ position: pf.index, fileId: job.files[pf.index].id, report: pf.report ?? null })) : undefined,
   });
   return 'ready';
 }

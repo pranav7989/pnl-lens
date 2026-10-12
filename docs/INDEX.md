@@ -81,7 +81,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 199 files._
+_Generated from file headers by `npm run docs:index` — 200 files._
 
 ### Pages
 
@@ -285,6 +285,7 @@ _Generated from file headers by `npm run docs:index` — 199 files._
 | `packages/db/migrations/0013_purge_v2.sql` | Retention and deletion: purge_raw_files() (30 days), purge_drafts() (24 h), purge_otp_codes(), delete_report_v2(), delete_account(). |
 | `packages/db/migrations/0014_research_ready.sql` | research schema: pseudonymised views over trades, metrics and traits, for users with research consent only. No ML. |
 | `packages/db/migrations/0015_analysis_error_message.sql` | analyses.error_message: the engine's own user-facing text for a failed file (e.g. scanned PDF), shown word for word. |
+| `packages/db/migrations/0016_analysis_file_reports.sql` | Per-file dashboards: each statement's own report (ReportV1) for analyses with 2+ files, shown as file tabs next to "All files". |
 | `packages/db/optional/pg_cron.sql` | Optional: schedule the purge inside Postgres if pg_cron is available. |
 | `packages/db/scripts/seed-dev.mjs` | Applies seed.sql (dev user with credits) — only when SEED_DEV_DATA=true (set by infra/compose.dev.yml only). |
 | `packages/db/scripts/setup-roles.mjs` | Creates/updates the login roles lens_app and lens_worker with passwords from env (runs after migrations, as superuser). |
@@ -297,7 +298,7 @@ _Generated from file headers by `npm run docs:index` — 199 files._
 | `packages/db/src/queries/plans.ts` | Plans: the user's plan card (allowance, validity, statements per report) and the owner-only manual grant (D5). |
 | `packages/db/src/queries/privacy.ts` | Consent history, data export/delete requests, account deletion, and the scheduled purge/sweep jobs (worker). |
 | `packages/db/src/queries/reports.ts` | Reports (api, lens_app): claim an analysis, add files (file-set lock), rename, delete, MON-YY history, Progress history, trades. |
-| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0015 (hand-written; every table is exercised through these types by test/db/*). |
+| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0016 (hand-written; every table is exercised through these types by test/db/*). |
 
 ### Ops
 

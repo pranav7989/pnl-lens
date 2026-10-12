@@ -71,6 +71,15 @@ describe.skipIf(!ok)('pipeline: every golden case', () => {
       expect(counts.n).toBe(c.report.m.n);
       expect(counts.runs).toBe(c.files.length);
       expect(counts.fps).toBe(c.files.length);
+      // per-file dashboards (2+ files): each file's own report equals that file's single-file golden
+      const per = (await t.admin.query('select position, payload from analysis_file_reports where analysis_id = $1 order by position', [analysisId])).rows;
+      if (c.files.length > 1) {
+        expect(per).toHaveLength(c.files.length);
+        for (const row of per) {
+          const single = CASES.find((x) => x.files.length === 1 && x.files[0] === c.files[row.position] && !x.currency)!;
+          expect(row.payload ? { ...row.payload, generatedAt: '<normalised>' } : null, c.files[row.position]).toEqual(single.report);
+        }
+      } else expect(per).toHaveLength(0);
       if (c.report.m.source === 'tradebook' && c.files.length === 1 && !c.id.includes('pdf') && !c.id.includes('docx')) expect(counts.fills).toBeGreaterThan(0);
 
       // saving it spends exactly one report and serves the same JSON
