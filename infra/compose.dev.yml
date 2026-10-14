@@ -81,6 +81,7 @@ services:
       FILE_KEK_ID: ${FILE_KEK_ID:?run npm run stack:env}
       FILE_KEK_K1: ${FILE_KEK_K1:?run npm run stack:env}
       APP_URL: http://localhost:${HTTP_PORT:-8080}
+      EXTRA_ALLOWED_ORIGINS: http://127.0.0.1:${HTTP_PORT:-8080}   # the same dev site opened by IP (a different origin to the browser)
       MAIL_DRIVER: console
       PAYMENTS_MODE: "off"
       EXPOSE_OPENAPI: "true"                  # dev only: GET /api/v1/openapi.json

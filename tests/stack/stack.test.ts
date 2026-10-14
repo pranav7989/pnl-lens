@@ -271,6 +271,13 @@ describe('API on the stack (Phase 4)', () => {
     const r = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: 'https://evil.example' } });
     expect(r.status).toBe(403);
   });
+  it('accepts the dev site opened as 127.0.0.1 as well as localhost (same site, two origins)', async () => {
+    const fd = new FormData();
+    fd.set('consent', 'true');
+    fd.set('files', new Blob([fs.readFileSync(FIXTURE)]), 'zerodha_tradebook.csv');
+    const r = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: `http://127.0.0.1:${process.env.HTTP_PORT || 8080}` } });
+    expect(r.status, await r.clone().text()).toBe(202);
+  });
   it('accepts an upload through Caddy and queues a BullMQ job', async () => {
     const fd = new FormData();
     fd.set('consent', 'true');

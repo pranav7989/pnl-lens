@@ -41,7 +41,7 @@ host :8080 (127.0.0.1 only) ──► caddy ──┬── /api/v1/*  ──►
 | Task | Command |
 |---|---|
 | Create secrets (first time; safe to re-run) | `npm run stack:env` → fills `.env` with random values for anything missing |
-| Build + start, wait until healthy | `npm run stack:up` → http://localhost:8080 |
+| Build + start, wait until healthy | `npm run stack:up` → http://localhost:8080 (http://127.0.0.1:8080 works too; both are allowed origins for the CSRF check) |
 | Prove the rules above | `npm run test:stack` |
 | Logs | `npm run stack:logs` |
 | Stop (keeps data) | `npm run stack:down` |
