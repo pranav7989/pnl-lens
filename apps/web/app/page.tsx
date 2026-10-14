@@ -37,11 +37,12 @@ function brokerLogos(): Record<string, string> {
   return (logoCache = out);
 }
 
-export default async function Home({ searchParams }: { searchParams: { region?: string } }) {
+export default async function Home(props: { searchParams: Promise<{ region?: string }> }) {
+  const searchParams = await props.searchParams;
   const user = await getSessionUser();
   // Site and prices follow the visitor's country (signed-in users: their stored country); ?region= switches manually.
   const forced = searchParams.region === 'in' ? 'IN' : searchParams.region === 'global' ? 'US' : null;
-  const country = forced || requestCountry() || user?.country;
+  const country = forced || (await requestCountry()) || user?.country;
   const plans = plansFor(country);
   const region = regionFor(country);
   return (

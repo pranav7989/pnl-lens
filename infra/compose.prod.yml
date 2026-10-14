@@ -1,0 +1,239 @@
+# @file  infra/compose.prod.yml
+# @area  Ops
+# @what  Production stack on one Ubuntu 24.04 VM: Caddy (80/443, TLS) → web/api; worker, Postgres, Redis, Garage on an internal network.
+#
+# Used by infra/scripts/deploy.sh (never by hand on a live server unless the runbook says so):
+#   IMAGE_REGISTRY=ghcr.io/<owner>/pnl-lens IMAGE_TAG=v1.2.3 docker compose --env-file .env -f infra/compose.prod.yml up -d
+# Without IMAGE_REGISTRY the images are built on the machine (the local VM test does this).
+# Differences from compose.dev.yml: AUTH_MODE=jwt, no dev seed, no OpenAPI, real email, TLS on 80/443,
+# restart policies and log rotation everywhere, optional second file key for rotation (docs/RUNBOOK.md).
+name: pnl-lens
+
+x-tz: &tz
+  TZ: Asia/Kolkata
+
+x-hardened: &hardened
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+x-keks: &keks
+  FILE_KEK_ID: ${FILE_KEK_ID:?set in .env}
+  FILE_KEK_K1: ${FILE_KEK_K1:?set in .env}
+  FILE_KEK_K2: ${FILE_KEK_K2:-}               # only during a key rotation
+  FILE_KEK_K3: ${FILE_KEK_K3:-}
+
+services:
+  caddy:
+    <<: [*hardened, *logging]
+    cap_add: [NET_BIND_SERVICE]
+    tmpfs: ["/tmp:size=16m"]
+    mem_limit: 256m
+    image: caddy:2.11.4-alpine
+    ports: ["80:80", "443:443", "443:443/udp"]
+    # The folder (not the file) is mounted, so a deploy's new Caddyfile is visible; deploy.sh then runs `caddy reload`.
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile.prod", "--adapter", "caddyfile"]
+    environment:
+      DOMAIN: ${DOMAIN:?set in .env}
+      TLS_MODE: ${TLS_MODE:-cloudflare}
+    volumes:
+      - ./caddy:/etc/caddy:ro
+      - ./certs:/etc/caddy-certs:ro           # Cloudflare origin certificate (TLS_MODE=cloudflare); git-ignored
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on:
+      web: { condition: service_healthy }
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      retries: 6
+    restart: unless-stopped
+
+  web:
+    <<: [*hardened, *logging]
+    tmpfs: ["/tmp:size=64m", "/app/apps/web/.next/cache:uid=1000,gid=1000,size=256m"]
+    mem_limit: 768m
+    build: { context: .., dockerfile: infra/docker/web.Dockerfile }
+    image: ${IMAGE_REGISTRY:-pnl-lens}/web:${IMAGE_TAG:-local}
+    environment:
+      <<: *tz
+      AUTH_MODE: jwt
+      API_INTERNAL_URL: http://api:4000
+      APP_URL: ${APP_URL:?set in .env}
+      PRICING_DEFAULT_COUNTRY: ${PRICING_DEFAULT_COUNTRY:-US}
+    networks: [edge]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+
+  api:
+    <<: [*hardened, *logging]
+    tmpfs: ["/tmp:size=64m"]
+    mem_limit: 1g                            # 50 users uploading 5 MB at once peaked at 549 MiB (docs/LOAD_TEST.md)
+    build: { context: .., dockerfile: infra/docker/api.Dockerfile }
+    image: ${IMAGE_REGISTRY:-pnl-lens}/api:${IMAGE_TAG:-local}
+    environment:
+      <<: [*tz, *keks]
+      DATABASE_URL: postgres://lens_app:${LENS_APP_PASSWORD:?set in .env}@postgres:5432/lens
+      REDIS_URL: redis://:${REDIS_PASSWORD:?set in .env}@redis:6379
+      S3_ENDPOINT: http://garage:3900
+      S3_REGION: garage
+      S3_BUCKET: statements
+      S3_EXPORT_BUCKET: exports
+      S3_ACCESS_KEY_ID: ${S3_API_ACCESS_KEY_ID:?set in .env}
+      S3_SECRET_ACCESS_KEY: ${S3_API_SECRET_ACCESS_KEY:?set in .env}
+      AUTH_MODE: jwt
+      SESSION_SECRET: ${SESSION_SECRET:?set in .env}
+      OTP_PEPPER: ${OTP_PEPPER:?set in .env}
+      IP_HASH_SECRET: ${IP_HASH_SECRET:?set in .env}
+      APP_URL: ${APP_URL:?set in .env}
+      MAIL_DRIVER: ${MAIL_DRIVER:-resend}
+      MAIL_FROM: ${MAIL_FROM:-PnL Lens <no-reply@pnllens.com>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      PAYMENTS_MODE: ${PAYMENTS_MODE:-off}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      PRICING_DEFAULT_COUNTRY: ${PRICING_DEFAULT_COUNTRY:-US}
+    networks: [edge, internal]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage-init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  worker:
+    <<: [*hardened, *logging]
+    tmpfs: ["/tmp:size=128m"]
+    mem_limit: ${WORKER_MEM_LIMIT:-2g}
+    build: { context: .., dockerfile: infra/docker/worker.Dockerfile }
+    image: ${IMAGE_REGISTRY:-pnl-lens}/worker:${IMAGE_TAG:-local}
+    environment:
+      <<: [*tz, *keks]
+      DATABASE_URL: postgres://lens_worker:${LENS_WORKER_PASSWORD:?set in .env}@postgres:5432/lens
+      REDIS_URL: redis://:${REDIS_PASSWORD:?set in .env}@redis:6379
+      S3_ENDPOINT: http://garage:3900
+      S3_REGION: garage
+      S3_BUCKET: statements
+      S3_EXPORT_BUCKET: exports
+      S3_ACCESS_KEY_ID: ${S3_WORKER_ACCESS_KEY_ID:?set in .env}
+      S3_SECRET_ACCESS_KEY: ${S3_WORKER_SECRET_ACCESS_KEY:?set in .env}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      ENGINE_TIMEOUT_MS: ${ENGINE_TIMEOUT_MS:-60000}
+      ENGINE_MEMORY_MB: ${ENGINE_MEMORY_MB:-512}
+      RETENTION_USAGE_MONTHS: ${RETENTION_USAGE_MONTHS:-12}
+      RETENTION_AUDIT_MONTHS: ${RETENTION_AUDIT_MONTHS:-24}
+    networks: [internal]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage-init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  postgres:
+    <<: *logging
+    image: postgres:16.14-bookworm
+    shm_size: 256m
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lens_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: lens
+      POSTGRES_INITDB_ARGS: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
+    volumes: [pgdata:/var/lib/postgresql/data]
+    networks: [internal]
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d lens"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+  redis:
+    <<: *logging
+    image: redis:7.4.11-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction", "--requirepass", "${REDIS_PASSWORD:?set in .env}"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set in .env}
+    volumes: [redisdata:/data]
+    networks: [internal]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+  garage:
+    <<: *logging
+    image: dxflrs/garage:v2.4.1
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set in .env}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set in .env}
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    networks: [internal]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    <<: *logging
+    build: { context: .., dockerfile: infra/docker/tools.Dockerfile }
+    image: ${IMAGE_REGISTRY:-pnl-lens}/tools:${IMAGE_TAG:-local}
+    command: ["sh", "-c", "node packages/db/scripts/migrate.mjs && node packages/db/scripts/setup-roles.mjs"]
+    environment:
+      MIGRATE_DATABASE_URL: postgres://${POSTGRES_USER:-lens_admin}:${POSTGRES_PASSWORD:?set in .env}@postgres:5432/lens
+      LENS_APP_PASSWORD: ${LENS_APP_PASSWORD:?set in .env}
+      LENS_WORKER_PASSWORD: ${LENS_WORKER_PASSWORD:?set in .env}
+    networks: [internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  storage-init:
+    <<: *logging
+    build: { context: .., dockerfile: infra/docker/tools.Dockerfile }   # same image as migrate
+    image: ${IMAGE_REGISTRY:-pnl-lens}/tools:${IMAGE_TAG:-local}
+    command: ["node", "infra/scripts/storage-init.mjs"]
+    environment:
+      GARAGE_ADMIN_URL: http://garage:3903
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set in .env}
+      S3_BUCKET: statements
+      S3_EXPORT_BUCKET: exports
+      STORAGE_CAPACITY_BYTES: ${STORAGE_CAPACITY_BYTES:-100000000000}
+      S3_API_ACCESS_KEY_ID: ${S3_API_ACCESS_KEY_ID:?set in .env}
+      S3_API_SECRET_ACCESS_KEY: ${S3_API_SECRET_ACCESS_KEY:?set in .env}
+      S3_WORKER_ACCESS_KEY_ID: ${S3_WORKER_ACCESS_KEY_ID:?set in .env}
+      S3_WORKER_SECRET_ACCESS_KEY: ${S3_WORKER_SECRET_ACCESS_KEY:?set in .env}
+    networks: [internal]
+    depends_on:
+      garage: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    restart: "no"
+
+networks:
+  edge: {}
+  internal:
+    internal: true
+
+volumes:
+  pgdata:
+  redisdata:
+  garage_meta:
+  garage_data:
+  caddy_data:
+  caddy_config:

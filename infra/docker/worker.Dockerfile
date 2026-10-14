@@ -1,6 +1,6 @@
 # @file  infra/docker/worker.Dockerfile
 # @area  Ops
-# @what  Worker image. Build context = repo root. Debian slim: official Node binary with full ICU (engine formatting).
+# @what  Worker image. Build context = repo root. Debian slim: official Node binary with full ICU (engine formatting). Bundled with esbuild; engine libraries installed.
 FROM node:22.23.2-bookworm-slim AS base
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -15,12 +15,19 @@ COPY packages/db/package.json packages/db/package.json
 FROM base AS build
 RUN npm ci --no-audit --no-fund --ignore-scripts
 COPY tsconfig.base.json ./
+COPY packages/shared/src packages/shared/src
+COPY packages/db/src packages/db/src
+COPY packages/engine/src packages/engine/src
 COPY apps/worker apps/worker
 RUN npm run build -w @pnl-lens/worker
 
 # ---- production deps only for this workspace
 FROM base AS prod-deps
-RUN npm ci --no-audit --no-fund --ignore-scripts --omit=dev -w @pnl-lens/worker
+RUN npm ci --no-audit --no-fund --ignore-scripts --omit=dev -w @pnl-lens/worker \
+ # The engine may pin a different version of a library than the web app (SheetJS 0.20.3 vs 0.18.5); npm then
+ # nests it under packages/engine/node_modules. Put those next to the worker bundle so it wins over the root copy.
+ && mkdir -p apps/worker/node_modules \
+ && if [ -d packages/engine/node_modules ]; then cp -R packages/engine/node_modules/. apps/worker/node_modules/; fi
 
 # ---- runtime
 FROM node:22.23.2-bookworm-slim AS runtime
@@ -28,6 +35,7 @@ WORKDIR /app
 # Pinned server timezone (plan D9): the engine's date fallback depends on it.
 ENV NODE_ENV=production TZ=Asia/Kolkata
 COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=prod-deps /app/apps/worker/node_modules ./apps/worker/node_modules
 COPY apps/worker/package.json apps/worker/package.json
 COPY --from=build /app/apps/worker/dist apps/worker/dist
 USER node

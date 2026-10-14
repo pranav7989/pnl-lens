@@ -105,7 +105,7 @@ describe('exposure: only Caddy is reachable from outside the Docker networks', (
     const E = `${PROJECT}_edge`, I = INTERNAL;
     expect(nets('caddy')).toEqual([E]);
     expect(nets('api')).toEqual([E, I].sort());
-    expect(nets('web')).toEqual([E, I].sort());          // transitional until Phase 6
+    expect(nets('web')).toEqual([E]);                    // Phase 6: no database access, talks only to the api
     for (const s of ['worker', 'postgres', 'redis', 'garage']) expect(nets(s), s).toEqual([I]);
   });
   it('the worker cannot reach the internet', () => {
@@ -125,14 +125,18 @@ describe('through Caddy', () => {
     expect(await res.text()).toContain('PnL Lens');
     expect(res.headers.get('server')).toBeNull();
   });
-  it('web app health checks Postgres', async () => {
-    const res = await fetch(`${BASE}/api/health`);
-    expect(res.status).toBe(200);
+  it('every /api/* path goes to the API; the web app has no API routes or DB credentials (Phase 6)', async () => {
+    const me = await (await fetch(`${BASE}/api/me`)).json();           // old web route: now answered by the API (404 shape)
+    expect(me.error).toBeDefined();
+    const v1 = await (await fetch(`${BASE}/api/v1/me`)).json();
+    expect(v1.user.id).toBe('00000000-0000-0000-0000-000000000001');
+    const env = dc('exec', '-T', 'web', 'sh', '-c', 'env').out;
+    expect(env).not.toMatch(/DATABASE_URL|LENS_APP_PASSWORD|SESSION_SECRET|FILE_KEK/);
   });
-  it('web app reads the seeded dev user from Postgres (as lens_app)', async () => {
-    const me = await (await fetch(`${BASE}/api/me`)).json();
-    expect(me.user.id).toBe('00000000-0000-0000-0000-000000000001');
-    expect(typeof me.credits).toBe('number');
+  it('the web app renders pages from API data (the dev user\'s dashboard)', async () => {
+    const res = await fetch(`${BASE}/dashboard`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('Your reports stay here until you delete them.');
   });
   it('routes /api/v1/* to the API', async () => {
     const res = await fetch(`${BASE}/api/v1/health`);
@@ -148,9 +152,9 @@ describe('through Caddy', () => {
 });
 
 describe('worker', () => {
-  it('is ready: Postgres as lens_worker, Redis, storage', () => {
+  it('is ready: Postgres as lens_worker, Redis, storage, queue consumer', () => {
     const r = dc('exec', '-T', 'worker', 'node', '-e', "fetch('http://127.0.0.1:4100/health').then(r=>r.text()).then(t=>console.log(t))");
-    expect(JSON.parse(r.out).checks).toEqual({ db: 'ok', redis: 'ok', storage: 'ok' });
+    expect(JSON.parse(r.out).checks).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok', engine: 'ok' });
   });
   it('runs in the pinned timezone Asia/Kolkata (plan D9)', () => {
     const r = dc('exec', '-T', 'worker', 'node', '-e', 'console.log(new Date(2024,0,1).getTimezoneOffset())');
@@ -186,11 +190,21 @@ describe('Postgres least privilege', () => {
     const r = psql('lens_app', env.LENS_APP_PASSWORD, "select count(*) from public.credits where user_id = '00000000-0000-0000-0000-000000000001'");
     expect(r.out).toBe('1');
   });
-  it('lens_worker logs in but has no table access yet (grants arrive in Phase 3)', () => {
+  it('lens_worker logs in and cannot read users (no access to accounts, payments or credits)', () => {
     expect(psql('lens_worker', env.LENS_WORKER_PASSWORD, 'select current_user').out).toBe('lens_worker');
     const r = psql('lens_worker', env.LENS_WORKER_PASSWORD, 'select count(*) from public.users');
     expect(r.code).not.toBe(0);
     expect(r.err).toMatch(/permission denied/);
+  });
+  it('lens_worker can read its job tables (migration 0009)', () => {
+    const r = psql('lens_worker', env.LENS_WORKER_PASSWORD, 'select count(*) from public.analyses');
+    expect(r.code, r.err).toBe(0);
+  });
+  it('the migrate job applied every migration (0014 or later) and the dev user has a plan (D6)', () => {
+    // at least one: the save test below tops the dev user up with a second plan once the seeded one is used up
+    expect(Number(psql('lens_app', env.LENS_APP_PASSWORD, "select count(*) from public.subscriptions where user_id = '00000000-0000-0000-0000-000000000001' and ends_at > now()").out)).toBeGreaterThanOrEqual(1);
+    const r = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, "select max(name) from public.schema_migrations");
+    expect(r.out >= '0014_').toBe(true);
   });
 });
 
@@ -240,5 +254,158 @@ describe('storage (Garage, S3 API) least privilege', () => {
   it('neither key can create buckets', () => {
     expect(aws(...API, ['s3', 'mb', 's3://probe-bucket']).code).not.toBe(0);
     expect(aws(...WORKER, ['s3', 'mb', 's3://probe-bucket']).code).not.toBe(0);
+  });
+});
+
+describe('API on the stack (Phase 4)', () => {
+  const ORIGIN = `http://localhost:${process.env.HTTP_PORT || 8080}`;
+  const FIXTURE = path.join(ROOT, 'packages/engine/test/fixtures/zerodha_tradebook.csv');
+  let analysisId = '';
+
+  it('is ready: Postgres (lens_app), Redis and storage all ok', async () => {
+    const r = await fetch(`${BASE}/api/v1/ready`);
+    expect(await r.json()).toEqual({ ok: true, checks: { db: 'ok', redis: 'ok', storage: 'ok' } });
+  });
+  it('refuses a cross-site upload (CSRF origin check)', async () => {
+    const fd = new FormData(); fd.set('consent', 'true');
+    const r = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: 'https://evil.example' } });
+    expect(r.status).toBe(403);
+  });
+  it('accepts the dev site opened as 127.0.0.1 as well as localhost (same site, two origins)', async () => {
+    const fd = new FormData();
+    fd.set('consent', 'true');
+    fd.set('files', new Blob([fs.readFileSync(FIXTURE)]), 'zerodha_tradebook.csv');
+    const r = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: `http://127.0.0.1:${process.env.HTTP_PORT || 8080}` } });
+    expect(r.status, await r.clone().text()).toBe(202);
+  });
+  it('accepts an upload through Caddy and queues a BullMQ job', async () => {
+    const fd = new FormData();
+    fd.set('consent', 'true');
+    fd.set('files', new Blob([fs.readFileSync(FIXTURE)]), 'zerodha_tradebook.csv');
+    const r = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: ORIGIN } });
+    expect(r.status).toBe(202);
+    analysisId = (await r.json()).analysisId;
+    const keys = dc('exec', '-T', 'redis', 'redis-cli', '-a', env.REDIS_PASSWORD, '--no-auth-warning', 'exists', `bull:analyses:analysis-${analysisId}`);
+    expect(keys.out).toBe('1');
+  });
+  it('the stored object is encrypted, and the worker key + file key decrypt it to the original', async () => {
+    const row = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD,
+      `select f.storage_key || ',' || encode(f.iv, 'hex') || ',' || encode(f.wrapped_dek, 'hex') || ',' || f.enc_key_id
+         from analysis_files af join statement_files f on f.id = af.file_id where af.analysis_id = '${analysisId}'`);
+    const [key, iv, wrapped, kekId] = row.out.split(',');
+    expect(kekId).toBe(env.FILE_KEK_ID);
+    const got = spawnSync('docker', ['run', '--rm', '--network', INTERNAL, '-e', `AWS_ACCESS_KEY_ID=${env.S3_WORKER_ACCESS_KEY_ID}`,
+      '-e', `AWS_SECRET_ACCESS_KEY=${env.S3_WORKER_SECRET_ACCESS_KEY}`, '-e', 'AWS_DEFAULT_REGION=garage', '-e', 'AWS_EC2_METADATA_DISABLED=true',
+      AWS_IMAGE, '--endpoint-url', 'http://garage:3900', 's3', 'cp', `s3://statements/${key}`, '-'], { maxBuffer: 20 * 1024 * 1024 });
+    expect(got.status, String(got.stderr)).toBe(0);
+    const plain = fs.readFileSync(FIXTURE);
+    expect(got.stdout.includes(plain.subarray(0, 32))).toBe(false);
+    const { decryptFile } = await import('../../packages/shared/src/file-crypto');
+    const kek = { id: kekId, key: Buffer.from(env[`FILE_KEK_${kekId.toUpperCase()}`], 'hex') };
+    expect(decryptFile(got.stdout, Buffer.from(iv, 'hex'), Buffer.from(wrapped, 'hex'), kek).equals(plain)).toBe(true);
+  });
+  it('reports the job status to the owner (the Phase 5 worker processes it)', async () => {
+    const r = await fetch(`${BASE}/api/v1/analyses/${analysisId}`);
+    expect(await r.json()).toMatchObject({ id: analysisId, status: expect.stringMatching(/^(queued|parsing|analysing|storing|ready)$/), fileCount: 1 });
+  });
+});
+
+describe('worker on the stack (Phase 5)', () => {
+  const ORIGIN = `http://localhost:${process.env.HTTP_PORT || 8080}`;
+  const FIX = path.join(ROOT, 'packages/engine/test/fixtures');
+  const golden = JSON.parse(fs.readFileSync(path.join(ROOT, 'packages/engine/test/golden/combo_tradebook_plus_other_account.json'), 'utf8')).report;
+  let analysisId = '';
+
+  it('worker is ready: Postgres as lens_worker, Redis, storage, queue', () => {
+    const r = dc('exec', '-T', 'worker', 'node', '-e', "fetch('http://127.0.0.1:4100/health').then(r=>r.json()).then(j=>console.log(JSON.stringify(j.checks)))");
+    expect(JSON.parse(r.out)).toEqual({ db: 'ok', redis: 'ok', storage: 'ok', queue: 'ok', engine: 'ok' });
+  });
+  it('two statements uploaded through Caddy become a ready analysis equal to the golden combined report', async () => {
+    const fd = new FormData();
+    fd.set('consent', 'true');
+    fd.append('files', new Blob([fs.readFileSync(path.join(FIX, 'zerodha_tradebook.csv'))]), 'zerodha_tradebook.csv');
+    fd.append('files', new Blob([fs.readFileSync(path.join(FIX, 'groww_pnl.csv'))]), 'groww_pnl.csv');
+    const up = await fetch(`${BASE}/api/v1/analyses`, { method: 'POST', body: fd, headers: { origin: ORIGIN } });
+    expect(up.status).toBe(202);
+    analysisId = (await up.json()).analysisId;
+    let s: any = null;
+    for (let i = 0; i < 60; i++) {
+      s = await (await fetch(`${BASE}/api/v1/analyses/${analysisId}`)).json();
+      if (s.status === 'ready' || s.status === 'failed') break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    expect(s.status).toBe('ready');
+    expect(s.preview).toMatchObject({ positions: golden.m.n, currency: golden.m.currency, net: golden.m.net });
+    const payload = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, `select payload::text from analyses where id = '${analysisId}'`).out;
+    expect({ ...JSON.parse(payload), generatedAt: '<normalised>' }).toEqual(golden);
+  });
+  it('the worker logged a read and a decrypt for each file', () => {
+    const r = psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD,
+      `select string_agg(action, ',' order by id) from file_access_log where actor_kind = 'worker' and file_id in (select file_id from analysis_files where analysis_id = '${analysisId}')`);
+    expect(r.out).toBe('read,decrypt,read,decrypt');
+  });
+  it('saving spends one report from the seeded dev plan and serves the report', async () => {
+    // the dev volume persists between runs: give the dev user a fresh plan if earlier runs used it up
+    psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, `insert into subscriptions (user_id, plan_id, reports_total, files_per_report, ends_at, grant_reason)
+      select '00000000-0000-0000-0000-000000000001', 'snapshot', 5, 3, now() + interval '183 days', 'stack test'
+      where not exists (select 1 from subscriptions where user_id = '00000000-0000-0000-0000-000000000001' and ends_at > now() and reports_used < reports_total)`);
+    const save = await fetch(`${BASE}/api/v1/reports`, { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ analysisId }) });
+    expect(save.status).toBe(201);
+    const { id } = await save.json();
+    const rep = await (await fetch(`${BASE}/api/v1/reports/${id}`)).json();
+    expect(rep.report.m.n).toBe(golden.m.n);
+    expect(rep.summary.monthLabel).toMatch(/^[A-Z]{3}-\d{2}$/);
+  });
+});
+
+describe('exports bucket (Phase 7)', () => {
+  const key = `probe/${Date.now()}`;
+  const API = [env.S3_API_ACCESS_KEY_ID, env.S3_API_SECRET_ACCESS_KEY] as const;
+  const WORKER = [env.S3_WORKER_ACCESS_KEY_ID, env.S3_WORKER_SECRET_ACCESS_KEY] as const;
+  it('worker key can write an archive but cannot read it back', () => {
+    expect(aws(...WORKER, ['s3', 'cp', '-', `s3://exports/${key}`], 'archive').code).toBe(0);
+    expect(aws(...WORKER, ['s3', 'cp', `s3://exports/${key}`, '-']).code).not.toBe(0);
+  });
+  it('api key can read archives (downloads) but cannot write', () => {
+    const r = aws(...API, ['s3', 'cp', `s3://exports/${key}`, '-']);
+    expect(r.code, r.err).toBe(0);
+    expect(r.out).toBe('archive');
+    expect(aws(...API, ['s3', 'cp', '-', `s3://exports/${key}-x`], 'nope').code).not.toBe(0);
+  });
+  it('worker key can delete expired archives; anonymous access is refused', () => {
+    expect(aws(null, null, ['s3', 'cp', `s3://exports/${key}`, '-']).code).not.toBe(0);
+    expect(aws(...WORKER, ['s3', 'rm', `s3://exports/${key}`]).code).toBe(0);
+  });
+});
+
+describe('hardening (Phase 7)', () => {
+  const inspect = (svc: string) => {
+    const id = dc('ps', '-q', svc).out.split(/\r?\n/)[0];
+    return JSON.parse(run('docker', ['inspect', id]).out)[0];
+  };
+  for (const svc of ['caddy', 'web', 'api', 'worker']) {
+    it(`${svc}: read-only root filesystem, no new privileges, all capabilities dropped, memory limit`, () => {
+      const c = inspect(svc);
+      expect(c.HostConfig.ReadonlyRootfs).toBe(true);
+      expect(c.HostConfig.SecurityOpt).toContain('no-new-privileges:true');
+      expect(c.HostConfig.CapDrop).toEqual(['ALL']);
+      expect(c.HostConfig.Memory).toBeGreaterThan(0);
+    });
+  }
+  for (const svc of ['web', 'api', 'worker']) {
+    it(`${svc} runs as a non-root user`, () => {
+      expect(dc('exec', '-T', svc, 'id', '-u').out).not.toBe('0');
+    });
+  }
+  it('security headers and CSP on every response (pages and API)', async () => {
+    for (const p of ['/', '/api/v1/health']) {
+      const h = (await fetch(`${BASE}${p}`)).headers;
+      expect(h.get('content-security-policy'), p).toContain("default-src 'self'");
+      expect(h.get('content-security-policy'), p).toContain("frame-ancestors 'none'");
+      expect(h.get('x-frame-options'), p).toBe('DENY');
+      expect(h.get('x-content-type-options'), p).toBe('nosniff');
+      expect(h.get('strict-transport-security'), p).toMatch(/max-age=\d+/);
+      expect(h.get('server'), p).toBeNull();
+    }
   });
 });
