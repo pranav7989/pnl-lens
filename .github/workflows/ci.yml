@@ -48,7 +48,7 @@ jobs:
       - run: npm run test:stack
       - name: Browser end to end (jwt mode)
         run: |
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit   # webkit = Safari engine (score-card and landing specs)
           npm run stack:e2e
           npm run test:e2e
       - name: Production compose file is valid
