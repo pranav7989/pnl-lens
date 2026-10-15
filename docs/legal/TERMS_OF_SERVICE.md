@@ -50,9 +50,9 @@ A **file** is one P&L statement or tradebook downloaded from your broker (Excel,
 
 | Plan | Reports | Files per report | Create reports within | Price (India / elsewhere) |
 |---|---|---|---|---|
-| Single | 1 | 2 | 7 days | ₹99 / US$4.99 |
-| Snapshot | 5 | 3 | 6 months (183 days) | ₹499 / US$19 |
-| Progress | 25 | 3 | 3 months (92 days) | ₹1,499 / US$49 |
+| Single | 1 | 2 | 7 days | ₹99 / US$9 |
+| Snapshot | 5 | 3 | 3 months (92 days) | ₹499 / US$19 |
+| Progress | 25 | 3 | 6 months (183 days) | ₹1,499 / US$49 |
 | Discipline | 90 | 3 | 12 months (365 days) | ₹3,999 / US$129 |
 
 - The **validity period** is how long you can **create new reports**. It starts when payment is confirmed. Unused reports **expire** at the end of it and are not refunded or carried over. **LAWYER CHECK**

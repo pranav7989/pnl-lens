@@ -12,6 +12,8 @@ export interface CurrentReport { id: string; createdAt: string; title: string | 
 
 const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 export const monthTag = (d: string) => { const x = new Date(d); return MON[x.getMonth()] + '-' + String(x.getFullYear()).slice(2); };
+/** Plan end date as DD-MMM-YY, e.g. 14-JAN-27 (REQ-3). */
+export const dateTag = (d: string) => { const x = new Date(d); return String(x.getDate()).padStart(2, '0') + '-' + MON[x.getMonth()] + '-' + String(x.getFullYear()).slice(2); };
 export const dayLabel = (d: string) => { const x = new Date(d); return x.getDate() + ' ' + MON[x.getMonth()].charAt(0) + MON[x.getMonth()].slice(1).toLowerCase(); };
 export const planName = (id: string) => PLANS.find((p) => p.id === id)?.name ?? id;
 export const expired = (p: PlanRow | null) => !p || new Date(p.endsAt).getTime() < Date.now();

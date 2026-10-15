@@ -134,6 +134,18 @@ describe.skipIf(!ok)('admin (RBAC)', () => {
     expect((await x.t.admin.query(`select count(*)::int as n from audit_log where action = 'plan_granted_manual' and user_id = $1`, [target])).rows[0].n).toBe(1);
   });
 
+  it('grants run for each plan\'s length from PLANS: 7 days, 3, 6 and 12 months (REQ-3)', async () => {
+    const owner = await makeUser(x.t, { role: 'owner' });
+    for (const [planId, days] of [['single', 7], ['snapshot', 92], ['progress', 183], ['discipline', 365]] as const) {
+      const email = `len-${planId}-${Date.now()}@t.local`;
+      const target = await makeUser(x.t, { email });
+      const r = await x.app.inject({ method: 'POST', url: '/api/v1/admin/grants', headers: await as(owner), payload: { email, planId, reason: 'Length check' } });
+      expect(r.statusCode, planId).toBe(201);
+      const d = (await x.t.admin.query(`select round(extract(epoch from ends_at - now()) / 86400)::int as d from subscriptions where user_id = $1`, [target])).rows[0].d;
+      expect(d, planId).toBe(days);
+    }
+  });
+
   it('tickets: support updates status; unknown ticket 404', async () => {
     const support = await makeUser(x.t, { role: 'support' });
     const { rows } = await x.t.admin.query(`insert into support_tickets (email, subject) values ('a@t.local', 'Help') returning id`);

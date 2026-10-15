@@ -9,7 +9,7 @@
  * creates the plan with values from packages/shared PLANS, never from the request.
  */
 import { z } from 'zod';
-import { PLANS, planPrice } from '@pnl-lens/shared/pricing';
+import { PLANS, planPrice, planSummary } from '@pnl-lens/shared/pricing';
 import { paymentsMode, razorpayKeys } from '@pnl-lens/shared/payments/config';
 import { createOrder, verifyCheckout, verifyWebhook, parseWebhook } from '@pnl-lens/shared/payments/razorpay';
 import { clientCountry } from '@pnl-lens/shared/auth/request';
@@ -71,7 +71,7 @@ export async function paymentRoutes(app: App, deps: Deps, opts: { webhookOnly?: 
       const { rows } = await deps.pool.query('select email from public.users where id = $1', [user.id]);
       await trackWith(deps.pool, user.id, 'checkout_started', { plan: plan.id, currency: price.currency });
       return ok(reply, { mode: 'razorpay', keyId: razorpayKeys().keyId, orderId: order.id, amount: price.amountMinor, currency: price.currency,
-        name: 'PnL Lens', description: `${plan.name} plan`, prefill: { email: rows[0]?.email || '' } });
+        name: 'PnL Lens', description: planSummary(plan), prefill: { email: rows[0]?.email || '' } });
     } catch (e) {
       await captureErrorWith(deps.pool, e, { source: 'server', route: 'POST /payments/order', userId: user.id, context: { plan: plan.id } });
       return fail(reply, 502, 'gateway_error', 'Could not start the payment. Please try again in a minute.');

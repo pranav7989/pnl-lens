@@ -211,7 +211,7 @@ describe.skipIf(!ok)('plan grants', () => {
 
   it('owner-only manual grant: role checked in the DB, reason required, audited (D5)', async () => {
     const owner = await makeUser(t, { role: 'owner' }), admin = await makeUser(t, { role: 'admin' }), u = await makeUser(t);
-    const g = { userId: u, plan: 'snapshot' as const, reports: 5, filesPerReport: 3, days: 183, reason: 'Support case #12' };
+    const g = { userId: u, plan: 'snapshot' as const, reports: 5, filesPerReport: 3, days: 92, reason: 'Support case #12' };
     expect(await code(adminGrantPlan(t.app, { ...g, actorId: admin }))).toBe('forbidden');
     expect(await code(adminGrantPlan(t.app, { ...g, actorId: owner, reason: '  ' }))).toBe('reason_required');
     expect(await code(adminGrantPlan(t.app, { ...g, actorId: owner, filesPerReport: 9 }))).toBe('invalid_plan');
@@ -222,6 +222,8 @@ describe.skipIf(!ok)('plan grants', () => {
     const s = (await t.admin.query('select * from subscriptions where id = $1', [id])).rows[0];
     expect(s).toMatchObject({ user_id: u, plan_id: 'snapshot', reports_total: 5, files_per_report: 3, granted_by: owner, grant_reason: 'Support case #12', payment_id: null });
     expect(before).toBe(0);   // the refused attempts above wrote nothing
+    const days = (await t.admin.query(`select round(extract(epoch from ends_at - now()) / 86400)::int as d from subscriptions where id = $1`, [id])).rows[0].d;
+    expect(days).toBe(92);    // Snapshot: 3 months (REQ-3)
     const audit = (await t.admin.query(`select meta from audit_log where action = 'plan_granted_manual' and user_id = $1`, [u])).rows;
     expect(audit.at(-1)!.meta).toMatchObject({ actor: owner, reason: 'Support case #12', plan: 'snapshot' });
   });
@@ -229,9 +231,11 @@ describe.skipIf(!ok)('plan grants', () => {
   it('the webhook grant (grant_plan) stays idempotent on replay', async () => {
     const u = await makeUser(t);
     await t.admin.query(`insert into payments (user_id, gateway_order_id, amount_minor, currency, plan_id) values ($1, 'order_x', 49900, 'INR', 'snapshot')`, [u]);
-    const g1 = await asRole(t, 'lens_app', `select grant_plan('order_x', 'pay_x', '{}'::jsonb, 5, 3, 183) as ok`);
-    const g2 = await asRole(t, 'lens_app', `select grant_plan('order_x', 'pay_x', '{}'::jsonb, 5, 3, 183) as ok`);
+    const g1 = await asRole(t, 'lens_app', `select grant_plan('order_x', 'pay_x', '{}'::jsonb, 5, 3, 92) as ok`);
+    const g2 = await asRole(t, 'lens_app', `select grant_plan('order_x', 'pay_x', '{}'::jsonb, 5, 3, 92) as ok`);
     expect([g1[0].ok, g2[0].ok]).toEqual([true, false]);
+    const days = (await t.admin.query(`select round(extract(epoch from ends_at - now()) / 86400)::int as d from subscriptions where user_id = $1`, [u])).rows[0].d;
+    expect(days).toBe(92);    // the plan's days from PLANS decide the end date
     expect((await t.admin.query('select count(*)::int as n from subscriptions where user_id = $1', [u])).rows[0].n).toBe(1);
   });
 

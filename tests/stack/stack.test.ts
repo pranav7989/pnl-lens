@@ -347,7 +347,7 @@ describe('worker on the stack (Phase 5)', () => {
   it('saving spends one report from the seeded dev plan and serves the report', async () => {
     // the dev volume persists between runs: give the dev user a fresh plan if earlier runs used it up
     psql(env.POSTGRES_USER || 'lens_admin', env.POSTGRES_PASSWORD, `insert into subscriptions (user_id, plan_id, reports_total, files_per_report, ends_at, grant_reason)
-      select '00000000-0000-0000-0000-000000000001', 'snapshot', 5, 3, now() + interval '183 days', 'stack test'
+      select '00000000-0000-0000-0000-000000000001', 'snapshot', 5, 3, now() + interval '92 days', 'stack test'
       where not exists (select 1 from subscriptions where user_id = '00000000-0000-0000-0000-000000000001' and ends_at > now() and reports_used < reports_total)`);
     const save = await fetch(`${BASE}/api/v1/reports`, { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ analysisId }) });
     expect(save.status).toBe(201);

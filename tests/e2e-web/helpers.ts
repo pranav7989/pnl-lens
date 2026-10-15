@@ -44,7 +44,7 @@ export async function signIn(page: Page, email: string, next = '/dashboard') {
 /** Gives the user a plan the way the owner's manual grant would (setup shortcut; payments are off in tests). */
 export function givePlan(email: string, plan = 'snapshot', reports = 5, files = 3) {
   sql(`insert into subscriptions (user_id, plan_id, reports_total, files_per_report, ends_at, grant_reason)
-       select id, '${plan}', ${reports}, ${files}, now() + interval '183 days', 'e2e' from users where email = '${email}'`);
+       select id, '${plan}', ${reports}, ${files}, now() + interval '92 days', 'e2e' from users where email = '${email}'`);
   sql(`update credits set balance = balance + ${reports} where user_id = (select id from users where email = '${email}')`);
 }
 

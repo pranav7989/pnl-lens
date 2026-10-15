@@ -85,7 +85,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 173 files._
+_Generated from file headers by `npm run docs:index` — 174 files._
 
 ### Pages
 
@@ -140,7 +140,7 @@ _Generated from file headers by `npm run docs:index` — 173 files._
 | `apps/web/components/workspace/DataRights.tsx` | "Your data" panel: research opt-in (off by default, change anytime), export my data (ZIP, kept 7 days), delete my account. |
 | `apps/web/components/workspace/History.tsx` | Report history grouped by month (MON-YY) with Progress score; rename in the history list only (PATCH /api/v1/reports/:id). |
 | `apps/web/components/workspace/model.ts` | Workspace data types (from the API) and the offline tool's wording, labels and plan rules, kept word for word. |
-| `apps/web/components/workspace/PlanCard.tsx` | Plan card (sidebar) and plan strip (upload view): reports used, statements per report, valid till MON-YY — as in the offline tool. |
+| `apps/web/components/workspace/PlanCard.tsx` | Plan card (sidebar) and plan strip (upload view): reports used, statements per report, valid till DD-MMM-YY — as in the offline tool. |
 | `apps/web/components/workspace/Workspace.tsx` | The report workspace (ported from the offline tool, now on the API): upload with consent, loader, file tabs + All files, "+" and ×, plan card, MON-YY history. |
 | `apps/web/lib/workspace-data.ts` | Server-side loaders for the workspace pages: my plans and my report history from the API, in the shapes the workspace uses. |
 
@@ -334,6 +334,7 @@ _Generated from file headers by `npm run docs:index` — 173 files._
 | `packages/shared/test/next.test.ts` | safeNext(): same-site paths pass; every off-site trick (//, /\, tabs/newlines, schemes) falls back. |
 | `packages/shared/test/otp.test.ts` | Email one-time code helpers. |
 | `packages/shared/test/payments.test.ts` | Razorpay checkout and webhook signature verification. |
+| `packages/shared/test/pricing.test.ts` | REQ-3: plan durations and prices from the single source of truth, the wording built from them, and no stale copy left in the repo. |
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
 | `tests/e2e-web/privacy.spec.ts` | Data rights in the browser: research opt-in toggle, export my data (worker builds the ZIP, download works), delete my account. |

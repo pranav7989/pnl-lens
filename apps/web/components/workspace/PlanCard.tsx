@@ -1,9 +1,9 @@
 /**
  * @file  apps/web/components/workspace/PlanCard.tsx
  * @area  Reports
- * @what  Plan card (sidebar) and plan strip (upload view): reports used, statements per report, valid till MON-YY — as in the offline tool.
+ * @what  Plan card (sidebar) and plan strip (upload view): reports used, statements per report, valid till DD-MMM-YY — as in the offline tool.
  */
-import { planName, expired, monthTag, reportsLeft, st, type PlanRow } from './model';
+import { planName, expired, dateTag, reportsLeft, st, type PlanRow } from './model';
 
 export function PlanCard({ plan }: { plan: PlanRow | null }) {
   if (!plan) return null;
@@ -14,7 +14,7 @@ export function PlanCard({ plan }: { plan: PlanRow | null }) {
       <div className="ws-plan-bar"><i style={{ width: pct + '%' }} /></div>
       <div className="ws-plan-sub">
         <span><b>{plan.reportsUsed}</b> of {plan.reportsTotal} report{plan.reportsTotal === 1 ? '' : 's'} used</span>
-        <span className={off ? 'off' : 'till'} suppressHydrationWarning>{off ? 'Ended ' : 'Till '}{monthTag(plan.endsAt)}</span>
+        <span className={off ? 'off' : 'till'} suppressHydrationWarning>{off ? 'Ended ' : 'Valid till '}{dateTag(plan.endsAt)}</span>
       </div>
     </div>
   );
@@ -28,7 +28,7 @@ export function PlanStrip({ plan }: { plan: PlanRow | null }) {
       <b>{planName(plan.planId)} plan</b>
       <span>{reportsLeft(plan)} of {plan.reportsTotal} report{plan.reportsTotal === 1 ? '' : 's'} left</span>
       <span>Up to {st(plan.filesPerReport)} per report</span>
-      <span suppressHydrationWarning>{off ? 'Ended ' : 'Valid till '}{monthTag(plan.endsAt)}</span>
+      <span suppressHydrationWarning>{off ? 'Ended ' : 'Valid till '}{dateTag(plan.endsAt)}</span>
     </div>
   );
 }

@@ -9,6 +9,7 @@
  */
 import Showcase from './Showcase';
 import { LogoMark } from '@/components/brand/Logo';
+import { durationLabel, reportsBullet, validityBullet, REPORTS_KEPT, type Plan } from '@pnl-lens/shared/pricing';
 
 type Region = 'IN' | 'GLOBAL';
 type Row = { sym: string; when: string; pnl: number; flag?: string };
@@ -99,13 +100,16 @@ const CRYPTO: Group = { group: 'Crypto exchanges', note: 'Spot and perpetual fut
   { n: 'CoinDCX', slug: 'coindcx', files: 'Trade history' }, { n: 'WazirX', slug: 'wazirx', files: 'Trade report' } ] };
 const SOURCES_BY: Record<Region, Group[]> = { IN: [IN_BROKERS, { ...US_BROKERS, group: 'International brokers' }, CRYPTO], GLOBAL: [US_BROKERS, EU_BROKERS, CRYPTO] };
 
-type PlanCard = { id: string; name: string; reports: number; filesPerReport: number; months: number | null; retentionDays: number; progress: boolean; price: { label: string } };
-const PLAN_COPY: Record<string, { tag: string; per: string; feat: string[]; cta: string }> = {
-  single: { tag: 'A first look', per: 'one-time', feat: ['1 report', '2 broker statements per report', 'Full dashboard and insights', 'Access for 7 days'], cta: 'Choose Single' },
-  snapshot: { tag: 'A thorough review', per: 'one-time', feat: ['5 reports', '3 broker statements per report', 'Combined view and PDF/CSV export', 'Use within 6 months'], cta: 'Choose Snapshot' },
-  progress: { tag: 'Build better habits', per: 'for 3 months', feat: ['25 reports over 3 months', 'Progress tab and habit tracking', 'Monthly check-up reminders', 'History kept for the whole plan'], cta: 'Choose Progress' },
-  discipline: { tag: 'For dedicated traders', per: 'for 12 months', feat: ['90 reports over 12 months', 'Full-year progress and trends', 'Share reports with your coach', 'Early access to new features'], cta: 'Choose Discipline' },
+type PlanCard = Plan & { price: { label: string } };
+// Plan-specific copy only; durations, report counts and statements come from PLANS (packages/shared/src/pricing.ts).
+const PLAN_COPY: Record<string, { tag: string; feat: string[]; cta: string }> = {
+  single: { tag: 'A first look', feat: ['Full dashboard and insights'], cta: 'Choose Single' },
+  snapshot: { tag: 'A thorough review', feat: ['Combined view and PDF/CSV export'], cta: 'Choose Snapshot' },
+  progress: { tag: 'Build better habits', feat: ['Progress tab and habit tracking', 'Monthly check-up reminders'], cta: 'Choose Progress' },
+  discipline: { tag: 'For dedicated traders', feat: ['Full-year progress and trends', 'Share reports with your coach', 'Early access to new features'], cta: 'Choose Discipline' },
 };
+/** Card bullets: reports (with "over N months" for progress plans), statements per report for one-off plans, the plan's own copy, validity, reports kept. */
+const planBullets = (p: Plan) => [reportsBullet(p), ...(p.progress ? [] : [`${p.filesPerReport} broker statements per report`]), ...PLAN_COPY[p.id].feat, validityBullet(p), REPORTS_KEPT].filter((x): x is string => !!x);
 
 const faq = (single: string, snapshot: string, region: Region) => [
   ['Which file should I upload?', 'Your broker’s P&L statement or tradebook, as Excel, CSV, PDF or Word. The tradebook gives the richest view because it includes the time of each trade.'],
@@ -252,8 +256,8 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
                   {p.id === 'progress' && <span className="lp-plan-flag">Most popular</span>}
                   <h3>{p.name}</h3>
                   <p className="lp-plan-tag">{c.tag}</p>
-                  <p className="lp-plan-price"><b>{p.price.label}</b><span>{c.per}</span></p>
-                  <ul>{c.feat.map((f) => <li key={f}>{f}</li>)}</ul>
+                  <p className="lp-plan-price"><b>{p.price.label}</b><span>{durationLabel(p)}</span></p>
+                  <ul>{planBullets(p).map((f) => <li key={f}>{f}</li>)}</ul>
                   <a className={`lp-btn block ${p.id === 'progress' ? '' : 'ghost'}`} href={`${start}${start.includes('?') ? '&' : '?'}plan=${p.id}`}>{c.cta}</a>
                 </div>
               );
