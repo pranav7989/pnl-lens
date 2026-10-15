@@ -85,7 +85,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 172 files._
+_Generated from file headers by `npm run docs:index` — 173 files._
 
 ### Pages
 
@@ -337,6 +337,7 @@ _Generated from file headers by `npm run docs:index` — 172 files._
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
 | `tests/e2e-web/privacy.spec.ts` | Data rights in the browser: research opt-in toggle, export my data (worker builds the ZIP, download works), delete my account. |
+| `tests/e2e-web/score-card.spec.ts` | REQ-1: the Progress score card's level labels never overlap, at every level and width, in Chromium (Chrome/Edge) and WebKit (Safari). |
 | `tests/e2e-web/workspace.spec.ts` | Browser end to end on the stack: sign in → upload with consent → loader → report (5 tabs) → "+" → file tabs/All files → rename in history → second device → remove → delete. |
 | `tests/load/prepare.mjs` | Load test setup: creates N test accounts (load-NN@load.invalid) in the running dev stack and writes a session token for each to .load/tokens.json. |
 | `tests/load/uploads.js` | k6 scenario: N users each upload statements at the same moment and follow their analysis to ready (latency, time to ready, failures). |

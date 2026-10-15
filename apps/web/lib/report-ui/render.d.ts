@@ -1,4 +1,7 @@
 import type { ReportV1 } from '@pnl-lens/engine/types';
+/** [name, lowest score, highest score] per level, mirroring the engine's thresholds. */
+export const LEVEL_RANGES: [string, number, number][];
+export function ladderHtml(index: number): string;
 export function mountReport(
   root: HTMLElement,
   report: ReportV1,

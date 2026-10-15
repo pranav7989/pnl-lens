@@ -8,6 +8,21 @@
  * Report renderer v2 (website + offline app). DOM-string rendering scoped to `root`, no dependencies.
  * Every user-derived string goes through esc(). Tiles carry data-behav="<key>" for the behaviour card.
  */
+/** Level names and score ranges. Mirrors the thresholds in packages/engine/src/engine.js buildProgress (engine unchanged). */
+export const LEVEL_RANGES = [['Building', 0, 39], ['Developing', 40, 54], ['Steady', 55, 69], ['Disciplined', 70, 84], ['Elite', 85, 100]];
+
+/**
+ * The level ladder under the score: 5 segments in one row, each label centred in its own column below
+ * (never overlapping). Narrow cards (ladder under 344 px) show only the current level's label (report.css).
+ * Hover or tap a segment for its name and score range.
+ */
+export function ladderHtml(index) {
+  const cl = (i) => (i < index ? 'done' : i === index ? 'on' : '');
+  return `<div class="pg-ladder" role="list" aria-label="Levels">
+    <div class="pg-lad-bar">${LEVEL_RANGES.map(([n, a, b], i) => `<i class="${cl(i)}" role="listitem" tabindex="0" aria-label="${n}: ${a}–${b}${i === index ? ' (your level)' : ''}" data-tip="${n}: ${a}–${b}"></i>`).join('')}</div>
+    <div class="pg-lad-lab" aria-hidden="true">${LEVEL_RANGES.map(([n], i) => `<span class="${cl(i)}">${n}</span>`).join('')}</div></div>`;
+}
+
 export function mountReport(root, R, fmt) {
   const inr = fmt.inr, pct = fmt.pct;
   const $ = (s) => root.querySelector(s), $$ = (s) => [...root.querySelectorAll(s)];
@@ -218,13 +233,12 @@ export function mountReport(root, R, fmt) {
     const headScore = cur ? cur.score : P.overall.score;
     const lab = (k) => { const [y, mo] = k.split('-'); return new Date(Date.UTC(+y, +mo - 1, 1)).toLocaleString('en', { month: 'short', timeZone: 'UTC' }) + ' ' + y.slice(2); };
     const lv = P.level || { name: '', index: 0, next: null };
-    const LADDER = ['Building', 'Developing', 'Steady', 'Disciplined', 'Elite'];
     let h = '<div class="rv-grid">';
     // 1 — hero
     h += `<div class="rv-panel s12 pg-hero" data-behav="score">${info('score')}
       <div class="pg-hero-ring">${ring(headScore, P.delta)}</div>
       <div class="pg-hero-mid"><span class="pg-kicker">Level</span><b class="pg-level">${esc(lv.name)}</b>
-        <div class="pg-ladder">${LADDER.map((n, i) => `<i class="${i < lv.index ? 'done' : i === lv.index ? 'on' : ''}" title="${n}"><span>${n}</span></i>`).join('')}</div>
+        ${ladderHtml(lv.index)}
         <p class="pg-next">${lv.next ? `<b>${lv.next.gap}</b> point${lv.next.gap === 1 ? '' : 's'} to <b>${esc(lv.next.name)}</b>` : 'Top level reached. Keep it steady.'}</p></div>
       <div class="pg-hero-note"><span class="pg-kicker">${cur ? esc(lab(cur.key)) + ' summary' : 'Summary'}</span><p>${esc(P.summary || '')}</p>
         ${(P.badges || []).length ? `<div class="pg-badges">${P.badges.map((b) => `<span class="pg-badge" title="${esc(b.desc)}"><i></i>${esc(b.name)}</span>`).join('')}</div>` : ''}</div></div>`;
