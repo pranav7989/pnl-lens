@@ -1,15 +1,15 @@
 /**
  * @file  apps/web/app/layout.tsx
  * @area  Pages
- * @what  Root layout: fonts (Manrope + ₹ glyph), header with logo and credits, browser error reporter.
+ * @what  Root layout: fonts (Manrope + ₹ glyph), header with logo and credits (from the API), browser error reporter.
  */
 import './globals.css';
 import './report.css';
+import './workspace.css';
 import localFont from 'next/font/local';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getSessionUser } from '@/lib/auth/session';
-import { getStore } from '@/lib/store';
+import { getMe } from '@/lib/api-client';
 import NavLinks from '@/components/nav/NavLinks';
 import { LogoMark } from '@/components/brand/Logo';
 import ErrorReporter from '@/components/ErrorReporter';
@@ -26,8 +26,8 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSessionUser();
-  const credits = user ? await getStore().getCredits(user.id).catch(() => null) : null;
+  const me = await getMe().catch(() => null);
+  const user = me?.user ?? null, credits = me ? me.credits : null;
   return (
     <html lang="en" className={`${manrope.variable} ${rupee.variable}`}>
       <head><meta name="color-scheme" content="dark" /></head>

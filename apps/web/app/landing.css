@@ -86,6 +86,13 @@ main:has(.lp), body:has(.lp) > main { max-width: none; padding: 0; }
 .lp-steps { counter-reset: s; }
 .lp-steps h3 { display: flex; align-items: center; gap: 12px; }
 .lp-steps h3::before { counter-increment: s; content: counter(s); flex: none; width: 30px; height: 30px; border-radius: 9px; background: var(--y); color: #000; font-weight: 800; display: grid; place-items: center; font-size: 15px; }
+/* REQ-4: "how it works" as three one-line steps in a row (stacked on phones) */
+.lp-steps.compact .lp-card { padding: 16px 18px; gap: 4px; } .lp-steps.compact h3 { font-size: 17px; } .lp-steps.compact p { font-size: 14.5px; }
+.lp-trustline a { color: var(--mut); text-decoration: underline; text-underline-offset: 3px; }
+/* "See plans" pill: shown by landing.js after the hero, hidden while pricing is on screen */
+.lp-pill { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 40; background: var(--y); color: #000; font-weight: 800; font-size: 15px; text-decoration: none; padding: 12px 22px; border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+.lp-pill[hidden] { display: none; }
+.lp-legal { font-size: 12.5px; color: var(--dim); }
 
 /* sample dashboard */
 .dx { position: relative; border-radius: 22px; padding: 1px; background: linear-gradient(140deg, rgba(255,214,10,.5), rgba(255,214,10,.04) 32%, rgba(255,255,255,.05) 62%, rgba(61,214,140,.32)); box-shadow: 0 40px 120px rgba(255,214,10,.07), 0 30px 80px rgba(0,0,0,.6); }
@@ -230,6 +237,16 @@ main:has(.lp), body:has(.lp) > main { max-width: none; padding: 0; }
 }
 @media (max-width: 760px) {
   .lp { font-size: 15.5px; } .lp-grid.g3, .lp-grid.g4, .lp-plans, .lp-notes { grid-template-columns: 1fr; }
+  /* phones: Most popular first, then Snapshot, Single, Discipline (REQ-4, owner Q3) */
+  .lp-plan[data-plan="progress"] { order: 1; } .lp-plan[data-plan="snapshot"] { order: 2; } .lp-plan[data-plan="single"] { order: 3; } .lp-plan[data-plan="discipline"] { order: 4; }
+  .lp-plan.hot { margin-top: 10px; }
+  /* REQ-4: reach pricing within 4 screen-heights on a 390x844 phone (tests/e2e-web/landing.spec.ts) */
+  .lp-section { padding-top: 40px; } .lp-head { margin-bottom: 18px; } .lp-head .lp-sub { margin-top: 8px; } .lp-foot-note { margin-top: 14px; }
+  .lp-steps.compact { gap: 8px; } .lp-steps.compact .lp-card { padding: 12px 14px; gap: 2px; } .lp-steps.compact h3 { font-size: 16px; } .lp-steps.compact h3::before { width: 24px; height: 24px; font-size: 13px; border-radius: 7px; }
+  .lp-benefits { gap: 12px; } .lp-benefits .lp-card { padding: 16px; gap: 8px; }
+  .dx-ov .dx-costs { display: none; }
+  .lp-hero { padding-top: 28px; padding-bottom: 20px; gap: 28px; } .lp-hero-cta { margin-top: 22px; gap: 10px; } .lp-trustline { margin-top: 16px; }
+  .lp-ledger li { padding: 7px 6px; } .lp-lede { margin-top: 16px; }
   .lp-hero-cta .lp-btn { flex: 1 1 100%; } .lp-ledger li { grid-template-columns: 1fr auto; padding: 9px 6px; } .lp-ledger .when { display: none; }
   .lp-lens { width: 88px; height: 88px; margin-left: -44px; border-width: 4px; } .lp-lens::after { width: 34px; right: -24px; }
   .dx-pr, .dx-in, .dx-cl { grid-template-columns: 1fr; } .dx-ov { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dx-panel { min-height: 0; padding: 10px; }

@@ -31,6 +31,13 @@ const SPEC = [
   ['S3_API_SECRET_ACCESS_KEY', () => hex(32)],
   ['S3_WORKER_ACCESS_KEY_ID', () => 'GK' + hex(12)],
   ['S3_WORKER_SECRET_ACCESS_KEY', () => hex(32)],
+  ['TEST_POSTGRES_PASSWORD', () => hex(32)],          // throwaway DB for npm run test:db (infra/compose.test.yml)
+  ['TEST_REDIS_PASSWORD', () => hex(32)],             // throwaway Redis for the worker queue tests (infra/compose.test.yml)
+  ['SESSION_SECRET', () => hex(32)],                  // signs the lens_session cookie (api + web)
+  ['OTP_PEPPER', () => hex(32)],                      // HMAC key for sign-in codes
+  ['IP_HASH_SECRET', () => hex(32)],                  // HMAC key for IPs in consent rows
+  ['FILE_KEK_ID', () => 'k1'],                        // which key encrypts new uploads
+  ['FILE_KEK_K1', () => hex(32)],                     // key-encryption key for raw files (rotate: add FILE_KEK_K2, switch FILE_KEK_ID)
 ];
 
 const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '') : '';

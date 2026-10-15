@@ -1,0 +1,8 @@
+{
+  "_what": "Dependency advisories accepted for a limited time, each with a reason and an end date. infra/scripts/audit.mjs fails on any other high/critical production advisory, and on any entry past its date.",
+  "entries": [
+    { "package": "postcss", "until": "2026-10-28", "reason": "Bundled by next 15.5.26 and used only while building CSS (no untrusted input). Fixed by next 15.5.27, which passes the 2-week rule on 2026-10-14." },
+    { "package": "source-map-js", "until": "2026-10-28", "reason": "Transitive dependency of next's build-time postcss; build-time only. 1.2.2 passes the 2-week rule on 2026-10-14." },
+    { "package": "next", "until": "2026-10-28", "reason": "Moderate SSG/ISR cache-poisoning advisories (pages are force-dynamic; no ISR) plus the postcss advisory above. Fixed in 15.5.27 after 2026-10-14." }
+  ]
+}

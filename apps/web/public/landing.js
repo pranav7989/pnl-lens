@@ -120,4 +120,28 @@
     }, { threshold: 0.3 }).observe(dx);
     if (reduce) dpan.forEach(function (p) { p.classList.add('in'); });
   }
+
+  /* REQ-4: pricing view and scroll depth (anonymous, allow-listed by the API), and the "See plans" pill */
+  var region = root.getAttribute('data-region') || '';
+  var send = function (name, props) {
+    try { fetch('/api/v1/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, props: props }), keepalive: true }).catch(function () {}); } catch (e) { /* ignore */ }
+  };
+  var pricing = document.getElementById('pricing'), hero = root.querySelector('.lp-hero'), pill = root.querySelector('[data-pill]');
+  var pastHero = false, pricingOn = false, pricingSeen = false;
+  var showPill = function () { if (pill) pill.hidden = !(pastHero && !pricingOn); };
+  if ('IntersectionObserver' in window) {
+    if (pricing) new IntersectionObserver(function (es) {
+      pricingOn = es[0].isIntersecting; showPill();
+      if (pricingOn && !pricingSeen) { pricingSeen = true; send('pricing_viewed', { region: region, from: 'landing' }); }
+    }, { threshold: 0.15 }).observe(pricing);
+    if (hero) new IntersectionObserver(function (es) { pastHero = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; showPill(); }).observe(hero);
+  }
+  if (pill) pill.addEventListener('click', function () { pill.hidden = true; });
+  var depths = [25, 50, 75, 100], sent = {};
+  var onDepth = function () {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = max > 0 ? Math.round((window.scrollY / max) * 100) : 100;
+    depths.forEach(function (d) { if (pct >= d && !sent[d]) { sent[d] = true; send('landing_scroll_depth', { depth: d, region: region }); } });
+  };
+  window.addEventListener('scroll', onDepth, { passive: true });
 })();

@@ -1,0 +1,13 @@
+# @file  infra/compose.e2e.yml
+# @area  Ops
+# @what  Overlay for browser end-to-end tests: real sign-in (AUTH_MODE=jwt, codes written to the API's console mail log).
+#   docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.e2e.yml up -d --build --wait
+#   npm run test:e2e
+services:
+  api:
+    environment:
+      AUTH_MODE: jwt
+      ALLOW_DEV_AUTH_IN_PROD: "false"
+  web:
+    environment:
+      AUTH_MODE: jwt

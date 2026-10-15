@@ -278,12 +278,23 @@
 .pg-hero-ring .pg-ring { margin: 0; width: 180px; height: 180px; }
 .pg-kicker { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
 .pg-level { display: block; font-size: 34px; font-weight: 800; letter-spacing: -.03em; color: var(--y); margin: 2px 0 12px; }
-.pg-ladder { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.pg-ladder i { height: 8px; border-radius: 4px; background: #222; position: relative; }
-.pg-ladder i.done { background: #6b5a10; } .pg-ladder i.on { background: var(--y); box-shadow: 0 0 12px rgba(255,214,10,.5); }
-.pg-ladder i span { position: absolute; top: 12px; left: 0; font-size: 10.5px; font-weight: 700; color: #6a6a6a; white-space: nowrap; font-style: normal; }
-.pg-ladder i.on span { color: var(--y); }
-.pg-next { margin: 30px 0 0; font-size: 14px; color: #cfcfcf; } .pg-next b { color: var(--ink); }
+/* Level ladder: bar row + label row on the same 5 columns, so each label sits centred under its own segment. */
+.pg-hero-mid { container-type: inline-size; min-width: 0; }
+.pg-lad-bar, .pg-lad-lab { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.pg-lad-bar i { height: 8px; border-radius: 4px; background: #222; position: relative; outline: none; cursor: default; }
+.pg-lad-bar i.done { background: #6b5a10; } .pg-lad-bar i.on { background: var(--y); box-shadow: 0 0 12px rgba(255,214,10,.5); }
+.pg-lad-bar i:focus-visible { box-shadow: 0 0 0 2px var(--y); }
+.pg-lad-bar i:hover::after, .pg-lad-bar i:focus::after { content: attr(data-tip); position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 5; white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--ink); background: #1b1b1b; border: 1px solid #333; border-radius: 6px; padding: 4px 8px; pointer-events: none; }
+.pg-lad-lab { margin-top: 8px; }
+.pg-lad-lab span { text-align: center; font-size: 11px; font-weight: 700; color: #6a6a6a; white-space: nowrap; line-height: 1.3; }
+.pg-lad-lab span.on { color: var(--y); font-weight: 800; }
+/* Narrow card: only the current level's name (never shrunk, never cut); the next level is in the "points to" line.
+   The widest label ("Developing", 11px/800) is 61px, so all five fit centred in their columns from 5×64 + 4×6 = 344px up. */
+@container (width < 344px) {
+  .pg-lad-lab span:not(.on) { visibility: hidden; }
+  .pg-lad-lab span.on:first-child { text-align: left; } .pg-lad-lab span.on:last-child { text-align: right; }
+}
+.pg-next { margin: 14px 0 0; font-size: 14px; color: #cfcfcf; } .pg-next b { color: var(--ink); }
 .pg-hero-note p { margin: 6px 0 12px; font-size: 15px; line-height: 1.6; color: #e6e6e6; }
 .pg-badges { display: flex; flex-wrap: wrap; gap: 8px; }
 .pg-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 750; padding: 6px 11px; border-radius: 999px; background: #17150c; border: 1px solid #4a3f12; color: #f2e3a0; }
