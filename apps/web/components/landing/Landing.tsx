@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/components/landing/Landing.tsx
  * @area  Landing
- * @what  Landing page markup for India and Global sites (hero ledger, patterns, sample dashboard, brokers, plans, FAQ).
+ * @what  Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, privacy, brokers, FAQ (pricing early for mobile, REQ-4).
  */
 /**
  * Public landing page. Server-rendered markup; motion comes from /public/landing.js (progressive:
@@ -101,6 +101,9 @@ const CRYPTO: Group = { group: 'Crypto exchanges', note: 'Spot and perpetual fut
 const SOURCES_BY: Record<Region, Group[]> = { IN: [IN_BROKERS, { ...US_BROKERS, group: 'International brokers' }, CRYPTO], GLOBAL: [US_BROKERS, EU_BROKERS, CRYPTO] };
 
 type PlanCard = Plan & { price: { label: string } };
+/** Footer legal details. FILL BEFORE LAUNCH (docs/GO_LIVE_CHECKLIST.md): company legal name, registered address, and the
+ *  policy pages once the lawyer-approved texts are published (e.g. ['/privacy', 'Privacy policy'], ['/terms', 'Terms of service']). */
+const LEGAL: { name: string; address: string; policies: [string, string][] } = { name: '[Company legal name]', address: '[Registered address]', policies: [] };
 // Plan-specific copy only; durations, report counts and statements come from PLANS (packages/shared/src/pricing.ts).
 const PLAN_COPY: Record<string, { tag: string; feat: string[]; cta: string }> = {
   single: { tag: 'A first look', feat: ['Full dashboard and insights'], cta: 'Choose Single' },
@@ -123,7 +126,7 @@ const faq = (single: string, snapshot: string, region: Region) => [
   ['What is the refund policy?', 'Reports cannot be refunded once they have been generated. If something genuinely goes wrong, write to support@pnllens.com. We take responsibility and respond promptly.'],
 ];
 
-export default function Landing({ signedIn, plans, logos, region = 'IN' }: { signedIn: boolean; plans: PlanCard[]; logos: Record<string, string>; region?: Region }) {
+export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: boolean; plans: PlanCard[]; region?: Region }) {
   const LEDGER = LEDGERS[region], inr = money(region), SOURCES = SOURCES_BY[region], MARQUEE = SOURCES.flatMap((g) => g.items);
   const other = region === 'IN' ? { href: '/?region=global', label: 'Global site' } : { href: '/?region=in', label: 'India site' };
   const start = signedIn ? '/upload' : '/login?next=/upload';
@@ -132,15 +135,15 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
   const atStake = flagged.reduce((s, r) => s + r.pnl, 0);
 
   return (
-    <div className="lp">
+    <div className="lp" data-region={region}>
       <a className="lp-skip" href="#main">Skip to content</a>
       <header className="lp-nav" data-nav>
         <a className="lp-brand" href="/" aria-label="PnL Lens home"><LogoMark size={30} /><span>PnL Lens</span></a>
         <nav className="lp-links" id="lp-menu" aria-label="Page sections">
           <a href="#report">Product</a>
           <a href="#patterns">Patterns</a>
-          <a href="#brokers">Brokers</a>
           <a href="#pricing">Pricing</a>
+          <a href="#brokers">Brokers</a>
           <a href="#faq">FAQ</a>
           <div className="lp-menu-cta">
             {signedIn ? <a className="lp-btn ghost" href="/dashboard">Dashboard</a> : <a className="lp-btn ghost" href="/login">Sign in</a>}
@@ -161,9 +164,9 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
             <p className="lp-lede">Upload your broker P&amp;L or tradebook. PnL Lens turns it into a clear, private review of your trading habits, with practical steps to improve.</p>
             <div className="lp-hero-cta">
               <a className="lp-btn lg" href={start}>Analyse my trades</a>
-              <a className="lp-btn lg ghost" href="#report">See a sample report</a>
+              <a className="lp-btn lg ghost" href="#pricing" data-see-plans>See plans · from {priceOf('single')}</a>
             </div>
-            <p className="lp-trustline">Private and encrypted <span>/</span> Any broker, any market <span>/</span> No tips or signals</p>
+            <p className="lp-trustline">Private and encrypted <span>/</span> Any broker, any market <span>/</span> No tips or signals <span>/</span> <a href="#report">See a sample report</a></p>
           </div>
           <figure className="lp-scan" aria-label="Example: PnL Lens reviewing a week of trades">
             <div className="lp-scan-head"><span>A week of trades</span><span className="muted">Example</span></div>
@@ -181,9 +184,13 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
           </figure>
         </section>
 
-        <section className="lp-reality" data-reveal>
-          <p className="lp-reality-line">{REALITY[region].line[0]}<strong>{REALITY[region].line[1]}</strong><strong>%</strong>{REALITY[region].line[2]}</p>
-          <p className="lp-src">{REALITY[region].src}</p>
+        <section className="lp-section lp-compact" id="how">
+          <header className="lp-head"><h2 className="lp-h2">Three steps. Two minutes.</h2><p className="lp-sub">No account linking, no setup, no waiting.</p></header>
+          <ol className="lp-grid g3 lp-steps compact">
+            <li className="lp-card" data-reveal><h3>Download</h3><p>Export your P&amp;L statement or tradebook from your broker.</p></li>
+            <li className="lp-card" data-reveal><h3>Add statements</h3><p>One file per broker statement. Encrypted on upload.</p></li>
+            <li className="lp-card" data-reveal><h3>Review</h3><p>Your dashboard, insights and next steps, ready instantly.</p></li>
+          </ol>
         </section>
 
         <section className="lp-section" id="report">
@@ -193,8 +200,8 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
 
         <section className="lp-section" id="patterns">
           <header className="lp-head"><h2 className="lp-h2">Patterns worth a closer look</h2><p className="lp-sub">Measured on your own trades, each with its impact and a practical next step.</p></header>
-          <div className="lp-grid g3">
-            {PATTERNS[region].map((p) => (
+          <div className="lp-grid g4 lp-benefits">
+            {PATTERNS[region].slice(0, 4).map((p) => (
               <article className="lp-card" key={p.t} data-reveal>
                 <h3>{p.t}</h3>
                 <p className="lp-card-ex">{p.ex}</p>
@@ -202,48 +209,7 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
               </article>
             ))}
           </div>
-          <p className="lp-foot-note">Also reviewed: {MORE.join(', ')}.</p>
-        </section>
-
-        <section className="lp-section" id="who">
-          <header className="lp-head"><h2 className="lp-h2">Built for every kind of trader</h2><p className="lp-sub">Whatever you trade and however often, the review adapts to your data.</p></header>
-          <div className="lp-grid g4">
-            {USES.map(([k, v]) => <article className="lp-card sm" key={k} data-reveal><h3>{k}</h3><p>{v}</p></article>)}
-          </div>
-        </section>
-
-        <section className="lp-section" id="brokers">
-          <header className="lp-head"><h2 className="lp-h2">Works with the files you already have</h2><p className="lp-sub">{region === 'IN' ? 'Statements and tradebooks from 30 brokers and exchanges.' : 'Statements and trade histories from 30 brokers and exchanges.'}</p></header>
-          <div className="lp-marquee" aria-hidden="true"><div className="lp-marquee-track">
-            {[...MARQUEE, ...MARQUEE].map((b, i) => <span key={i} className={logos[b.slug] ? 'has-logo' : ''}>{logos[b.slug] ? <img src={logos[b.slug]} alt="" height={28} loading="lazy" /> : b.n}</span>)}
-          </div></div>
-          <div className="lp-grid g3">
-            {SOURCES.map((g) => (
-              <div className="lp-src-col" key={g.group} data-reveal>
-                <h3>{g.group}</h3><p className="lp-src-note">{g.note}</p>
-                <ul>{g.items.map((it) => <li key={it.n}><b>{it.n}</b><span>{it.files}</span></li>)}</ul>
-              </div>
-            ))}
-          </div>
-          <p className="lp-foot-note">Broker and exchange names belong to their owners. PnL Lens is not affiliated with any of them.</p>
-        </section>
-
-        <section className="lp-section">
-          <header className="lp-head"><h2 className="lp-h2">Three steps. Two minutes.</h2><p className="lp-sub">No account linking, no setup, no waiting.</p></header>
-          <ol className="lp-grid g3 lp-steps">
-            <li className="lp-card" data-reveal><h3>Download</h3><p>Export your P&amp;L statement or tradebook from your broker.</p></li>
-            <li className="lp-card" data-reveal><h3>Add statements</h3><p>One file per broker statement. Encrypted on upload.</p></li>
-            <li className="lp-card" data-reveal><h3>Review</h3><p>Your dashboard, insights and next steps, ready instantly.</p></li>
-          </ol>
-        </section>
-
-        <section className="lp-section">
-          <header className="lp-head"><h2 className="lp-h2">Private and principled</h2><p className="lp-sub">Your data stays yours, and the review stays objective.</p></header>
-          <div className="lp-grid g3">
-            <article className="lp-card" data-reveal><h3>Private by design</h3><p>Your files are encrypted, processed on our secure servers, and you can delete them anytime.</p></article>
-            <article className="lp-card" data-reveal><h3>No broker access</h3><p>No passwords, no API keys, no connection to your account.</p></article>
-            <article className="lp-card" data-reveal><h3>No tips, ever</h3><p>We describe what your trades show. Decisions remain yours.</p></article>
-          </div>
+          <p className="lp-foot-note">Also reviewed: {[...PATTERNS[region].slice(4).map((p) => p.t.toLowerCase()), ...MORE].join(', ')}.</p>
         </section>
 
         <section className="lp-section" id="pricing">
@@ -252,7 +218,7 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
             {plans.map((p) => {
               const c = PLAN_COPY[p.id];
               return (
-                <div key={p.id} className={`lp-plan ${p.id === 'progress' ? 'hot' : ''}`} data-reveal>
+                <div key={p.id} className={`lp-plan ${p.id === 'progress' ? 'hot' : ''}`} data-plan={p.id} data-reveal>
                   {p.id === 'progress' && <span className="lp-plan-flag">Most popular</span>}
                   <h3>{p.name}</h3>
                   <p className="lp-plan-tag">{c.tag}</p>
@@ -269,6 +235,43 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
           </div>
         </section>
 
+        <section className="lp-section" id="privacy">
+          <header className="lp-head"><h2 className="lp-h2">Private and principled</h2><p className="lp-sub">Your data stays yours, and the review stays objective.</p></header>
+          <div className="lp-grid g3">
+            <article className="lp-card" data-reveal><h3>Private by design</h3><p>Your files are encrypted, processed on our secure servers, and you can delete them anytime.</p></article>
+            <article className="lp-card" data-reveal><h3>No broker access</h3><p>No passwords, no API keys, no connection to your account.</p></article>
+            <article className="lp-card" data-reveal><h3>No tips, ever</h3><p>We describe what your trades show. Decisions remain yours.</p></article>
+          </div>
+        </section>
+
+        <section className="lp-section" id="brokers">
+          <header className="lp-head"><h2 className="lp-h2">Works with the files you already have</h2><p className="lp-sub">{region === 'IN' ? 'Statements and tradebooks from 30 brokers and exchanges.' : 'Statements and trade histories from 30 brokers and exchanges.'}</p></header>
+          <div className="lp-marquee" aria-hidden="true"><div className="lp-marquee-track">
+            {[...MARQUEE, ...MARQUEE].map((b, i) => <span key={i}>{b.n}</span>)}
+          </div></div>
+          <div className="lp-grid g3">
+            {SOURCES.map((g) => (
+              <div className="lp-src-col" key={g.group} data-reveal>
+                <h3>{g.group}</h3><p className="lp-src-note">{g.note}</p>
+                <ul>{g.items.map((it) => <li key={it.n}><b>{it.n}</b><span>{it.files}</span></li>)}</ul>
+              </div>
+            ))}
+          </div>
+          <p className="lp-foot-note">Broker and exchange names belong to their owners. PnL Lens is not affiliated with any of them.</p>
+        </section>
+
+        <section className="lp-reality" data-reveal>
+          <p className="lp-reality-line">{REALITY[region].line[0]}<strong>{REALITY[region].line[1]}</strong><strong>%</strong>{REALITY[region].line[2]}</p>
+          <p className="lp-src">{REALITY[region].src}</p>
+        </section>
+
+        <section className="lp-section" id="who">
+          <header className="lp-head"><h2 className="lp-h2">Built for every kind of trader</h2><p className="lp-sub">Whatever you trade and however often, the review adapts to your data.</p></header>
+          <div className="lp-grid g4">
+            {USES.map(([k, v]) => <article className="lp-card sm" key={k} data-reveal><h3>{k}</h3><p>{v}</p></article>)}
+          </div>
+        </section>
+
         <section className="lp-section" id="faq">
           <header className="lp-head"><h2 className="lp-h2">Questions, answered</h2><p className="lp-sub">Anything else? Write to support@pnllens.com.</p></header>
           <div className="lp-faq">{faq(priceOf('single'), priceOf('snapshot'), region).map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div>
@@ -279,11 +282,13 @@ export default function Landing({ signedIn, plans, logos, region = 'IN' }: { sig
           <a className="lp-btn lg" href={start}>Analyse my trades</a>
         </section>
       </main>
+      <a className="lp-pill" href="#pricing" data-pill hidden>See plans</a>
 
       <footer className="lp-foot">
         <div className="lp-brand"><LogoMark size={26} /><span>PnL Lens</span></div>
         <p>PnL Lens is a trade-analysis tool, not investment advice, and is not registered as an investment adviser or research analyst. Trading involves risk of loss. Figures on this page are illustrative. Reports cannot be refunded once generated; for genuine issues write to support@pnllens.com.</p>
-        <nav aria-label="Footer"><a href={other.href}>{other.label}</a><a href="mailto:support@pnllens.com">support@pnllens.com</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+        <p className="lp-legal">{LEGAL.name} · {LEGAL.address}</p>
+        <nav aria-label="Footer"><a href={other.href}>{other.label}</a>{LEGAL.policies.map(([href, label]) => <a key={href} href={href}>{label}</a>)}<a href="mailto:support@pnllens.com">support@pnllens.com</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
       </footer>
     </div>
   );

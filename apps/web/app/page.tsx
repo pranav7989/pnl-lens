@@ -5,8 +5,6 @@
  */
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import fs from 'node:fs';
-import path from 'node:path';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestCountry } from '@/lib/auth/country';
 import { plansFor, regionFor } from '@pnl-lens/shared/pricing';
@@ -22,21 +20,6 @@ export const metadata: Metadata = {
   openGraph: { title: 'PnL Lens — understand your trading', description: 'A clear, private review of your trading habits. Trade responsibly.', type: 'website', url: 'https://pnllens.com' },
 };
 
-/** Logos dropped into public/brokers/<slug>.svg|png are picked up automatically (see public/brokers/README.md). */
-let logoCache: Record<string, string> | null = null;
-function brokerLogos(): Record<string, string> {
-  if (logoCache && process.env.NODE_ENV === 'production') return logoCache;
-  const dir = path.join(process.cwd(), 'public', 'brokers');
-  const out: Record<string, string> = {};
-  try {
-    for (const f of fs.readdirSync(dir)) {
-      const m = f.match(/^([a-z0-9-]+)\.(svg|png|webp)$/);
-      if (m && !out[m[1]]) out[m[1]] = `/brokers/${f}`;
-    }
-  } catch { /* folder missing: names only */ }
-  return (logoCache = out);
-}
-
 export default async function Home(props: { searchParams: Promise<{ region?: string }> }) {
   const searchParams = await props.searchParams;
   const user = await getSessionUser();
@@ -47,7 +30,7 @@ export default async function Home(props: { searchParams: Promise<{ region?: str
   const region = regionFor(country);
   return (
     <div>
-      <Landing signedIn={!!user} plans={plans} logos={brokerLogos()} region={region} />
+      <Landing signedIn={!!user} plans={plans} region={region} />
       <Script src="/landing.js" strategy="afterInteractive" />
     </div>
   );

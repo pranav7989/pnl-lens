@@ -85,7 +85,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 174 files._
+_Generated from file headers by `npm run docs:index` — 176 files._
 
 ### Pages
 
@@ -100,7 +100,7 @@ _Generated from file headers by `npm run docs:index` — 174 files._
 | File | What it does |
 |---|---|
 | `apps/web/app/page.tsx` | Home page route. Picks India or Global site from the visitor country (?region= overrides) and renders <Landing>. |
-| `apps/web/components/landing/Landing.tsx` | Landing page markup for India and Global sites (hero ledger, patterns, sample dashboard, brokers, plans, FAQ). |
+| `apps/web/components/landing/Landing.tsx` | Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, privacy, brokers, FAQ (pricing early for mobile, REQ-4). |
 | `apps/web/components/landing/Showcase.tsx` | Animated 5-tab sample dashboard on the landing page (illustrative numbers, ₹ or $ by region). |
 
 ### Brand
@@ -178,7 +178,7 @@ _Generated from file headers by `npm run docs:index` — 174 files._
 | File | What it does |
 |---|---|
 | `apps/api/src/routes/admin.ts` | Admin console API ported from apps/web/app/api/admin/* (role read from the DB each request, every read audited) plus the owner-only manual plan grant (D5). |
-| `apps/api/src/routes/telemetry.ts` | POST /events (allow-listed product events) and POST /errors (browser errors), ported from apps/web; always 204. |
+| `apps/api/src/routes/telemetry.ts` | POST /events (allow-listed product events; two landing events also from visitors) and POST /errors (browser errors); always 204. |
 | `apps/web/app/admin/page.tsx` | Admin console page: staff only (role from the API, read from the database on every request). |
 | `apps/web/components/admin/AdminConsole.tsx` | Admin console UI: Users, Finance, Errors, Support, Product tabs (shown per role). |
 | `apps/web/components/ErrorReporter.tsx` | Sends browser errors to /api/v1/errors (max 5 per page load). |
@@ -306,6 +306,7 @@ _Generated from file headers by `npm run docs:index` — 174 files._
 | File | What it does |
 |---|---|
 | `apps/api/test/auth.test.ts` | Sign-in (email code), session cookie, /me, /plans, CSRF origin check, consents, export and account deletion, health/ready — on real Postgres. |
+| `apps/api/test/events.test.ts` | POST /events: allow-listed names only; visitors may send only the landing events (REQ-4); journey events from signed-in users (REQ-2). |
 | `apps/api/test/helpers.ts` | API test helpers: app on a fresh migrated database (lens_app connection), session cookies, multipart bodies, captured mail. |
 | `apps/api/test/openapi-doc.ts` | Builds the app with placeholder dependencies (no database connection is opened) to read its OpenAPI document. |
 | `apps/api/test/openapi.test.ts` | apps/api/openapi.json matches the routes (regenerate: npm run openapi -w @pnl-lens/api); global and sign-in rate limits. |
@@ -337,6 +338,7 @@ _Generated from file headers by `npm run docs:index` — 174 files._
 | `packages/shared/test/pricing.test.ts` | REQ-3: plan durations and prices from the single source of truth, the wording built from them, and no stale copy left in the repo. |
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
+| `tests/e2e-web/landing.spec.ts` | REQ-4: on a 390x844 phone pricing starts within 4 screen-heights; See plans / nav / pill reach it; mobile card order; no section lost; landing events stored. |
 | `tests/e2e-web/privacy.spec.ts` | Data rights in the browser: research opt-in toggle, export my data (worker builds the ZIP, download works), delete my account. |
 | `tests/e2e-web/score-card.spec.ts` | REQ-1: the Progress score card's level labels never overlap, at every level and width, in Chromium (Chrome/Edge) and WebKit (Safari). |
 | `tests/e2e-web/workspace.spec.ts` | Browser end to end on the stack: sign in → upload with consent → loader → report (5 tabs) → "+" → file tabs/All files → rename in history → second device → remove → delete. |

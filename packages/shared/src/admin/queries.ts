@@ -118,7 +118,14 @@ async function productTab() {
   const failures = await q(`select coalesce(props->>'reason','unknown') as reason, coalesce(props->>'ext','?') as ext, count(*)::int as n from events where name in ('upload_failed','no_trades') and created_at > now() - interval '30 days' group by 1, 2 order by 3 desc limit 12`);
   const tabs = await q(`select coalesce(props->>'tab','?') as tab, count(*)::int as n from events where name='tab_viewed' and created_at > now() - interval '30 days' group by 1 order by 2 desc`);
   const brokers = await q(`select coalesce(props->>'broker','unknown') as broker, count(*)::int as n from events where name='report_viewed' and created_at > now() - interval '30 days' group by 1 order by 2 desc limit 10`);
-  return { k, daily, failures, tabs, brokers };
+  // REQ-4: landing page (visitors included) — pricing views and how far people scroll
+  const landing = await one(`select
+      (select count(*) from events where name='pricing_viewed' and created_at > now() - interval '30 days')::int as pricing_views,
+      (select count(*) from events where name='landing_scroll_depth' and props->>'depth'='25' and created_at > now() - interval '30 days')::int as d25,
+      (select count(*) from events where name='landing_scroll_depth' and props->>'depth'='50' and created_at > now() - interval '30 days')::int as d50,
+      (select count(*) from events where name='landing_scroll_depth' and props->>'depth'='75' and created_at > now() - interval '30 days')::int as d75,
+      (select count(*) from events where name='landing_scroll_depth' and props->>'depth'='100' and created_at > now() - interval '30 days')::int as d100`);
+  return { k, daily, failures, tabs, brokers, landing };
 }
 
 return { usersTab, financeTab, errorsTab, supportTab, userLookup, productTab };

@@ -16,6 +16,7 @@ Everything the code can do is built and tested (`docs/BACKEND_V2_PLAN.md`, Phase
 | A8 | First owner account promoted | `DEPLOYMENT_VM.md` §9 |
 | A9 | `ALERT_EMAIL` set; trigger one test alert by stopping the api for 6 minutes (`dc stop api`), then start it and confirm the "recovered" mail | `docs/RUNBOOK.md` |
 | A10 | First backup run by hand, then a restore drill on a throwaway Droplet | `RUNBOOK.md`, `docs/RESTORE_DRILL.md` |
+| A11 | Landing footer: replace `[Company legal name]` and `[Registered address]`, and add the policy page links once the lawyer-approved texts are published | `LEGAL` in `apps/web/components/landing/Landing.tsx` |
 
 ## B. Engineering items with a date
 

@@ -142,6 +142,8 @@ function ProductTab({ d }: { d: any }) {
     <Panel title="Most-used tabs" span="s5"><Table cols={[['Tab', (r) => r.tab], ['Views', (r) => r.n, 'n']]} rows={d.tabs} /></Panel>
     <Panel title="Why uploads fail" sub="reason and file type" span="s7"><Table cols={[['Reason', (r) => r.reason], ['File type', (r) => r.ext], ['Count', (r) => r.n, 'n']]} rows={d.failures} /></Panel>
     <Panel title="Brokers seen" span="s5"><Table cols={[['Broker / source', (r) => r.broker], ['Reports', (r) => r.n, 'n']]} rows={d.brokers} /></Panel>
+    {d.landing && <Panel title="Landing page" sub="visitors, last 30 days: pricing seen and how far they scrolled" span="s12">
+      <Table cols={[['Measure', (r) => r.m], ['Count', (r) => r.n, 'n']]} rows={[{ m: 'Pricing section seen', n: d.landing.pricing_views }, { m: 'Scrolled 25% of the page', n: d.landing.d25 }, { m: 'Scrolled 50%', n: d.landing.d50 }, { m: 'Scrolled 75%', n: d.landing.d75 }, { m: 'Reached the end', n: d.landing.d100 }]} /></Panel>}
   </>;
 }
 

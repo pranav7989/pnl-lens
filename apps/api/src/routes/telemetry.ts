@@ -1,10 +1,10 @@
 /**
  * @file  apps/api/src/routes/telemetry.ts
  * @area  Admin
- * @what  POST /events (allow-listed product events) and POST /errors (browser errors), ported from apps/web; always 204.
+ * @what  POST /events (allow-listed product events; two landing events also from visitors) and POST /errors (browser errors); always 204.
  */
 import { z } from 'zod';
-import { trackWith, captureErrorWith, CLIENT_EVENTS } from '@pnl-lens/shared/admin/telemetry';
+import { trackWith, captureErrorWith, CLIENT_EVENTS, ANON_EVENTS } from '@pnl-lens/shared/admin/telemetry';
 import type { App, Deps } from '../app.js';
 import { sessionUser } from '../lib/http.js';
 
@@ -15,7 +15,10 @@ export async function telemetryRoutes(app: App, deps: Deps) {
   app.post('/events', { ...lenient, schema: { tags: ['telemetry'], summary: 'Product event', body: z.object({ name: z.string(), props: z.record(z.string(), z.unknown()).optional() }) } }, async (req, reply) => {
     const u = await sessionUser(req);
     const b = req.body as any;
-    if (u && typeof b?.name === 'string' && CLIENT_EVENTS.has(b.name)) await trackWith(deps.pool, u.id, b.name, b.props && typeof b.props === 'object' ? b.props : undefined);
+    // signed-in: any allow-listed event; visitors (landing page): only the anonymous landing events, stored without a user
+    if (typeof b?.name === 'string' && CLIENT_EVENTS.has(b.name) && (u || ANON_EVENTS.has(b.name))) {
+      await trackWith(deps.pool, u?.id ?? null, b.name, b.props && typeof b.props === 'object' ? b.props : undefined);
+    }
     return reply.code(204).send();
   });
 
