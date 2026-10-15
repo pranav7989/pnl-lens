@@ -32,7 +32,15 @@ export async function paymentRoutes(app: App, deps: Deps, opts: { webhookOnly?: 
         if ((event === 'payment.captured' || event === 'order.paid') && orderId) {
           const { rows } = await deps.pool.query('select plan_id from public.payments where gateway_order_id = $1', [orderId]);
           const plan = PLANS.find((p) => p.id === rows[0]?.plan_id);
-          if (plan) await deps.pool.query('select public.grant_plan($1, $2, $3, $4, $5, $6)', [orderId, paymentId, body, plan.reports, plan.filesPerReport, plan.days]);
+          if (plan) {
+            const g = await deps.pool.query('select public.grant_plan($1, $2, $3, $4, $5, $6) as ok', [orderId, paymentId, body, plan.reports, plan.filesPerReport, plan.days]);
+            // REQ-2: a purchase that started from the journey bar or card (Razorpay returns the order's notes)
+            const notes = body?.payload?.payment?.entity?.notes || body?.payload?.order?.entity?.notes || {};
+            if (g.rows[0]?.ok && notes.source === 'journey') {
+              const { rows: u } = await deps.pool.query('select user_id from public.payments where gateway_order_id = $1', [orderId]);
+              await trackWith(deps.pool, u[0]?.user_id ?? null, 'upgrade_from_journey', { plan: plan.id });
+            }
+          }
         } else if (event === 'payment.failed' && orderId) {
           await deps.pool.query(`update public.payments set status = 'failed', raw_payload = $2 where gateway_order_id = $1 and status in ('created', 'authorized')`, [orderId, body]);
         } else if (event === 'refund.processed' && paymentId) {
@@ -57,7 +65,7 @@ export async function paymentRoutes(app: App, deps: Deps, opts: { webhookOnly?: 
   /** POST { planId } — off: 503 · razorpay: creates an Order for Checkout. */
   app.post('/payments/order', {
     attachValidation: true,
-    schema: { tags: ['payments'], summary: 'Start a payment for a plan', security: [{ session: [] }], body: z.object({ planId: z.string() }) },
+    schema: { tags: ['payments'], summary: 'Start a payment for a plan', security: [{ session: [] }], body: z.object({ planId: z.string(), source: z.enum(['journey']).optional() }) },
   }, async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     const plan = PLANS.find((p) => p.id === (req.body as any)?.planId);
@@ -65,7 +73,7 @@ export async function paymentRoutes(app: App, deps: Deps, opts: { webhookOnly?: 
     const price = planPrice(plan, clientCountry(asFetchLike(req)) || user.country);
     if (paymentsMode() === 'off') return fail(reply, 503, 'payments_off', 'Payments are opening soon. Write to support@pnllens.com to be notified.');
     try {
-      const order = await createOrder({ amountMinor: price.amountMinor, currency: price.currency, receipt: `${plan.id}-${user.id.slice(0, 8)}-${Date.now().toString(36)}`, notes: { plan: plan.id, user: user.id } });
+      const order = await createOrder({ amountMinor: price.amountMinor, currency: price.currency, receipt: `${plan.id}-${user.id.slice(0, 8)}-${Date.now().toString(36)}`, notes: { plan: plan.id, user: user.id, ...((req.body as any)?.source === 'journey' ? { source: 'journey' } : {}) } });
       await deps.pool.query(`insert into public.payments (user_id, gateway, gateway_order_id, amount_minor, currency, status, plan_id, credits_granted) values ($1, 'razorpay', $2, $3, $4, 'created', $5, $6)`,
         [user.id, order.id, price.amountMinor, price.currency, plan.id, plan.reports]);
       const { rows } = await deps.pool.query('select email from public.users where id = $1', [user.id]);

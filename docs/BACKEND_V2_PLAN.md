@@ -488,6 +488,17 @@ Done on macOS (Apple Silicon); Phases 1–2 were re-verified on the same machine
 | Docs | `docs/DEPLOYMENT_VM.md` (DigitalOcean + Spaces + Cloudflare), `docs/RUNBOOK.md`, `docs/GO_LIVE_CHECKLIST.md`, `docs/LOAD_TEST.md`, `docs/RESTORE_DRILL.md`; `INDEX`, `INFRA`, `ENVIRONMENT`, `TESTING` updated; `.do/app.yaml` and the App Platform guide removed; the AWS guide marked outdated |
 | Open (owner) | Run `provision.sh` on a Multipass VM or the Droplet; the go-live checklist (accounts, keys, lawyer, the 2026-10-14 dependency bump) |
 
+### Owner change requests of 15 Oct 2026 (after Phase 8)
+
+Pranav's document *PnL Lens: Change Requirements (15 Oct 2026)*. Owner answers: Discipline 12 months, Single 7 days, Progress first on phones, reminder email later. Delivered as four commits on branch `req-oct15` (PR #2).
+
+| Request | Result |
+|---|---|
+| REQ-1 Score card labels | Labels in their own row, centred under each segment; current level yellow and bold; only the current level under 344 px; tooltips with ranges. Playwright check at 320–1440 px, every level, scores 0 and 100, Chromium and WebKit |
+| REQ-3 Durations and $9 | `PLANS`: Snapshot 3 months (92 days), Progress 6 months (183 days); Global Single $9. All copy built from `PLANS`; "Reports kept until you delete them" on every card; plan card "Valid till DD-MMM-YY". Grants already use `plan.days` (no migration). Tests for durations, grants (7/92/183/365 days) and a repo search for old text |
+| REQ-4 Pricing higher | Phone (390×844): pricing from 10.39 to 3.94 screen-heights, no content removed; See plans button and pill; Progress first on phones; broker names without logos; footer legal placeholders (go-live A11); visitor events `pricing_viewed` / `landing_scroll_depth` |
+| REQ-2 Journey | `packages/shared/src/journey.ts` (5 steps, real data only, locks name the plan and price); bar on dashboard, upload and report pages (one line on phones, Hide remembered on the device); "What's next" card on Overview and Progress with a blurred preview for Single; pricing page highlights the plan a step needs; events `journey_bar_view`, `journey_step_click`, `journey_next_action_click`, `upgrade_from_journey`; admin Product tab: Single → higher plan, 45-day return, journey events. Reminder email (C) later, as agreed |
+
 ## 15. Risks
 
 | Risk | Mitigation |

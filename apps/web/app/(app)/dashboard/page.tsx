@@ -6,10 +6,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getMe } from '@/lib/api-client';
-import { loadPlans, loadHistory } from '@/lib/workspace-data';
+import { loadPlanData, loadHistory } from '@/lib/workspace-data';
 import { PlanCard } from '@/components/workspace/PlanCard';
 import History from '@/components/workspace/History';
 import DataRights from '@/components/workspace/DataRights';
+import JourneyBar from '@/components/workspace/JourneyBar';
 import { currentPlan } from '@/components/workspace/model';
 
 export const dynamic = 'force-dynamic';
@@ -17,9 +18,10 @@ export const dynamic = 'force-dynamic';
 export default async function Dashboard() {
   const me = await getMe();
   if (!me) redirect('/login?next=/dashboard');
-  const [plans, reports] = await Promise.all([loadPlans(), loadHistory()]);
+  const [{ plans, prices }, reports] = await Promise.all([loadPlanData(), loadHistory()]);
   return (
     <>
+      <JourneyBar plans={plans} reports={reports} prices={prices} />
       <div className="report-head">
         <div>
           <h1 className="page-title">Your reports</h1>

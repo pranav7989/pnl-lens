@@ -22,6 +22,9 @@ import { withAnalysing } from '@/lib/report-ui/loader.js';
 import { api, uploadStatements, waitForAnalysis, type AnalysisStatus, type ApiError } from '@/lib/api-browser';
 import { PlanCard, PlanStrip } from './PlanCard';
 import History from './History';
+import JourneyBar from './JourneyBar';
+import { journey } from '@pnl-lens/shared/journey';
+import type { PlanId } from '@pnl-lens/shared/pricing';
 import {
   currentPlan, reportsLeft, expired, planEndedText, planName, filesFullText, dayLabel, st, UPLOAD_SUB, CONSENT_PROCESSING, CONSENT_RESEARCH,
   type PlanRow, type HistoryItem, type CurrentReport,
@@ -50,16 +53,17 @@ async function analyseFiles(files: File[], fields: Record<string, string>, fileC
   return withAnalysing(async () => waitForAnalysis(await uploadStatements(files, fields)), { fileCount });
 }
 
-export default function Workspace(props: { mode: 'upload' | 'report'; plans: PlanRow[] | null; reports: HistoryItem[]; current?: CurrentReport }) {
+export default function Workspace(props: { mode: 'upload' | 'report'; plans: PlanRow[] | null; reports: HistoryItem[]; current?: CurrentReport; prices?: Record<string, string> }) {
   const plan = currentPlan(props.plans);
   const [lock, setLock] = useState<Lock>(null);
   const close = () => setLock(null);
   return (
     <>
       <LockMessage lock={lock} onClose={close} />
+      <JourneyBar plans={props.plans} reports={props.reports} prices={props.prices || {}} />
       {props.mode === 'upload' || !props.current
         ? <UploadView plan={plan} reports={props.reports} setLock={setLock} />
-        : <ReportView plan={plan} reports={props.reports} current={props.current} setLock={setLock} />}
+        : <ReportView plan={plan} plans={props.plans} prices={props.prices || {}} reports={props.reports} current={props.current} setLock={setLock} />}
     </>
   );
 }
@@ -185,7 +189,7 @@ function UploadView({ plan, reports, setLock }: { plan: PlanRow | null; reports:
 }
 
 /* ---------------------------------------------------------------- report view */
-function ReportView({ plan, reports, current, setLock }: { plan: PlanRow | null; reports: HistoryItem[]; current: CurrentReport; setLock: (l: Lock) => void }) {
+function ReportView({ plan, plans, prices, reports, current, setLock }: { plan: PlanRow | null; plans: PlanRow[] | null; prices: Record<string, string>; reports: HistoryItem[]; current: CurrentReport; setLock: (l: Lock) => void }) {
   const router = useRouter();
   const files = current.files;
   const fileReport = (i: number) => (files.length === 1 ? current.report : files[i]?.report ?? null);
@@ -210,12 +214,16 @@ function ReportView({ plan, reports, current, setLock }: { plan: PlanRow | null;
   useEffect(() => {
     if (!root.current || !r) return;
     const checkups = reports.filter((x) => x.progressScore != null).map((x) => ({ savedAt: x.createdAt, to: x.to, score: x.progressScore as number, label: x.fileNames.join(', ') }));
-    const h = mountReport(root.current, r, { ...formatterFor(r), history: checkups, historyWhere: 'in your account' });
+    const j = journey({ plans, reports, prices: prices as Partial<Record<PlanId, string>> });
+    const h = mountReport(root.current, r, { ...formatterFor(r), history: checkups, historyWhere: 'in your account', next: j.next });
     if (tab !== 'overview') h.show(tab);
-    const nav = root.current.querySelector('.tabs');
+    const el = root.current, nav = el.querySelector('.tabs');
     const onTab = (e: Event) => { const b = (e.target as HTMLElement).closest('[data-tab]') as HTMLElement | null; if (b) setTab(b.dataset.tab!); };
+    // "What's next" card (REQ-2): same event as the journey bar's action, marked as coming from the card
+    const onCard = (e: Event) => { const a = (e.target as HTMLElement).closest('[data-wn-cta]') as HTMLElement | null; if (a) ev('journey_next_action_click', { kind: a.dataset.wnCta, plan: j.tier ?? 'none', from: 'card' }); };
     nav?.addEventListener('click', onTab);
-    return () => { nav?.removeEventListener('click', onTab); h.destroy(); };
+    el.addEventListener('click', onCard);
+    return () => { nav?.removeEventListener('click', onTab); el.removeEventListener('click', onCard); h.destroy(); };
   }, [r]);
 
   const stamp = (current.title ? '“' + current.title + '”  ·  ' : '') + 'Report of ' + dayLabel(current.createdAt) + ' ' + new Date(current.createdAt).getFullYear();

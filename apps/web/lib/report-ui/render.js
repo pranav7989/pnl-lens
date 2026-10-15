@@ -77,6 +77,19 @@ export function mountReport(root, R, fmt) {
   }
 
   /* ---------- overview ---------- */
+  /**
+   * REQ-2 "What's next" card at the end of Overview and Progress (website only: fmt.next comes from the journey in
+   * packages/shared/src/journey.ts). Single users also see a blurred, illustrative trend preview (no numbers).
+   */
+  function whatsNext() {
+    const n = fmt.next; if (!n) return '';
+    const preview = n.kind === 'upgrade'
+      ? `<div class="wn-preview" aria-hidden="true"><svg viewBox="0 0 400 120" preserveAspectRatio="none"><polyline points="0,95 60,80 120,86 180,62 240,58 300,40 360,34 400,22" fill="none" stroke="#FFD60A" stroke-width="4"/><polyline points="0,110 400,110" stroke="#333" stroke-width="2"/></svg><span>Unlock month-by-month progress with Snapshot</span></div>`
+      : '';
+    return `<div class="rv-panel s12 wn" data-whats-next><div><h3>What's next</h3><p>${esc(n.text)}</p></div>
+      <a class="btn" href="${esc(n.href)}" data-wn-cta="${esc(n.kind)}">${esc(n.cta)} →</a>${preview}</div>`;
+  }
+
   function overview() {
     const dn = { dp: 'DP charges', amc: 'Demat AMC', autosq: 'Auto square-off fees', margin: 'Margin penalties', other: 'Other debits' };
     const heads = Object.entries(R.heads || {}).filter(([, v]) => v).sort((a, b) => b[1] - a[1]);
@@ -116,7 +129,7 @@ export function mountReport(root, R, fmt) {
         <p class="rv-note">Worst streak ${R.seq.worstStreak} losses in a row${R.seq.worstDay ? ` · worst day ${esc(R.seq.worstDay.date)} (${inr(R.seq.worstDay.pnl)})` : ''}.</p>`, 's6');
     }
     if ((R.b.year || []).length > 1) h += panel('year', 'By expiry year', 'F&amp;O only', bars(R.b.year), 's6');
-    $('#overview').innerHTML = h + '</div>';
+    $('#overview').innerHTML = h + whatsNext() + '</div>';
   }
 
   /* ---------- insights ---------- */
@@ -299,7 +312,7 @@ export function mountReport(root, R, fmt) {
     h += `<div class="rv-panel s12" data-behav="checkups"><div class="rv-ph"><h3>Check-up history</h3><small>${H.length ? `next check-up due ${due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'your first check-up'}</small>${info('checkups')}</div>
       ${H.length ? `<div class="pg-hist">${H.map((c, i) => `<div class="pg-hc${i === H.length - 1 ? ' cur' : ''}"><span>${esc(new Date(c.savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }))}</span><b class="${c.score >= 70 ? 'gain' : c.score >= 50 ? '' : 'loss'}">${c.score}</b><small>${esc(c.label)}</small>${i ? `<em class="${c.score - H[i - 1].score >= 0 ? 'gain' : 'loss'}">${c.score - H[i - 1].score >= 0 ? '+' : ''}${c.score - H[i - 1].score}</em>` : '<em>baseline</em>'}</div>`).join('')}</div>` : ''}
       <p class="rv-note">Come back every month with that month's tradebook. Each check-up is compared with the last, so you can see which habits changed.</p></div>`;
-    el.innerHTML = h + '</div>';
+    el.innerHTML = h + whatsNext() + '</div>';
   }
   /* ---------- positions ---------- */
   let sortKey = 'pnl', sortDir = 1;

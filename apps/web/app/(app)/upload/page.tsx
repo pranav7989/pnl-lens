@@ -5,7 +5,7 @@
  */
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { loadPlans, loadHistory } from '@/lib/workspace-data';
+import { loadPlanData, loadHistory } from '@/lib/workspace-data';
 import Workspace from '@/components/workspace/Workspace';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +13,6 @@ export const dynamic = 'force-dynamic';
 export default async function Upload() {
   const user = await getSessionUser();
   if (!user) redirect('/login?next=/upload');
-  const [plans, reports] = await Promise.all([loadPlans(), loadHistory()]);
-  return <Workspace mode="upload" plans={plans} reports={reports} />;
+  const [{ plans, prices }, reports] = await Promise.all([loadPlanData(), loadHistory()]);
+  return <Workspace mode="upload" plans={plans} reports={reports} prices={prices} />;
 }

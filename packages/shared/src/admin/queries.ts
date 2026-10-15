@@ -125,7 +125,19 @@ async function productTab() {
       (select count(*) from events where name='landing_scroll_depth' and props->>'depth'='50' and created_at > now() - interval '30 days')::int as d50,
       (select count(*) from events where name='landing_scroll_depth' and props->>'depth'='75' and created_at > now() - interval '30 days')::int as d75,
       (select count(*) from events where name='landing_scroll_depth' and props->>'depth'='100' and created_at > now() - interval '30 days')::int as d100`);
-  return { k, daily, failures, tabs, brokers, landing };
+  // REQ-2: journey bar — events, Single → higher plan, and users who came back within 45 days
+  const journey = await one(`select
+      (select count(*) from events where name='journey_bar_view' and created_at > now() - interval '30 days')::int as views,
+      (select count(*) from events where name='journey_step_click' and created_at > now() - interval '30 days')::int as step_clicks,
+      (select count(*) from events where name='journey_next_action_click' and created_at > now() - interval '30 days')::int as action_clicks,
+      (select count(*) from events where name='upgrade_from_journey' and created_at > now() - interval '30 days')::int as upgrades,
+      (select count(*) from (select distinct on (user_id) user_id, plan_id from subscriptions order by user_id, created_at) f where f.plan_id = 'single')::int as single_first,
+      (select count(*) from (select distinct on (user_id) user_id, plan_id, created_at from subscriptions order by user_id, created_at) f
+         where f.plan_id = 'single' and exists (select 1 from subscriptions s where s.user_id = f.user_id and s.plan_id <> 'single' and s.created_at > f.created_at))::int as single_upgraded,
+      (select count(*) from (select user_id, min(created_at) as first from reports group by user_id) f)::int as with_report,
+      (select count(*) from (select user_id, min(created_at) as first from reports group by user_id) f
+         where exists (select 1 from reports r where r.user_id = f.user_id and r.created_at > f.first + interval '1 day' and r.created_at <= f.first + interval '45 days'))::int as returned_45d`);
+  return { k, daily, failures, tabs, brokers, landing, journey };
 }
 
 return { usersTab, financeTab, errorsTab, supportTab, userLookup, productTab };

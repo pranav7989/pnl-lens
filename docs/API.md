@@ -33,7 +33,7 @@ Built in backend-v2 Phase 4. The web app still uses its own Next routes until th
 | | `GET /reports/:id/status` | The latest job for that report |
 | | `PATCH /reports/:id { title }` | Rename (history only) |
 | | `DELETE /reports/:id` | Removes the payload, trades and metrics, and shreds the files |
-| Payments | `GET /payments/config`, `POST /payments/order`, `POST /payments/verify`, `POST /payments/webhook` | Modes `off \| razorpay` (link mode removed, D5). Only the webhook grants a plan, and it is idempotent |
+| Payments | `GET /payments/config`, `POST /payments/order`, `POST /payments/verify`, `POST /payments/webhook` | Modes `off \| razorpay` (link mode removed, D5). Only the webhook grants a plan, and it is idempotent. `POST /payments/order` takes an optional `source: "journey"` (REQ-2): it goes into the Razorpay order notes, and the webhook records `upgrade_from_journey` when that payment grants the plan |
 | Admin | `GET /admin/metrics?tab=`, `POST /admin/roles`, `PATCH /admin/tickets`, `GET /admin/user?email=` | Role read from the DB on every request; every read is written to `audit_log` |
 | | `POST /admin/grants { email, planId, reason }` | Owner only (`plans:grant`, D5). Plan values come from `PLANS`; the DB re-checks the owner role and the reason, and writes an audit row |
 | Privacy | `GET /me/consents`, `POST /me/consents { purpose: "research", granted }` | Research consent is opt-in, off by default, append-only |

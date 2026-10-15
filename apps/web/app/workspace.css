@@ -98,3 +98,40 @@
 @media (max-width: 900px) { .ws-hist-h, #historyList { display: none; } }
 
 .up-note .def { display: block; color: var(--ink); margin-bottom: 2px; }
+
+/* ===== REQ-2 journey bar (components/workspace/JourneyBar.tsx) ===== */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.jb { background: linear-gradient(180deg, #16140a, #0d0d0d); border: 1px solid #3a3210; border-radius: 14px; padding: 14px 16px; margin: 0 0 16px; }
+.jb-line { display: none; width: 100%; align-items: center; justify-content: space-between; gap: 10px; background: none; border: 0; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; text-align: left; padding: 0; cursor: pointer; }
+.jb-line span { min-width: 0; } .jb-line i { font-style: normal; color: var(--y); font-size: 18px; transition: transform .2s ease; }
+.jb-head { display: flex; align-items: baseline; gap: 12px; }
+.jb-head b { font-size: 15px; } .jb-count { color: var(--y); font-size: 13px; font-weight: 800; }
+.jb-hide { margin-left: auto; background: none; border: 0; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; padding: 2px 4px; } .jb-hide:hover { color: var(--ink); }
+.jb-track { height: 6px; border-radius: 3px; background: #222; margin: 10px 0 12px; overflow: hidden; } .jb-track i { display: block; height: 100%; background: var(--y); border-radius: 3px; }
+.jb-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.jb-steps li > a, .jb-st { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-height: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid #262626; background: #111; font-size: 13px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.jb-steps li.done .jb-st { border-color: #4a3f12; background: #17150c; }
+.jb-steps li.locked a { color: var(--muted); border-style: dashed; } .jb-steps li.locked a:hover { border-color: var(--y); color: var(--ink); }
+.jb-steps small { flex-basis: 100%; font-size: 11.5px; font-weight: 700; color: var(--y); }
+.jb-ic { width: 14px; height: 14px; flex: none; stroke: var(--y); stroke-width: 1.8; fill: none; } .jb-steps li.locked .jb-ic { stroke: var(--muted); }
+.jb-steps li.locked .jb-ic rect { fill: none; }
+.jb-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #444; flex: none; }
+.jb-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 12px; }
+.jb-score, .jb-next { margin: 0; font-size: 13.5px; color: #cfcfcf; } .jb-score b { color: var(--y); }
+.jb-cta { margin-left: auto; text-decoration: none; font-size: 13.5px; }
+.jb.collapsed .jb-line { display: flex; } .jb.collapsed .jb-full { display: none; }
+@media (max-width: 640px) {
+  .jb { padding: 12px 14px; }
+  .jb-line { display: flex; } .jb .jb-full { display: none; } .jb.open .jb-full { display: block; margin-top: 12px; } .jb.open .jb-line i { transform: rotate(90deg); }
+  .jb-steps { grid-template-columns: 1fr; } .jb-cta { margin-left: 0; width: 100%; text-align: center; }
+}
+/* "What's next" card at the end of Overview and Progress (render.js) */
+.wn { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 20px; align-items: center; }
+.wn h3 { margin: 0 0 4px; } .wn p { margin: 0; color: #cfcfcf; font-size: 14px; } .wn .btn { text-decoration: none; }
+.wn-preview { grid-column: 1 / -1; position: relative; height: 120px; border-radius: 12px; overflow: hidden; border: 1px solid #262626; }
+.wn-preview svg { width: 100%; height: 100%; filter: blur(5px); opacity: .55; }
+.wn-preview span { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 0 12px; font-weight: 800; font-size: 14px; color: var(--ink); }
+@media (max-width: 640px) { .wn { grid-template-columns: 1fr; } .wn .btn { text-align: center; } }
+/* pricing page: the plan a locked journey step needs (?plan=…&from=journey) */
+.plan-pick { box-shadow: 0 0 0 1px var(--y), 0 18px 50px rgba(255,214,10,.12); scroll-margin-top: 90px; }
+.plan-pick-tag { display: inline-block; margin-bottom: 8px; background: var(--y); color: #000; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; }

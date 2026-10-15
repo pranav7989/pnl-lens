@@ -6,7 +6,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { apiServer } from '@/lib/api-client';
-import { loadPlans, loadHistory } from '@/lib/workspace-data';
+import { loadPlanData, loadHistory } from '@/lib/workspace-data';
 import Workspace from '@/components/workspace/Workspace';
 
 export const dynamic = 'force-dynamic';
@@ -27,10 +27,10 @@ export default async function ReportPage(props: { params: Promise<{ id: string }
     );
   }
   if (!r.ok) notFound();
-  const [plans, reports] = await Promise.all([loadPlans(), loadHistory()]);
+  const [{ plans, prices }, reports] = await Promise.all([loadPlanData(), loadHistory()]);
   const d = r.data;
   return (
-    <Workspace mode="report" plans={plans} reports={reports}
+    <Workspace mode="report" plans={plans} reports={reports} prices={prices}
       current={{ id, createdAt: d.summary.createdAt, title: d.summary.title, report: d.report, files: d.files, places: d.places }} />
   );
 }

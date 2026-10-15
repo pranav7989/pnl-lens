@@ -142,6 +142,12 @@ function ProductTab({ d }: { d: any }) {
     <Panel title="Most-used tabs" span="s5"><Table cols={[['Tab', (r) => r.tab], ['Views', (r) => r.n, 'n']]} rows={d.tabs} /></Panel>
     <Panel title="Why uploads fail" sub="reason and file type" span="s7"><Table cols={[['Reason', (r) => r.reason], ['File type', (r) => r.ext], ['Count', (r) => r.n, 'n']]} rows={d.failures} /></Panel>
     <Panel title="Brokers seen" span="s5"><Table cols={[['Broker / source', (r) => r.broker], ['Reports', (r) => r.n, 'n']]} rows={d.brokers} /></Panel>
+    {d.journey && (() => { const jn = d.journey, pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) + '%' : '–'); return <>
+      <div className="rv-kpis s12"><Kpi label="Single → higher plan" value={pct(jn.single_upgraded, jn.single_first)} sub={`${jn.single_upgraded} of ${jn.single_first} who started on Single`} />
+        <Kpi label="Came back within 45 days" value={pct(jn.returned_45d, jn.with_report)} sub={`${jn.returned_45d} of ${jn.with_report} with a report`} />
+        <Kpi label="Upgrades from the journey" value={jn.upgrades} sub="last 30 days" /><Kpi label="Journey bar views" value={jn.views} sub="last 30 days" /></div>
+      <Panel title="Journey" sub="last 30 days" span="s12"><Table cols={[['Event', (r) => r.m], ['Count', (r) => r.n, 'n']]}
+        rows={[{ m: 'Bar shown (journey_bar_view)', n: jn.views }, { m: 'Locked step tapped (journey_step_click)', n: jn.step_clicks }, { m: 'Next action tapped (journey_next_action_click)', n: jn.action_clicks }, { m: 'Purchase from the journey (upgrade_from_journey)', n: jn.upgrades }]} /></Panel></>; })()}
     {d.landing && <Panel title="Landing page" sub="visitors, last 30 days: pricing seen and how far they scrolled" span="s12">
       <Table cols={[['Measure', (r) => r.m], ['Count', (r) => r.n, 'n']]} rows={[{ m: 'Pricing section seen', n: d.landing.pricing_views }, { m: 'Scrolled 25% of the page', n: d.landing.d25 }, { m: 'Scrolled 50%', n: d.landing.d50 }, { m: 'Scrolled 75%', n: d.landing.d75 }, { m: 'Reached the end', n: d.landing.d100 }]} /></Panel>}
   </>;

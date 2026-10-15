@@ -35,4 +35,20 @@ describe.skipIf(!ok)('product events', () => {
     expect(await rows('made_up_event')).toEqual([]);
     expect((await post({ name: 'pricing_viewed' }, { origin: 'https://evil.example' })).statusCode).toBe(403);
   });
+
+  it('journey events from signed-in users are stored (REQ-2)', async () => {
+    const u = await makeUser(x.t);
+    for (const name of ['journey_bar_view', 'journey_step_click', 'journey_next_action_click']) expect((await post({ name, props: { plan: 'single' } }, await as(u))).statusCode).toBe(204);
+    for (const name of ['journey_bar_view', 'journey_step_click', 'journey_next_action_click']) expect(await rows(name)).toEqual([{ user_id: u, props: { plan: 'single' } }]);
+  });
+
+  it('the admin Product tab shows the landing and journey numbers', async () => {
+    const owner = await makeUser(x.t, { role: 'owner' });
+    const r = await x.app.inject({ method: 'GET', url: '/api/v1/admin/metrics?tab=product', headers: await as(owner) });
+    expect(r.statusCode).toBe(200);
+    const d = r.json();
+    expect(d.landing).toMatchObject({ pricing_views: 1, d50: 1 });
+    expect(d.journey).toMatchObject({ views: 1, step_clicks: 1, action_clicks: 1, upgrades: 0 });
+    expect(Object.keys(d.journey)).toEqual(expect.arrayContaining(['single_first', 'single_upgraded', 'with_report', 'returned_45d']));
+  });
 });

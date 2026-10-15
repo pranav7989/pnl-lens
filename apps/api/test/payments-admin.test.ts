@@ -31,6 +31,19 @@ describe.skipIf(!ok)('payments', () => {
   };
   const captured = (orderId: string) => ({ event: 'payment.captured', payload: { payment: { entity: { id: `pay_${orderId}`, order_id: orderId } } } });
 
+  it('a purchase started from the journey records upgrade_from_journey once (REQ-2)', async () => {
+    const u = await makeUser(x.t);
+    const id = await order(u, 'snapshot');
+    const body = { event: 'payment.captured', payload: { payment: { entity: { id: `pay_${id}`, order_id: id, notes: { plan: 'snapshot', user: u, source: 'journey' } } } } };
+    expect((await webhook(body)).statusCode).toBe(200);
+    expect((await webhook(body)).statusCode).toBe(200);                 // replay: no second plan, no second event
+    const ev = (await x.t.admin.query(`select user_id, props from events where name = 'upgrade_from_journey' and user_id = $1`, [u])).rows;
+    expect(ev).toEqual([{ user_id: u, props: { plan: 'snapshot' } }]);
+    const plain = await makeUser(x.t), id2 = await order(plain, 'snapshot');
+    expect((await webhook(captured(id2))).statusCode).toBe(200);
+    expect((await x.t.admin.query(`select count(*)::int as n from events where name = 'upgrade_from_journey' and user_id = $1`, [plain])).rows[0].n).toBe(0);
+  });
+
   it('config says off; ordering while off gives the old 503', async () => {
     const cfg = await x.app.inject({ method: 'GET', url: '/api/v1/payments/config', headers: { 'cf-ipcountry': 'IN' } });
     expect(cfg.json()).toMatchObject({ mode: 'off', support: 'support@pnllens.com' });

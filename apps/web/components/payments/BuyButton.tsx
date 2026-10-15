@@ -19,7 +19,8 @@ const loadCheckout = () => new Promise<void>((res, rej) => {
   document.body.appendChild(s);
 });
 
-export default function BuyButton({ planId, label, primary }: { planId: string; label: string; primary?: boolean }) {
+/** `source: 'journey'` marks a purchase that started from the journey bar or card (REQ-2): the webhook records upgrade_from_journey. */
+export default function BuyButton({ planId, label, primary, source }: { planId: string; label: string; primary?: boolean; source?: 'journey' }) {
   const [mode, setMode] = useState<'off' | 'razorpay' | null>(null);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   useEffect(() => { fetch('/api/v1/payments/config').then((r) => r.json()).then((j) => setMode(j.mode)).catch(() => setMode('off')); }, []);
@@ -27,7 +28,7 @@ export default function BuyButton({ planId, label, primary }: { planId: string; 
   async function buy() {
     setBusy(true); setMsg('');
     try {
-      const r = await fetch('/api/v1/payments/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId }) });
+      const r = await fetch('/api/v1/payments/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(source ? { planId, source } : { planId }) });
       if (r.status === 401) { location.href = `/login?next=/pricing`; return; }
       const j = await r.json();
       if (!r.ok) { setMsg(j.message || 'Payments are opening soon.'); return; }
