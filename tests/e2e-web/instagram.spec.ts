@@ -32,8 +32,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     expect(pos[0]).toBe(0);
     expect(Math.max(...pos)).toBeGreaterThanOrEqual(max - 2);
     for (let i = 1; i < pos.length; i++) expect(pos[i], `step ${i}`).toBeGreaterThanOrEqual(pos[i - 1]);
-    await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(150);
-    expect((await rail(page)).left).toBe(0);
+    await page.evaluate(() => scrollTo(0, 0));
+    await expect.poll(async () => (await rail(page)).left).toBe(0);   // the next animation frame moves it back (slow on CI WebKit)
   });
 
   test(`${vp.width}px: after a manual swipe the row stops following the page`, async ({ page }) => {
