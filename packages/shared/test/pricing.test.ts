@@ -34,7 +34,8 @@ describe('plans (REQ-3, 15 Oct 2026)', () => {
     const root = path.resolve(__dirname, '../../..');
     let hits = '';
     try {
-      hits = execFileSync('git', ['grep', '-n', '-e', '4\\.99', '-e', 'Use within 6 months', '-e', 'History kept', '-e', '25 reports over 3 months', '-e', 'usdMinor: 499\\b',
+      // a price, not a number inside an SVG path such as "L4.99" (the X logo)
+      hits = execFileSync('git', ['grep', '-n', '-E', '-e', '(^|[^0-9.A-Za-z])4\\.99', '-e', 'Use within 6 months', '-e', 'History kept', '-e', '25 reports over 3 months', '-e', 'usdMinor: 499([^0-9]|$)',
         '--', '.', ':!package-lock.json', ':!packages/engine/test/golden', ':!packages/shared/test/pricing.test.ts'], { cwd: root, encoding: 'utf8' });
     } catch (e: any) { if (e.status !== 1) throw e; }   // git grep exits 1 when nothing matches
     expect(hits).toBe('');
