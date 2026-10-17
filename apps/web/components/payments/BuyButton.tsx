@@ -45,8 +45,8 @@ export default function BuyButton({ planId, label, primary, source }: { planId: 
     finally { setBusy(false); }
   }
 
-  if (mode === 'off') return <div><button className={`btn ${primary ? '' : 'ghost'}`} disabled style={{ width: '100%', opacity: 0.65 }}>Payments opening soon</button>
-    <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>Write to <a href="mailto:support@pnllens.com" style={{ color: 'var(--y)' }}>support@pnllens.com</a> to be notified.</p></div>;
-  return <div><button className={`btn ${primary ? '' : 'ghost'}`} style={{ width: '100%' }} onClick={buy} disabled={busy || !mode}>{busy ? 'Opening…' : label}</button>
-    {msg && <p className="muted" style={{ fontSize: 12.5, margin: '8px 0 0' }}>{msg}</p>}</div>;
+  if (mode === 'off') return <div><button className={`btn btn-block ${primary ? '' : 'ghost'}`} disabled>Payments opening soon</button>
+    <p className="muted tiny buy-note">Write to <a className="link" href="mailto:support@pnllens.com">support@pnllens.com</a> to be notified.</p></div>;
+  return <div><button className={`btn btn-block ${primary ? '' : 'ghost'}`} onClick={buy} disabled={busy || !mode}>{busy ? 'Opening…' : label}</button>
+    {msg && <p className="muted small buy-note">{msg}</p>}</div>;
 }

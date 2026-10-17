@@ -24,7 +24,7 @@ export default async function Login(props: { searchParams: Promise<{ error?: str
   return (
     <div className="panel center-card">
       <h3>Sign in or create an account</h3>
-      <p className="muted" style={{ marginTop: -4 }}>New here? Signing in creates your account.</p>
+      <p className="muted center-sub">New here? Signing in creates your account.</p>
       <LoginForm google={!!providers.data?.google} next={next} error={searchParams.error ? ERRORS[searchParams.error] || ERRORS.google : ''} />
     </div>
   );

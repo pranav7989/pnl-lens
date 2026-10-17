@@ -46,26 +46,26 @@ export default function DataRights() {
   const latest = exports[0];
 
   return (
-    <div className="panel" style={{ maxWidth: 620, marginTop: 16 }}>
+    <div className="panel data-rights">
       <h3>Your data</h3>
-      <div className="consent" style={{ marginTop: 6 }}>
+      <div className="consent dr-consent">
         <label><input type="checkbox" name="research" checked={!!research} disabled={research === null} onChange={(e) => toggleResearch(e.target.checked)} /> <span>{CONSENT_RESEARCH}</span></label>
       </div>
-      <div className="filters" style={{ marginTop: 16, alignItems: 'center' }}>
+      <div className="filters dr-actions">
         <button className="btn ghost" onClick={requestExport} disabled={!!latest && (latest.status === 'pending' || latest.status === 'processing')}>Export my data</button>
-        {latest && (latest.status === 'pending' || latest.status === 'processing') && <span className="muted" style={{ fontSize: 13 }}>Preparing your export…</span>}
+        {latest && (latest.status === 'pending' || latest.status === 'processing') && <span className="muted small">Preparing your export…</span>}
         {latest?.downloadable && <a className="btn" href={`/api/v1/me/export/${latest.id}`}>Download export (ZIP)</a>}
-        {latest?.status === 'failed' && <span className="muted" style={{ fontSize: 13 }}>The export could not be prepared. Try again.</span>}
+        {latest?.status === 'failed' && <span className="muted small">The export could not be prepared. Try again.</span>}
       </div>
-      <p className="muted" style={{ fontSize: 12.5, margin: '4px 0 0' }}>The export holds your account, reports, trades and the statements still stored. The download link works for 7 days.</p>
-      <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+      <p className="muted small dr-note">The export holds your account, reports, trades and the statements still stored. The download link works for 7 days.</p>
+      <div className="dr-danger">
         {!confirmDelete
-          ? <button className="btn ghost" style={{ color: 'var(--loss)' }} onClick={() => setConfirmDelete(true)}>Delete my account</button>
+          ? <button className="btn ghost btn-danger-quiet" onClick={() => setConfirmDelete(true)}>Delete my account</button>
           : <div>
-              <p style={{ margin: '0 0 8px', fontSize: 14 }}>This permanently deletes your reports, trades and statements. Payment records are kept as the law requires. Type <b>DELETE</b> to confirm.</p>
+              <p className="dr-warn">This permanently deletes your reports, trades and statements. Payment records are kept as the law requires. Type <b>DELETE</b> to confirm.</p>
               <div className="filters">
                 <input aria-label="Type DELETE to confirm" value={typed} onChange={(e) => setTyped(e.target.value)} />
-                <button className="btn" style={{ background: 'var(--loss)', color: '#fff' }} disabled={typed !== 'DELETE'} onClick={deleteAccount}>Delete my account</button>
+                <button className="btn btn-danger" disabled={typed !== 'DELETE'} onClick={deleteAccount}>Delete my account</button>
                 <button className="btn ghost" onClick={() => { setConfirmDelete(false); setTyped(''); }}>Cancel</button>
               </div>
             </div>}
