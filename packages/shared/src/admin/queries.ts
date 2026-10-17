@@ -137,7 +137,15 @@ async function productTab() {
       (select count(*) from (select user_id, min(created_at) as first from reports group by user_id) f)::int as with_report,
       (select count(*) from (select user_id, min(created_at) as first from reports group by user_id) f
          where exists (select 1 from reports r where r.user_id = f.user_id and r.created_at > f.first + interval '1 day' and r.created_at <= f.first + interval '45 days'))::int as returned_45d`);
-  return { k, daily, failures, tabs, brokers, landing, journey };
+  // REQ-5/6: social icons and the Instagram section (visitors included)
+  const instagram = await one(`select
+      (select count(*) from events where name='ig_section_view' and created_at > now() - interval '30 days')::int as views,
+      (select count(*) from events where name='ig_card_play' and created_at > now() - interval '30 days')::int as plays,
+      (select count(*) from events where name='ig_card_click' and created_at > now() - interval '30 days')::int as card_clicks,
+      (select count(*) from events where name='ig_follow_click' and created_at > now() - interval '30 days')::int as follows`);
+  const social = await q(`select coalesce(props->>'network','?') as network, coalesce(props->>'placement','?') as placement, count(*)::int as n
+      from events where name='social_click' and created_at > now() - interval '30 days' group by 1, 2 order by 3 desc`);
+  return { k, daily, failures, tabs, brokers, landing, journey, instagram, social };
 }
 
 return { usersTab, financeTab, errorsTab, supportTab, userLookup, productTab };

@@ -10,6 +10,7 @@
 import Showcase from './Showcase';
 import { LogoMark } from '@/components/brand/Logo';
 import Social from './Social';
+import Instagram from './Instagram';
 import { siteFor } from '@pnl-lens/shared/site';
 import { durationLabel, reportsBullet, validityBullet, REPORTS_KEPT, type Plan } from '@pnl-lens/shared/pricing';
 
@@ -238,6 +239,8 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
             <div><b>Refunds.</b> Reports cannot be refunded once generated. If something genuinely goes wrong, write to <a href="mailto:support@pnllens.com">support@pnllens.com</a>. We take responsibility and respond promptly.</div>
           </div>
         </section>
+
+        <Instagram site={site} />
 
         <section className="lp-section" id="privacy">
           <header className="lp-head"><h2 className="lp-h2">Private and principled</h2><p className="lp-sub">Your data stays yours, and the review stays objective.</p></header>

@@ -148,6 +148,51 @@
   };
   window.addEventListener('scroll', onDepth, { passive: true });
 
+  /* REQ-6: Instagram row — follows the page scroll from card 1 to card 4 until the visitor moves it by hand */
+  var ig = root.querySelector('[data-ig]'), rail = root.querySelector('[data-ig-rail]'), bar = root.querySelector('[data-ig-progress]');
+  if (ig && rail) {
+    var auto = !reduce, ticking = false;
+    var maxScroll = function () { return Math.max(0, rail.scrollWidth - rail.clientWidth); };
+    var setBar = function () { var m = maxScroll(); if (bar) bar.style.transform = 'scaleX(' + (m > 0 ? rail.scrollLeft / m : 1).toFixed(3) + ')'; };
+    var follow = function () {
+      ticking = false; if (!auto) return;
+      var vh = window.innerHeight, r = rail.getBoundingClientRect();
+      var p = Math.min(1, Math.max(0, (vh - r.top) / (0.75 * vh + 0.35 * r.height)));
+      rail.scrollLeft = p * maxScroll(); setBar();
+    };
+    window.addEventListener('scroll', function () { if (auto && !ticking) { ticking = true; requestAnimationFrame(follow); } }, { passive: true });
+    window.addEventListener('resize', function () { if (auto) requestAnimationFrame(follow); else setBar(); });
+    rail.addEventListener('scroll', setBar, { passive: true });
+    // manual takes over for the rest of this page view; the row then snaps card by card
+    var takeOver = function () { if (!auto) return; auto = false; rail.classList.add('manual'); };
+    ['pointerdown', 'touchstart', 'keydown'].forEach(function (t) { rail.addEventListener(t, takeOver, { passive: true }); });
+    rail.addEventListener('wheel', function (e) { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) takeOver(); }, { passive: true });
+    rail.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var item = rail.querySelector('.ig-item'), step = item ? item.getBoundingClientRect().width + 20 : 300;
+      rail.scrollBy({ left: e.key === 'ArrowRight' ? step : -step, behavior: reduce ? 'auto' : 'smooth' }); e.preventDefault();
+    });
+    if (reduce) rail.classList.add('manual');
+    requestAnimationFrame(function () { follow(); setBar(); });
+    if ('IntersectionObserver' in window) {
+      var seen = false;
+      new IntersectionObserver(function (es) { if (es[0].isIntersecting && !seen) { seen = true; send('ig_section_view', { site: region }); } }, { threshold: 0.25 }).observe(ig);
+      // self-hosted reels: muted, play while at least 60% of the card is visible; never with reduced motion
+      var played = {};
+      if (!reduce) [].slice.call(rail.querySelectorAll('[data-ig-video]')).forEach(function (v) {
+        new IntersectionObserver(function (es) {
+          var n = v.getAttribute('data-ig-video');
+          if (es[0].intersectionRatio >= 0.6) { var pr = v.play(); if (pr && pr.then) pr.then(function () { if (!played[n]) { played[n] = 1; send('ig_card_play', { card: +n, site: region }); } }).catch(function () {}); }
+          else v.pause();
+        }, { threshold: [0, 0.6, 1] }).observe(v);
+      });
+    }
+    rail.addEventListener('click', function (e) {
+      var c = e.target.closest && e.target.closest('[data-ig-card]'); if (c) send('ig_card_click', { card: +c.getAttribute('data-ig-card'), site: region });
+      var f = e.target.closest && e.target.closest('[data-ig-follow]'); if (f) send('ig_follow_click', { site: region });
+    });
+  }
+
   /* REQ-5: social icon clicks (header, footer, Instagram section) */
   root.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('[data-social]');

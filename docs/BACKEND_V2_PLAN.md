@@ -515,6 +515,7 @@ An approved exception to rule 8: styling only. The system is documented in `docs
 | Request | Result |
 |---|---|
 | REQ-5 Social icons (PR #4) | X and Instagram icon buttons in the landing header (beside the burger on phones) and footer (centred on phones). Links in one per-site config (`packages/shared/src/site.ts`), `noopener noreferrer`, aria labels, a yellow focus/hover state, Organization JSON-LD `sameAs`, and a visitor event `social_click`. Nav: Product · Brokers · Pricing · FAQ. Also: the See plans pill no longer covers the footer, and its text is dark on yellow (it was white). Tests: header and footer at 320–1440 px on both sites, no overlap, focus ring, JSON-LD, event |
+| REQ-6 Instagram section (PR #5) | After pricing: heading and copy as specified, 3 cards (post, 2 reels) + a yellow follow card in one 9:16 row; the row follows the page scroll from card 1 to card 4 (spec formula); a manual swipe, drag, wheel or arrow key takes over and the row then snaps card by card; reduced motion = manual only. Self-hosted media only (`public/media/instagram/`, names in `site.ts`); until the owner's files arrive each card is a branded placeholder linking to Instagram. Videos play muted when ≥ 60% visible, never with reduced motion. No Instagram/Meta requests on either site; CSP `media-src 'self'`. Events `ig_*` + admin Product panels (Instagram, Social icons). Pricing depth 3.93 screens |
 
 ## 15. Risks
 

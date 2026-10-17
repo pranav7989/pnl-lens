@@ -50,4 +50,6 @@ Rules:
 - **Tabs:** grey text, white when selected, with a 2px yellow underline that slides.
 - **Segmented controls** (report groups, sample dashboard): the selected segment is a raised `--s3` chip, not yellow.
 - **Pills:** severity uses a tinted background with a coloured hairline (`.lv`, `.rv-lv`).
+- **Instagram row** (`components/landing/Instagram.tsx`): 9:16 cards, radius 20, gap 20, width `clamp(232px, 68vw, 300px)`; a yellow Post/Reel chip; the follow card is the one solid-yellow surface on the page; a 220 px progress line. Snapping only after the visitor moves the row by hand.
+- **Instagram row** (`components/landing/Instagram.tsx`): 9:16 cards, radius 20, gap 20, width `clamp(232px, 68vw, 300px)`; a yellow Post/Reel chip; the follow card is the one solid-yellow surface on the page; a 220 px progress line. Snapping only after the visitor moves the row by hand.
 - **Social icons** (`components/landing/Social.tsx`, links in `packages/shared/src/site.ts`): 38 px (40 px on phones) square buttons, grey hairline; yellow with a black icon on hover and focus.

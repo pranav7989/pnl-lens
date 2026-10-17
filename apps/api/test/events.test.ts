@@ -23,6 +23,10 @@ describe.skipIf(!ok)('product events', () => {
     expect((await post({ name: 'journey_bar_view' })).statusCode).toBe(204);
     expect(await rows('pricing_viewed')).toEqual([{ user_id: null, props: { region: 'IN', from: 'landing' } }]);
     expect(await rows('landing_scroll_depth')).toEqual([{ user_id: null, props: { depth: 50, region: 'GLOBAL' } }]);
+    for (const name of ['social_click', 'ig_section_view', 'ig_card_play', 'ig_card_click', 'ig_follow_click']) {
+      expect((await post({ name, props: { site: 'IN' } })).statusCode).toBe(204);
+      expect(await rows(name), name).toEqual([{ user_id: null, props: { site: 'IN' } }]);
+    }
     expect(await rows('upload_started')).toEqual([]);
     expect(await rows('journey_bar_view')).toEqual([]);
   });

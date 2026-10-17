@@ -148,6 +148,10 @@ function ProductTab({ d }: { d: any }) {
         <Kpi label="Upgrades from the journey" value={jn.upgrades} sub="last 30 days" /><Kpi label="Journey bar views" value={jn.views} sub="last 30 days" /></div>
       <Panel title="Journey" sub="last 30 days" span="s12"><Table cols={[['Event', (r) => r.m], ['Count', (r) => r.n, 'n']]}
         rows={[{ m: 'Bar shown (journey_bar_view)', n: jn.views }, { m: 'Locked step tapped (journey_step_click)', n: jn.step_clicks }, { m: 'Next action tapped (journey_next_action_click)', n: jn.action_clicks }, { m: 'Purchase from the journey (upgrade_from_journey)', n: jn.upgrades }]} /></Panel></>; })()}
+    {d.instagram && <Panel title="Instagram section" sub="visitors, last 30 days" span="s6">
+      <Table cols={[['Measure', (r) => r.m], ['Count', (r) => r.n, 'n']]} rows={[{ m: 'Section seen', n: d.instagram.views }, { m: 'Reels played', n: d.instagram.plays }, { m: 'Cards opened on Instagram', n: d.instagram.card_clicks }, { m: 'Follow on Instagram', n: d.instagram.follows }]} /></Panel>}
+    {d.social && <Panel title="Social icons" sub="clicks, last 30 days" span="s6">
+      <Table cols={[['Network', (r) => r.network], ['Where', (r) => r.placement], ['Clicks', (r) => r.n, 'n']]} rows={d.social} /></Panel>}
     {d.landing && <Panel title="Landing page" sub="visitors, last 30 days: pricing seen and how far they scrolled" span="s12">
       <Table cols={[['Measure', (r) => r.m], ['Count', (r) => r.n, 'n']]} rows={[{ m: 'Pricing section seen', n: d.landing.pricing_views }, { m: 'Scrolled 25% of the page', n: d.landing.d25 }, { m: 'Scrolled 50%', n: d.landing.d50 }, { m: 'Scrolled 75%', n: d.landing.d75 }, { m: 'Reached the end', n: d.landing.d100 }]} /></Panel>}
   </>;

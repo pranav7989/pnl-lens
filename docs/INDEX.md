@@ -86,7 +86,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 182 files._
+_Generated from file headers by `npm run docs:index` — 184 files._
 
 ### Pages
 
@@ -101,6 +101,7 @@ _Generated from file headers by `npm run docs:index` — 182 files._
 | File | What it does |
 |---|---|
 | `apps/web/app/page.tsx` | Home page route. Picks India or Global site from the visitor country (?region= overrides) and renders <Landing>. |
+| `apps/web/components/landing/Instagram.tsx` | REQ-6 Instagram section: 3 posts/reels and a follow card in one row that slides sideways on scroll (landing.js). Self-hosted media only, no Meta resources. |
 | `apps/web/components/landing/Landing.tsx` | Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, privacy, brokers, FAQ (pricing early for mobile, REQ-4). |
 | `apps/web/components/landing/Showcase.tsx` | Animated 5-tab sample dashboard on the landing page (illustrative numbers, ₹ or $ by region). |
 | `apps/web/components/landing/Social.tsx` | X and Instagram icon buttons (REQ-5) for the landing header and footer; links come from the per-site config. |
@@ -344,6 +345,7 @@ _Generated from file headers by `npm run docs:index` — 182 files._
 | `packages/shared/test/pricing.test.ts` | REQ-3: plan durations and prices from the single source of truth, the wording built from them, and no stale copy left in the repo. |
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
+| `tests/e2e-web/instagram.spec.ts` | REQ-6 Instagram section: scroll-linked row (card 1 → 4), manual takeover, reduced motion, video play rules, exact copy, no Meta requests, no layout shift. |
 | `tests/e2e-web/journey.spec.ts` | REQ-2 journey bar and "What's next" card end to end: Single 2/5 with locks, later month completes step 3, locked step opens pricing, phone view, events in admin. |
 | `tests/e2e-web/landing.spec.ts` | REQ-4: on a 390x844 phone pricing starts within 4 screen-heights; See plans / nav / pill reach it; mobile card order; no section lost; landing events stored. |
 | `tests/e2e-web/privacy.spec.ts` | Data rights in the browser: research opt-in toggle, export my data (worker builds the ZIP, download works), delete my account. |

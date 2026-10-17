@@ -11,6 +11,6 @@ export default defineConfig({
   // UI-only specs run in Chromium (Chrome, Edge) and WebKit (Safari); the stack journeys in Chromium only.
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
-    { name: 'webkit', use: { browserName: 'webkit' }, testMatch: /(score-card|landing)\.spec\.ts/ },
+    { name: 'webkit', use: { browserName: 'webkit' }, testMatch: /(score-card|landing|instagram)\.spec\.ts/ },
   ],
 });

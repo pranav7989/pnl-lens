@@ -39,7 +39,7 @@ Built in backend-v2 Phase 4. The web app still uses its own Next routes until th
 | Privacy | `GET /me/consents`, `POST /me/consents { purpose: "research", granted }` | Research consent is opt-in, off by default, append-only |
 | | `POST /me/export` | 202; one open request at a time (the worker builds the archive in Phase 6) |
 | | `POST /me/delete` or `DELETE /me` with `{ confirm: true }` | Deletes the account now: reports, trades and files are removed; payments and consent proof are kept |
-| Telemetry | `POST /events`, `POST /errors` | Always 204. Event names must be in `CLIENT_EVENTS` (`packages/shared/src/admin/telemetry.ts`); visitors without a session may send only the landing events (`pricing_viewed`, `landing_scroll_depth`, `social_click`; stored without a user) |
+| Telemetry | `POST /events`, `POST /errors` | Always 204. Event names must be in `CLIENT_EVENTS` (`packages/shared/src/admin/telemetry.ts`); visitors without a session may send only the landing events (`pricing_viewed`, `landing_scroll_depth`, `social_click`, `ig_section_view`, `ig_card_play`, `ig_card_click`, `ig_follow_click`; stored without a user) |
 
 The old external URLs `/api/payments/webhook` and `/api/auth/google/callback` are registered too, so the Razorpay dashboard and the Google console need no change. Since the Phase 6 cutover Caddy sends every `/api/*` path to the API; the website has no API routes.
 

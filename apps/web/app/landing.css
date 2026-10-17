@@ -102,6 +102,32 @@ main:has(.lp), body:has(.lp) > main { max-width: none; padding: 0; }
 .lp-foot { grid-template-areas: "brand text legal" "nav nav social"; }
 .lp-foot > .lp-brand { grid-area: brand; } .lp-foot > p:not(.lp-legal) { grid-area: text; } .lp-foot > .lp-legal { grid-area: legal; } .lp-foot > nav { grid-area: nav; } .lp-foot-social { grid-area: social; justify-self: end; }
 
+/* REQ-6: Instagram section — one row of 9:16 cards that slides sideways on scroll (landing.js) */
+.ig-rail { display: flex; gap: 20px; overflow-x: auto; padding: 4px 2px 12px; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; }
+/* card-by-card snapping only once the visitor moves the row by hand (landing.js adds .manual) */
+.ig-rail.manual { scroll-snap-type: x mandatory; scroll-padding-inline: 2px; scroll-behavior: smooth; }
+.ig-rail::-webkit-scrollbar { display: none; }
+.ig-rail:focus-visible { box-shadow: inset 0 0 0 2px var(--y); border-radius: 12px; }
+.ig-item { flex: 0 0 clamp(232px, 68vw, 300px); scroll-snap-align: start; display: flex; flex-direction: column; gap: 10px; }
+.ig-card { position: relative; display: block; aspect-ratio: 9 / 16; border-radius: 20px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); text-decoration: none; color: var(--ink); transition: border-color var(--t-fast) var(--ease); }
+a.ig-card:hover { border-color: var(--line-hover); }
+.ig-card video, .ig-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.ig-chip { position: absolute; z-index: 2; top: 12px; left: 12px; background: var(--y); color: var(--on-y); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+.ig-ph { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 14px; padding: 24px; text-align: center; color: var(--ink-3); }
+.ig-ph svg { width: 28px; height: 28px; }
+.ig-ph b { color: var(--ink-2); font-size: 14px; font-weight: 500; max-width: 18ch; }
+.ig-play { width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid var(--line-strong); position: relative; }
+.ig-play::after { content: ''; position: absolute; left: 26px; top: 21px; border-style: solid; border-width: 11px 0 11px 17px; border-color: transparent transparent transparent var(--ink); }
+.ig-view { font-size: 14px; color: var(--mut); text-decoration: none; padding-left: 4px; transition: color var(--t-fast) var(--ease); } .ig-view:hover { color: var(--ink); }
+.ig-follow { background: var(--y); border-color: var(--y); color: var(--on-y); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 28px; text-align: center; }
+.ig-handle { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.ig-follow p { margin: 0; font-size: 15px; line-height: 1.5; color: rgba(10,10,10,.78); }
+.lp .ig-follow-btn { margin-top: 6px; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 20px; border-radius: 12px; background: #0A0A0A; color: var(--y); font-weight: 600; text-decoration: none; transition: background-color var(--t-fast) var(--ease); }
+.lp .ig-follow-btn:hover { background: #222225; }
+.ig-also { margin: 0; padding-left: 4px; font-size: 14px; color: var(--mut); } .ig-also a { color: var(--ink); }
+.ig-progress { width: 220px; height: 2px; margin: 18px auto 0; background: var(--line-strong); border-radius: 2px; overflow: hidden; }
+.ig-progress i { display: block; height: 100%; width: 100%; background: var(--y); border-radius: 2px; transform-origin: left center; transform: scaleX(0); }
+
 /* sample dashboard */
 .dx { position: relative; border-radius: 20px; padding: 1px; background: var(--line-strong); box-shadow: 0 30px 80px rgba(0,0,0,.5); }
 .dx::before { content: ''; position: absolute; inset: 1px; border-radius: 19px; background: var(--s1); }
@@ -250,11 +276,11 @@ main:has(.lp), body:has(.lp) > main { max-width: none; padding: 0; }
   .lp-plan[data-plan="progress"] { order: 1; } .lp-plan[data-plan="snapshot"] { order: 2; } .lp-plan[data-plan="single"] { order: 3; } .lp-plan[data-plan="discipline"] { order: 4; }
   .lp-plan.hot { margin-top: 10px; }
   /* REQ-4: reach pricing within 4 screen-heights on a 390x844 phone (tests/e2e-web/landing.spec.ts) */
-  .lp-section { padding-top: 40px; } .lp-head { margin-bottom: 18px; } .lp-head .lp-sub { margin-top: 8px; } .lp-foot-note { margin-top: 14px; }
+  .lp-section { padding-top: 36px; } .lp-head { margin-bottom: 18px; } .lp-head .lp-sub { margin-top: 8px; } .lp-foot-note { margin-top: 14px; }
   .lp-steps.compact { gap: 8px; } .lp-steps.compact .lp-card { padding: 12px 14px; gap: 2px; } .lp-steps.compact h3 { font-size: 16px; } .lp-steps.compact h3::before { width: 24px; height: 24px; font-size: 13px; border-radius: 7px; }
   .lp-benefits { gap: 12px; } .lp-benefits .lp-card { padding: 16px; gap: 8px; }
   .dx-ov .dx-costs { display: none; }
-  .lp-hero { padding-top: 28px; padding-bottom: 20px; gap: 28px; } .lp-hero-cta { margin-top: 22px; gap: 10px; } .lp-trustline { margin-top: 16px; }
+  .lp-hero { padding-top: 28px; padding-bottom: 8px; gap: 28px; } .lp-hero-cta { margin-top: 22px; gap: 10px; } .lp-trustline { margin-top: 16px; }
   .lp-ledger li { padding: 7px 6px; } .lp-lede { margin-top: 16px; }
   .lp-hero-cta .lp-btn { flex: 1 1 100%; } .lp-ledger li { grid-template-columns: 1fr auto; padding: 9px 6px; } .lp-ledger .when { display: none; }
   .lp-lens { width: 88px; height: 88px; margin-left: -44px; border-width: 4px; } .lp-lens::after { width: 34px; right: -24px; }
