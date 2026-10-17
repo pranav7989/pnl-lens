@@ -57,7 +57,7 @@
   if (scan && lens && rows.length) {
     if (reduce) { rows.forEach(function (r) { if (r.classList.contains('is-bad')) r.classList.add('flagged'); }); foot && foot.classList.add('show'); }
     else {
-      var CYCLE = 7200, HOLD = 2600, t0 = null, visible = true, lastPhase = -1;
+      var CYCLE = 8000, HOLD = 3000, t0 = null, visible = true, lastPhase = -1;
       new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(scan);
       var tick = function (ts) {
         if (!t0) t0 = ts;
@@ -66,7 +66,7 @@
           var t = (ts - t0) % (CYCLE + HOLD), p = Math.min(1, t / CYCLE);
           var ease = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
           var y = top - lh / 2 + ease * h;
-          lens.style.transform = 'translate3d(' + (Math.sin(p * Math.PI * 2) * 36).toFixed(1) + 'px,' + (y - 40).toFixed(1) + 'px,0)';
+          lens.style.transform = 'translate3d(0,' + (y - 40).toFixed(1) + 'px,0)';   // straight down the ledger, no sideways wobble
           var centre = y;
           if (t < 40 && lastPhase !== 0) { rows.forEach(function (r) { r.classList.remove('flagged'); }); foot && foot.classList.remove('show'); lastPhase = 0; }
           rows.forEach(function (r) { if (r.classList.contains('is-bad') && !r.classList.contains('flagged') && centre > r.offsetTop + r.offsetHeight * 0.55) r.classList.add('flagged'); });
