@@ -57,7 +57,7 @@
   if (scan && lens && rows.length) {
     if (reduce) { rows.forEach(function (r) { if (r.classList.contains('is-bad')) r.classList.add('flagged'); }); foot && foot.classList.add('show'); }
     else {
-      var CYCLE = 7200, HOLD = 2600, t0 = null, visible = true, lastPhase = -1;
+      var CYCLE = 8000, HOLD = 3000, t0 = null, visible = true, lastPhase = -1;
       new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(scan);
       var tick = function (ts) {
         if (!t0) t0 = ts;
@@ -66,7 +66,7 @@
           var t = (ts - t0) % (CYCLE + HOLD), p = Math.min(1, t / CYCLE);
           var ease = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
           var y = top - lh / 2 + ease * h;
-          lens.style.transform = 'translate3d(' + (Math.sin(p * Math.PI * 2) * 36).toFixed(1) + 'px,' + (y - 40).toFixed(1) + 'px,0)';
+          lens.style.transform = 'translate3d(0,' + (y - 40).toFixed(1) + 'px,0)';   // straight down the ledger, no sideways wobble
           var centre = y;
           if (t < 40 && lastPhase !== 0) { rows.forEach(function (r) { r.classList.remove('flagged'); }); foot && foot.classList.remove('show'); lastPhase = 0; }
           rows.forEach(function (r) { if (r.classList.contains('is-bad') && !r.classList.contains('flagged') && centre > r.offsetTop + r.offsetHeight * 0.55) r.classList.add('flagged'); });
@@ -120,4 +120,85 @@
     }, { threshold: 0.3 }).observe(dx);
     if (reduce) dpan.forEach(function (p) { p.classList.add('in'); });
   }
+
+  /* REQ-4: pricing view and scroll depth (anonymous, allow-listed by the API), and the "See plans" pill */
+  var region = root.getAttribute('data-region') || '';
+  var send = function (name, props) {
+    try { fetch('/api/v1/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, props: props }), keepalive: true }).catch(function () {}); } catch (e) { /* ignore */ }
+  };
+  var pricing = document.getElementById('pricing'), hero = root.querySelector('.lp-hero'), pill = root.querySelector('[data-pill]');
+  var pastHero = false, pricingOn = false, pricingSeen = false, footOn = false;
+  var showPill = function () { if (pill) pill.hidden = !(pastHero && !pricingOn && !footOn); };
+  if ('IntersectionObserver' in window) {
+    if (pricing) new IntersectionObserver(function (es) {
+      pricingOn = es[0].isIntersecting; showPill();
+      if (pricingOn && !pricingSeen) { pricingSeen = true; send('pricing_viewed', { region: region, from: 'landing' }); }
+    }, { threshold: 0.15 }).observe(pricing);
+    if (hero) new IntersectionObserver(function (es) { pastHero = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; showPill(); }).observe(hero);
+    // the pill would cover the footer links and icons: hide it while the footer is on screen
+    var footer = root.querySelector('.lp-foot');
+    if (footer) new IntersectionObserver(function (es) { footOn = es[0].isIntersecting; showPill(); }).observe(footer);
+  }
+  if (pill) pill.addEventListener('click', function () { pill.hidden = true; });
+  var depths = [25, 50, 75, 100], sent = {};
+  var onDepth = function () {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = max > 0 ? Math.round((window.scrollY / max) * 100) : 100;
+    depths.forEach(function (d) { if (pct >= d && !sent[d]) { sent[d] = true; send('landing_scroll_depth', { depth: d, region: region }); } });
+  };
+  window.addEventListener('scroll', onDepth, { passive: true });
+
+  /* REQ-6: Instagram row — follows the page scroll from card 1 to card 4 until the visitor moves it by hand */
+  var ig = root.querySelector('[data-ig]'), rail = root.querySelector('[data-ig-rail]'), bar = root.querySelector('[data-ig-progress]');
+  if (ig && rail) {
+    var auto = !reduce, ticking = false;
+    var maxScroll = function () { return Math.max(0, rail.scrollWidth - rail.clientWidth); };
+    var setBar = function () { var m = maxScroll(); if (bar) bar.style.transform = 'scaleX(' + (m > 0 ? rail.scrollLeft / m : 1).toFixed(3) + ')'; };
+    var follow = function () {
+      ticking = false; if (!auto) return;
+      var vh = window.innerHeight, r = rail.getBoundingClientRect();
+      var p = Math.min(1, Math.max(0, (vh - r.top) / (0.75 * vh + 0.35 * r.height)));
+      rail.scrollLeft = p * maxScroll(); setBar();
+    };
+    window.addEventListener('scroll', function () { if (auto && !ticking) { ticking = true; requestAnimationFrame(follow); } }, { passive: true });
+    window.addEventListener('resize', function () { if (auto) requestAnimationFrame(follow); else setBar(); });
+    rail.addEventListener('scroll', setBar, { passive: true });
+    // manual takes over for the rest of this page view; the row then snaps card by card
+    var takeOver = function () { if (!auto) return; auto = false; rail.classList.add('manual'); };
+    ['pointerdown', 'touchstart', 'keydown'].forEach(function (t) { rail.addEventListener(t, takeOver, { passive: true }); });
+    rail.addEventListener('wheel', function (e) { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) takeOver(); }, { passive: true });
+    rail.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var item = rail.querySelector('.ig-item'), step = item ? item.getBoundingClientRect().width + 20 : 300;
+      rail.scrollBy({ left: e.key === 'ArrowRight' ? step : -step, behavior: reduce ? 'auto' : 'smooth' }); e.preventDefault();
+    });
+    if (reduce) rail.classList.add('manual');
+    requestAnimationFrame(function () { follow(); setBar(); });
+    if ('IntersectionObserver' in window) {
+      var seen = false;
+      new IntersectionObserver(function (es) { if (es[0].isIntersecting && !seen) { seen = true; send('ig_section_view', { site: region }); } }, { threshold: 0.25 }).observe(ig);
+      // self-hosted reels: muted, play while at least 60% of the card is visible; never with reduced motion
+      var played = {};
+      if (!reduce) [].slice.call(rail.querySelectorAll('[data-ig-video]')).forEach(function (v) {
+        new IntersectionObserver(function (es) {
+          var n = v.getAttribute('data-ig-video');
+          if (es[0].intersectionRatio >= 0.6) { var pr = v.play(); if (pr && pr.then) pr.then(function () { if (!played[n]) { played[n] = 1; send('ig_card_play', { card: +n, site: region }); } }).catch(function () {}); }
+          else v.pause();
+        }, { threshold: [0, 0.6, 1] }).observe(v);
+      });
+    }
+    rail.addEventListener('click', function (e) {
+      var c = e.target.closest && e.target.closest('[data-ig-card]'); if (c) send('ig_card_click', { card: +c.getAttribute('data-ig-card'), site: region });
+      var f = e.target.closest && e.target.closest('[data-ig-follow]'); if (f) send('ig_follow_click', { site: region });
+    });
+  }
+
+  /* REQ-5: social icon clicks (header, footer, Instagram section) */
+  root.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-social]');
+    if (a) send('social_click', { network: a.getAttribute('data-social'), placement: a.getAttribute('data-placement') || 'header', region: region });
+    /* REQ-7: a blog card in the landing preview */
+    var b = e.target.closest && e.target.closest('[data-blog-preview]');
+    if (b) send('blog_preview_click', { slug: b.getAttribute('data-blog-preview'), site: region });
+  });
 })();

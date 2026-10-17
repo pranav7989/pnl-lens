@@ -1,14 +1,13 @@
 /**
  * @file  apps/web/components/payments/BuyButton.tsx
  * @area  Payments
- * @what  Buy button for every payment mode: opening soon / Razorpay link / Razorpay Checkout.
+ * @what  Buy button for both payment modes: opening soon / Razorpay Checkout (link mode removed, plan D5).
  */
 /**
- * BuyButton — one button for every payment mode.
+ * BuyButton — one button for both payment modes.
  *   off      → "Payments opening soon" + support email (no request)
- *   link     → opens the pasted Razorpay Payment Page/Link
- *   razorpay → loads checkout.js, opens Razorpay Checkout, verifies on success
- * Mode comes from GET /api/payments/config (set PAYMENTS_MODE on the server).
+ *   razorpay → loads checkout.js, opens Razorpay Checkout, verifies on success; the plan is granted by the webhook
+ * Mode comes from GET /api/v1/payments/config (PAYMENTS_MODE on the API).
  */
 'use client';
 import { useEffect, useState } from 'react';
@@ -20,24 +19,24 @@ const loadCheckout = () => new Promise<void>((res, rej) => {
   document.body.appendChild(s);
 });
 
-export default function BuyButton({ planId, label, primary }: { planId: string; label: string; primary?: boolean }) {
-  const [mode, setMode] = useState<'off' | 'link' | 'razorpay' | null>(null);
+/** `source: 'journey'` marks a purchase that started from the journey bar or card (REQ-2): the webhook records upgrade_from_journey. */
+export default function BuyButton({ planId, label, primary, source }: { planId: string; label: string; primary?: boolean; source?: 'journey' }) {
+  const [mode, setMode] = useState<'off' | 'razorpay' | null>(null);
   const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
-  useEffect(() => { fetch('/api/payments/config').then((r) => r.json()).then((j) => setMode(j.mode)).catch(() => setMode('off')); }, []);
+  useEffect(() => { fetch('/api/v1/payments/config').then((r) => r.json()).then((j) => setMode(j.mode)).catch(() => setMode('off')); }, []);
 
   async function buy() {
     setBusy(true); setMsg('');
     try {
-      const r = await fetch('/api/payments/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planId }) });
+      const r = await fetch('/api/v1/payments/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(source ? { planId, source } : { planId }) });
       if (r.status === 401) { location.href = `/login?next=/pricing`; return; }
       const j = await r.json();
       if (!r.ok) { setMsg(j.message || 'Payments are opening soon.'); return; }
-      if (j.mode === 'link') { location.href = j.url; return; }
       await loadCheckout();
       new window.Razorpay({
         key: j.keyId, order_id: j.orderId, amount: j.amount, currency: j.currency, name: j.name, description: j.description, prefill: j.prefill, theme: { color: '#FFD60A' },
         handler: async (resp: any) => {
-          const v = await fetch('/api/payments/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(resp) });
+          const v = await fetch('/api/v1/payments/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(resp) });
           const vj = await v.json(); setMsg(vj.message || vj.error || ''); if (v.ok) setTimeout(() => { location.href = '/dashboard?paid=1'; }, 1500);
         },
         modal: { ondismiss: () => setBusy(false) },
@@ -46,8 +45,8 @@ export default function BuyButton({ planId, label, primary }: { planId: string; 
     finally { setBusy(false); }
   }
 
-  if (mode === 'off') return <div><button className={`btn ${primary ? '' : 'ghost'}`} disabled style={{ width: '100%', opacity: 0.65 }}>Payments opening soon</button>
-    <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>Write to <a href="mailto:support@pnllens.com" style={{ color: 'var(--y)' }}>support@pnllens.com</a> to be notified.</p></div>;
-  return <div><button className={`btn ${primary ? '' : 'ghost'}`} style={{ width: '100%' }} onClick={buy} disabled={busy || !mode}>{busy ? 'Opening…' : label}</button>
-    {msg && <p className="muted" style={{ fontSize: 12.5, margin: '8px 0 0' }}>{msg}</p>}</div>;
+  if (mode === 'off') return <div><button className={`btn btn-block ${primary ? '' : 'ghost'}`} disabled>Payments opening soon</button>
+    <p className="muted tiny buy-note">Write to <a className="link" href="mailto:support@pnllens.com">support@pnllens.com</a> to be notified.</p></div>;
+  return <div><button className={`btn btn-block ${primary ? '' : 'ghost'}`} onClick={buy} disabled={busy || !mode}>{busy ? 'Opening…' : label}</button>
+    {msg && <p className="muted small buy-note">{msg}</p>}</div>;
 }
