@@ -86,7 +86,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 180 files._
+_Generated from file headers by `npm run docs:index` — 182 files._
 
 ### Pages
 
@@ -103,6 +103,8 @@ _Generated from file headers by `npm run docs:index` — 180 files._
 | `apps/web/app/page.tsx` | Home page route. Picks India or Global site from the visitor country (?region= overrides) and renders <Landing>. |
 | `apps/web/components/landing/Landing.tsx` | Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, privacy, brokers, FAQ (pricing early for mobile, REQ-4). |
 | `apps/web/components/landing/Showcase.tsx` | Animated 5-tab sample dashboard on the landing page (illustrative numbers, ₹ or $ by region). |
+| `apps/web/components/landing/Social.tsx` | X and Instagram icon buttons (REQ-5) for the landing header and footer; links come from the per-site config. |
+| `packages/shared/src/site.ts` | Per-site settings (India / Global): social profile links and the Instagram section cards. One place to point a site at its own accounts. |
 
 ### Brand
 

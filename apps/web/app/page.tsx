@@ -9,6 +9,9 @@ import { getSessionUser } from '@/lib/auth/session';
 import { requestCountry } from '@/lib/auth/country';
 import { plansFor, regionFor } from '@pnl-lens/shared/pricing';
 import Landing from '@/components/landing/Landing';
+import { siteFor } from '@pnl-lens/shared/site';
+
+const SITE_URL = (process.env.APP_URL || 'https://pnllens.com').replace(/\/$/, '');
 import './landing.css';
 
 
@@ -30,6 +33,8 @@ export default async function Home(props: { searchParams: Promise<{ region?: str
   const region = regionFor(country);
   return (
     <div>
+      {/* Organization structured data with the social profiles (REQ-5, SEO) */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'Organization', name: 'PnL Lens', url: SITE_URL, logo: `${SITE_URL}/icon.svg`, sameAs: [siteFor(region).social.instagram, siteFor(region).social.x] }) }} />
       <Landing signedIn={!!user} plans={plans} region={region} />
       <Script src="/landing.js" strategy="afterInteractive" />
     </div>

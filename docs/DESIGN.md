@@ -50,3 +50,4 @@ Rules:
 - **Tabs:** grey text, white when selected, with a 2px yellow underline that slides.
 - **Segmented controls** (report groups, sample dashboard): the selected segment is a raised `--s3` chip, not yellow.
 - **Pills:** severity uses a tinted background with a coloured hairline (`.lv`, `.rv-lv`).
+- **Social icons** (`components/landing/Social.tsx`, links in `packages/shared/src/site.ts`): 38 px (40 px on phones) square buttons, grey hairline; yellow with a black icon on hover and focus.

@@ -9,6 +9,8 @@
  */
 import Showcase from './Showcase';
 import { LogoMark } from '@/components/brand/Logo';
+import Social from './Social';
+import { siteFor } from '@pnl-lens/shared/site';
 import { durationLabel, reportsBullet, validityBullet, REPORTS_KEPT, type Plan } from '@pnl-lens/shared/pricing';
 
 type Region = 'IN' | 'GLOBAL';
@@ -130,6 +132,7 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
   const LEDGER = LEDGERS[region], inr = money(region), SOURCES = SOURCES_BY[region], MARQUEE = SOURCES.flatMap((g) => g.items);
   const other = region === 'IN' ? { href: '/?region=global', label: 'Global site' } : { href: '/?region=in', label: 'India site' };
   const start = signedIn ? '/upload' : '/login?next=/upload';
+  const site = siteFor(region);
   const priceOf = (id: string) => plans.find((p) => p.id === id)!.price.label;
   const flagged = LEDGER.filter((r) => r.flag);
   const atStake = flagged.reduce((s, r) => s + r.pnl, 0);
@@ -141,9 +144,8 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
         <a className="lp-brand" href="/" aria-label="PnL Lens home"><LogoMark size={30} /><span>PnL Lens</span></a>
         <nav className="lp-links" id="lp-menu" aria-label="Page sections">
           <a href="#report">Product</a>
-          <a href="#patterns">Patterns</a>
-          <a href="#pricing">Pricing</a>
           <a href="#brokers">Brokers</a>
+          <a href="#pricing">Pricing</a>
           <a href="#faq">FAQ</a>
           <div className="lp-menu-cta">
             {signedIn ? <a className="lp-btn ghost" href="/dashboard">Dashboard</a> : <a className="lp-btn ghost" href="/login">Sign in</a>}
@@ -151,9 +153,11 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
           </div>
         </nav>
         <div className="lp-nav-cta">
+          <Social site={site} placement="header" />
           {signedIn ? <a className="lp-btn ghost" href="/dashboard">Dashboard</a> : <a className="lp-btn ghost" href="/login">Sign in</a>}
           <a className="lp-btn" href={start}>Get started</a>
         </div>
+        <Social site={site} placement="header" className="lp-social-m" />
         <button className="lp-burger" aria-controls="lp-menu" aria-expanded="false" aria-label="Open menu" data-burger><span /><span /></button>
       </header>
 
@@ -289,6 +293,7 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
         <p>PnL Lens is a trade-analysis tool, not investment advice, and is not registered as an investment adviser or research analyst. Trading involves risk of loss. Figures on this page are illustrative. Reports cannot be refunded once generated; for genuine issues write to support@pnllens.com.</p>
         <p className="lp-legal">{LEGAL.name} · {LEGAL.address}</p>
         <nav aria-label="Footer"><a href={other.href}>{other.label}</a>{LEGAL.policies.map(([href, label]) => <a key={href} href={href}>{label}</a>)}<a href="mailto:support@pnllens.com">support@pnllens.com</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+        <Social site={site} placement="footer" className="lp-foot-social" />
       </footer>
     </div>
   );

@@ -510,6 +510,12 @@ An approved exception to rule 8: styling only. The system is documented in `docs
 - **Fixed:** the journey bar alignment on report pages, the plan card overflow, the delete button and heatmap contrast, the phone nav wrap, and the reduced-motion trend line.
 - **Checks:** the page text, links, buttons and inputs are identical before and after on 11 views (only small labels are now shown in capitals). All tests pass, and the landing page still puts pricing within 4 screen-heights (3.89).
 
+### Owner change requests of 17 Oct 2026 (REQ-5 to REQ-7)
+
+| Request | Result |
+|---|---|
+| REQ-5 Social icons (PR #4) | X and Instagram icon buttons in the landing header (beside the burger on phones) and footer (centred on phones). Links in one per-site config (`packages/shared/src/site.ts`), `noopener noreferrer`, aria labels, a yellow focus/hover state, Organization JSON-LD `sameAs`, and a visitor event `social_click`. Nav: Product · Brokers · Pricing · FAQ. Also: the See plans pill no longer covers the footer, and its text is dark on yellow (it was white). Tests: header and footer at 320–1440 px on both sites, no overlap, focus ring, JSON-LD, event |
+
 ## 15. Risks
 
 | Risk | Mitigation |

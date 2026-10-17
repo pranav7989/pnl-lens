@@ -127,14 +127,17 @@
     try { fetch('/api/v1/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, props: props }), keepalive: true }).catch(function () {}); } catch (e) { /* ignore */ }
   };
   var pricing = document.getElementById('pricing'), hero = root.querySelector('.lp-hero'), pill = root.querySelector('[data-pill]');
-  var pastHero = false, pricingOn = false, pricingSeen = false;
-  var showPill = function () { if (pill) pill.hidden = !(pastHero && !pricingOn); };
+  var pastHero = false, pricingOn = false, pricingSeen = false, footOn = false;
+  var showPill = function () { if (pill) pill.hidden = !(pastHero && !pricingOn && !footOn); };
   if ('IntersectionObserver' in window) {
     if (pricing) new IntersectionObserver(function (es) {
       pricingOn = es[0].isIntersecting; showPill();
       if (pricingOn && !pricingSeen) { pricingSeen = true; send('pricing_viewed', { region: region, from: 'landing' }); }
     }, { threshold: 0.15 }).observe(pricing);
     if (hero) new IntersectionObserver(function (es) { pastHero = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; showPill(); }).observe(hero);
+    // the pill would cover the footer links and icons: hide it while the footer is on screen
+    var footer = root.querySelector('.lp-foot');
+    if (footer) new IntersectionObserver(function (es) { footOn = es[0].isIntersecting; showPill(); }).observe(footer);
   }
   if (pill) pill.addEventListener('click', function () { pill.hidden = true; });
   var depths = [25, 50, 75, 100], sent = {};
@@ -144,4 +147,10 @@
     depths.forEach(function (d) { if (pct >= d && !sent[d]) { sent[d] = true; send('landing_scroll_depth', { depth: d, region: region }); } });
   };
   window.addEventListener('scroll', onDepth, { passive: true });
+
+  /* REQ-5: social icon clicks (header, footer, Instagram section) */
+  root.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-social]');
+    if (a) send('social_click', { network: a.getAttribute('data-social'), placement: a.getAttribute('data-placement') || 'header', region: region });
+  });
 })();

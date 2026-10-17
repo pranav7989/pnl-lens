@@ -24,7 +24,8 @@
     "./payments/razorpay": "./src/payments/razorpay.ts",
     "./file-crypto": "./src/file-crypto.ts",
     "./auth/next": "./src/auth/next.ts",
-    "./journey": "./src/journey.ts"
+    "./journey": "./src/journey.ts",
+    "./site": "./src/site.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
