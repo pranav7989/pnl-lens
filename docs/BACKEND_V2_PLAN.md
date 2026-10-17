@@ -499,6 +499,17 @@ Pranav's document *PnL Lens: Change Requirements (15 Oct 2026)*. Owner answers: 
 | REQ-4 Pricing higher | Phone (390×844): pricing from 10.39 to 3.94 screen-heights, no content removed; See plans button and pill; Progress first on phones; broker names without logos; footer legal placeholders (go-live A11); visitor events `pricing_viewed` / `landing_scroll_depth` |
 | REQ-2 Journey | `packages/shared/src/journey.ts` (5 steps, real data only, locks name the plan and price); bar on dashboard, upload and report pages (one line on phones, Hide remembered on the device); "What's next" card on Overview and Progress with a blurred preview for Single; pricing page highlights the plan a step needs; events `journey_bar_view`, `journey_step_click`, `journey_next_action_click`, `upgrade_from_journey`; admin Product tab: Single → higher plan, 45-day return, journey events. Reminder email (C) later, as agreed |
 
+### Visual refinement (17 Oct 2026, PR #3)
+
+An approved exception to rule 8: styling only. The system is documented in `docs/DESIGN.md`.
+
+- **One set of tokens** for app and landing: 3 surfaces, 3 hairlines, 3 text greys (all WCAG AA), a restrained yellow, one easing and 3 durations.
+- **Lighter type scale** (no weights above 700).
+- **Real control states:** hover, pressed, disabled and focus.
+- **Removed:** the yellow hero slab, glows, surface gradients, hover lifts, the loader's breathing and shimmer, and the lens wobble.
+- **Fixed:** the journey bar alignment on report pages, the plan card overflow, the delete button and heatmap contrast, the phone nav wrap, and the reduced-motion trend line.
+- **Checks:** the page text, links, buttons and inputs are identical before and after on 11 views (only small labels are now shown in capitals). All tests pass, and the landing page still puts pricing within 4 screen-heights (3.89).
+
 ## 15. Risks
 
 | Risk | Mitigation |

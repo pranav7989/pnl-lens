@@ -20,6 +20,7 @@ Start here. Every source file starts with a 3-line header (`@file`, `@area`, `@w
 | 12 | `docs/PRIVACY_NOTES.md` | What is stored, where, for how long, who can read it (basis for the privacy policy) |
 | 13 | `docs/PAYMENTS_RAZORPAY.md` | Payment modes and the Razorpay integration |
 | 14 | `docs/LOAD_TEST.md` · `docs/RESTORE_DRILL.md` | Load-test results and the backup/restore rehearsal |
+| 14b | `docs/DESIGN.md` | The visual system: colour tokens, type scale, spacing, motion and component rules |
 | 15 | `docs/legal/` | **Drafts, not in force:** Privacy Policy and Terms of Service, with LAWYER CHECK / BUILD CHECK markers |
 | 16 | `docs/HANDOFF_HISTORY.md` | Change log and decisions from before backend-v2 |
 

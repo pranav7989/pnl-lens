@@ -43,6 +43,7 @@ PostgreSQL 16, Redis 7, Garage (S3-compatible; replaced MinIO, plan D14), Caddy.
    consent at upload, and use of data for research/AI is a separate opt-in that is off by default.
 8. Keep the existing UI, wording and features exactly. This is a backend move, not a redesign.
    Approved exception: the privacy/expiry strings in plan §2.1, applied only after owner sign-off.
+   Approved exception (17 Oct 2026): the visual design system in docs/DESIGN.md (styling only; same content, features and behaviour).
 9. Every new file gets the @file/@area/@what header. Run `npm run docs:index` after adding files.
 10. Work one phase at a time. Stop at the end of a phase, list what was done, what was
     tested and what is left. Do not start the next phase unasked.
