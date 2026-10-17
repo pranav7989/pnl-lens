@@ -7,15 +7,16 @@ asked to map columns) and produces a dashboard: Overview, Progress, Insights & f
 Clusters, Positions. Two sites: India (INR) and Global (USD). Plans: Single, Snapshot,
 Progress, Discipline (see packages/shared/src/pricing.ts). "File" = one broker statement.
 
-## Current state (before this rebuild)
-- Next.js 14 App Router + TypeScript. Start with docs/INDEX.md and docs/ARCHITECTURE.md.
-- Since Phase 1 this is an npm workspaces monorepo: apps/web (the Next app), packages/engine,
-  packages/shared, packages/db. Run commands from the repo root.
-- The analysis engine still runs in the BROWSER (until Phase 6): packages/engine/src/*.js
-  (Web Worker, pdf.js, SheetJS). Engine parity = packages/engine/test/golden (see docs/TESTING.md).
-- PostgreSQL migrations packages/db/migrations/0001–0007: users, reports, credits, payments,
-  subscriptions, RBAC (owner/admin/support/finance/analyst), telemetry, audit log.
-- Payments are built but off (PAYMENTS_MODE=off|link|razorpay). See docs/PAYMENTS_RAZORPAY.md.
+## Current state (backend-v2, Phases 1–8 done; see docs/BACKEND_V2_PLAN.md results)
+- npm workspaces monorepo; run commands from the repo root. Start with docs/INDEX.md and docs/ARCHITECTURE.md.
+- apps/web: Next.js 15 + React 19, no DB access and no API routes; it calls apps/api (Fastify, /api/v1).
+- The engine runs on the SERVER in apps/worker (BullMQ, isolated child process). Engine parity =
+  packages/engine/test/golden (see docs/TESTING.md).
+- PostgreSQL migrations packages/db/migrations/0001–0018 (0001–0007 are frozen). Files are stored
+  encrypted in Garage; roles lens_app / lens_worker / lens_research.
+- Payments are built but off (PAYMENTS_MODE=off|razorpay). See docs/PAYMENTS_RAZORPAY.md.
+- Production: infra/compose.prod.yml + infra/scripts (docs/DEPLOYMENT_VM.md, docs/RUNBOOK.md,
+  docs/GO_LIVE_CHECKLIST.md).
 
 ## Goal of this branch (backend-v2)
 Move parsing and analysis to the server and store raw files, normalised trades and
@@ -42,6 +43,7 @@ PostgreSQL 16, Redis 7, Garage (S3-compatible; replaced MinIO, plan D14), Caddy.
    consent at upload, and use of data for research/AI is a separate opt-in that is off by default.
 8. Keep the existing UI, wording and features exactly. This is a backend move, not a redesign.
    Approved exception: the privacy/expiry strings in plan §2.1, applied only after owner sign-off.
+   Approved exception (17 Oct 2026): the visual design system in docs/DESIGN.md (styling only; same content, features and behaviour).
 9. Every new file gets the @file/@area/@what header. Run `npm run docs:index` after adding files.
 10. Work one phase at a time. Stop at the end of a phase, list what was done, what was
     tested and what is left. Do not start the next phase unasked.
@@ -56,6 +58,7 @@ removed (off | razorpay only). Server TZ = Asia/Kolkata. Fresh start, no data mi
   (= `docker compose --env-file .env -f infra/compose.dev.yml …`; see docs/INFRA.md)
 - Tests: `npm test`  Type check: `npm run typecheck`  Lint: `npm run lint`
 - Migrations: `npm run db:migrate`
+- DB tests: `npm run db:test:up` then `npm run test:db` (throwaway Postgres, infra/compose.test.yml)
 - Windows dev machine: Node/Git were installed via winget; a terminal opened before that may need
   `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
 

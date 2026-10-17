@@ -2,6 +2,8 @@
 # @area  Ops
 # @what  One-off jobs image: DB migrations + role passwords + dev seed, and Garage storage setup. Build context = repo root.
 FROM node:22.23.2-bookworm-slim
+# npm downloads retry with backoff, so a short network drop on the build machine doesn't fail the image (CI run 38575945565)
+ENV npm_config_fetch_retries=5 npm_config_fetch_retry_mintimeout=20000 npm_config_fetch_retry_maxtimeout=120000
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
