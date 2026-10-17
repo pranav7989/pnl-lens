@@ -10,9 +10,11 @@ import { requestCountry } from '@/lib/auth/country';
 import { plansFor, regionFor } from '@pnl-lens/shared/pricing';
 import Landing from '@/components/landing/Landing';
 import { siteFor } from '@pnl-lens/shared/site';
+import { listPosts } from '@/lib/blog';
 
 const SITE_URL = (process.env.APP_URL || 'https://pnllens.com').replace(/\/$/, '');
 import './landing.css';
+import './blog.css';
 
 
 
@@ -31,11 +33,13 @@ export default async function Home(props: { searchParams: Promise<{ region?: str
   const country = forced || (await requestCountry()) || user?.country;
   const plans = plansFor(country);
   const region = regionFor(country);
+  // REQ-7 landing preview: the latest 3 published posts for this site (the section is hidden when there are none)
+  const { posts } = await listPosts(region === 'IN' ? 'india' : 'global');
   return (
     <div>
       {/* Organization structured data with the social profiles (REQ-5, SEO) */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'Organization', name: 'PnL Lens', url: SITE_URL, logo: `${SITE_URL}/icon.svg`, sameAs: [siteFor(region).social.instagram, siteFor(region).social.x] }) }} />
-      <Landing signedIn={!!user} plans={plans} region={region} />
+      <Landing signedIn={!!user} plans={plans} region={region} posts={posts.slice(0, 3)} />
       <Script src="/landing.js" strategy="afterInteractive" />
     </div>
   );

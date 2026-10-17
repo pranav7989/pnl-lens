@@ -12,7 +12,7 @@ import { loadKeks, type Kek } from '@pnl-lens/shared/file-crypto';
 export interface Config {
   databaseUrl: string;
   redisUrl: string | null;
-  s3: { endpoint: string; region: string; bucket: string; exportBucket: string; accessKeyId: string; secretAccessKey: string } | null;
+  s3: { endpoint: string; region: string; bucket: string; exportBucket: string; mediaBucket: string; accessKeyId: string; secretAccessKey: string } | null;
   keks: { current: Kek; all: Map<string, Kek> };
   ipHashSecret: string;
   /** Public origin(s) allowed to send state-changing requests (CSRF check). Empty = same host as the request. */
@@ -43,7 +43,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     databaseUrl: req(env, 'DATABASE_URL'),
     redisUrl: env.REDIS_URL || null,
     s3: env.S3_ENDPOINT ? {
-      endpoint: env.S3_ENDPOINT, region: env.S3_REGION || 'garage', bucket: req(env, 'S3_BUCKET'), exportBucket: env.S3_EXPORT_BUCKET || 'exports',
+      endpoint: env.S3_ENDPOINT, region: env.S3_REGION || 'garage', bucket: req(env, 'S3_BUCKET'), exportBucket: env.S3_EXPORT_BUCKET || 'exports', mediaBucket: env.S3_MEDIA_BUCKET || 'media',
       accessKeyId: req(env, 'S3_ACCESS_KEY_ID'), secretAccessKey: req(env, 'S3_SECRET_ACCESS_KEY'),
     } : null,
     keks: loadKeks(env),

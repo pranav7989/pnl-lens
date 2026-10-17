@@ -28,7 +28,7 @@ export default function LoginForm({ google, next, error }: { google: boolean; ne
   }
   async function verify(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setMsg('');
-    const { ok, data } = await post('/api/v1/auth/otp/verify', { email, code });
+    const { ok, data } = await post('/api/v1/auth/otp/verify', { email, code, ...(/[?&]from=blog(&|$)/.test(next) ? { source: 'blog' } : {}) });
     setBusy(false);
     if (!ok) { setMsg(data.message || 'That code did not work.'); return; }
     router.push(next); router.refresh();

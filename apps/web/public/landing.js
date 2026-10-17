@@ -197,5 +197,8 @@
   root.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('[data-social]');
     if (a) send('social_click', { network: a.getAttribute('data-social'), placement: a.getAttribute('data-placement') || 'header', region: region });
+    /* REQ-7: a blog card in the landing preview */
+    var b = e.target.closest && e.target.closest('[data-blog-preview]');
+    if (b) send('blog_preview_click', { slug: b.getAttribute('data-blog-preview'), site: region });
   });
 })();

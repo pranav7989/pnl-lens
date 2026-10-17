@@ -53,7 +53,7 @@ async function analyseFiles(files: File[], fields: Record<string, string>, fileC
   return withAnalysing(async () => waitForAnalysis(await uploadStatements(files, fields)), { fileCount });
 }
 
-export default function Workspace(props: { mode: 'upload' | 'report'; plans: PlanRow[] | null; reports: HistoryItem[]; current?: CurrentReport; prices?: Record<string, string> }) {
+export default function Workspace(props: { mode: 'upload' | 'report'; plans: PlanRow[] | null; reports: HistoryItem[]; current?: CurrentReport; prices?: Record<string, string>; source?: 'blog' }) {
   const plan = currentPlan(props.plans);
   const [lock, setLock] = useState<Lock>(null);
   const close = () => setLock(null);
@@ -62,14 +62,14 @@ export default function Workspace(props: { mode: 'upload' | 'report'; plans: Pla
       <LockMessage lock={lock} onClose={close} />
       <JourneyBar plans={props.plans} reports={props.reports} prices={props.prices || {}} />
       {props.mode === 'upload' || !props.current
-        ? <UploadView plan={plan} reports={props.reports} setLock={setLock} />
+        ? <UploadView plan={plan} reports={props.reports} setLock={setLock} source={props.source} />
         : <ReportView plan={plan} plans={props.plans} prices={props.prices || {}} reports={props.reports} current={props.current} setLock={setLock} />}
     </>
   );
 }
 
 /* ---------------------------------------------------------------- upload view */
-function UploadView({ plan, reports, setLock }: { plan: PlanRow | null; reports: HistoryItem[]; setLock: (l: Lock) => void }) {
+function UploadView({ plan, reports, setLock, source }: { plan: PlanRow | null; reports: HistoryItem[]; setLock: (l: Lock) => void; source?: 'blog' }) {
   const router = useRouter();
   const maxFiles = plan && !expired(plan) ? plan.filesPerReport : 3;
   const [picked, setPicked] = useState<File[]>([]);
@@ -114,7 +114,7 @@ function UploadView({ plan, reports, setLock }: { plan: PlanRow | null; reports:
     setBusy(true); setError(''); setPreview(null);
     const ext = picked.map((f) => f.name.split('.').pop()).join(',');
     try {
-      const s = await analyseFiles(picked, { consent: 'true', ...(research ? { research: 'true' } : {}), ...(currency ? { currency } : {}) }, picked.length);
+      const s = await analyseFiles(picked, { consent: 'true', ...(research ? { research: 'true' } : {}), ...(currency ? { currency } : {}), ...(source ? { source } : {}) }, picked.length);
       if (s.status === 'failed') {
         ev(s.error === 'no_closed_trades' ? 'no_trades' : 'upload_failed', { reason: s.error, ext });
         setError(s.message || 'Could not read the file.'); setBusy(false); return;

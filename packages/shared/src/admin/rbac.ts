@@ -9,11 +9,12 @@
  * `plans:grant` (owner only) is the approved exception to rule 6 (plan D5); the DB re-checks it in admin_grant_plan().
  */
 export type Role = 'user' | 'owner' | 'admin' | 'support' | 'finance' | 'analyst';
-export type Perm = 'tab:users' | 'tab:finance' | 'tab:errors' | 'tab:support' | 'tab:product' | 'user:lookup' | 'user:pii' | 'roles:manage' | 'plans:grant';
+export type Perm = 'tab:users' | 'tab:finance' | 'tab:errors' | 'tab:support' | 'tab:product' | 'user:lookup' | 'user:pii' | 'roles:manage' | 'plans:grant' | 'tab:blog' | 'blog:publish';
 
 export const PERMS: Record<Role, Perm[]> = {
-  owner: ['tab:users', 'tab:finance', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage', 'plans:grant'],
-  admin: ['tab:users', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage'],
+  owner: ['tab:users', 'tab:finance', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage', 'plans:grant', 'tab:blog', 'blog:publish'],
+  // blog (REQ-7, owner Q7): owner and admin only; the database re-checks the role in blog_admin_* functions
+  admin: ['tab:users', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage', 'tab:blog', 'blog:publish'],
   support: ['tab:errors', 'tab:support', 'user:lookup', 'user:pii'],
   finance: ['tab:finance'],
   analyst: ['tab:users', 'tab:product'],

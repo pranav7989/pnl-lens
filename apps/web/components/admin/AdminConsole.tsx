@@ -1,15 +1,17 @@
 /**
  * @file  apps/web/components/admin/AdminConsole.tsx
  * @area  Admin
- * @what  Admin console UI: Users, Finance, Errors, Support, Product tabs (shown per role).
+ * @what  Admin console UI: Users, Finance, Errors, Support, Product and Blog tabs (shown per role).
  */
 'use client';
 import { useEffect, useState } from 'react';
+import BlogAdmin from './BlogAdmin';
 
-type Tab = 'users' | 'finance' | 'errors' | 'support' | 'product';
+type Tab = 'users' | 'finance' | 'errors' | 'support' | 'product' | 'blog';
 const TABS: { id: Tab; name: string; perm: string }[] = [
   { id: 'users', name: 'Users', perm: 'tab:users' }, { id: 'finance', name: 'Finance', perm: 'tab:finance' },
   { id: 'errors', name: 'Errors', perm: 'tab:errors' }, { id: 'support', name: 'Support', perm: 'tab:support' }, { id: 'product', name: 'Product', perm: 'tab:product' },
+  { id: 'blog', name: 'Blog', perm: 'tab:blog' },
 ];
 const n = (v: any) => Number(v || 0);
 const money = (minor: any, cur = 'INR') => (cur === 'USD' ? '$' : '₹') + (n(minor) / 100).toLocaleString(cur === 'USD' ? 'en-US' : 'en-IN', { maximumFractionDigits: 0 });
@@ -33,16 +35,16 @@ export default function AdminConsole({ role, perms, pg }: { role: string; perms:
   const [data, setData] = useState<Record<string, any>>({});
   const [err, setErr] = useState('');
   const load = (t: Tab) => fetch(`/api/v1/admin/metrics?tab=${t}`).then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.message || j.error); setData((d) => ({ ...d, [t]: j })); }).catch((e) => setErr(e.message));
-  useEffect(() => { if (tab && !data[tab]) load(tab); }, [tab]); // eslint-disable-line
+  useEffect(() => { if (tab && tab !== 'blog' && !data[tab]) load(tab); }, [tab]); // eslint-disable-line
   if (!pg) return <div className="panel center-card"><h3>Admin console</h3><p className="muted">Connect PostgreSQL (STORE_DRIVER=pg) to see live metrics.</p></div>;
   const d = tab ? data[tab] : null;
   return (
     <div className="ad">
       <div className="ad-head"><div><h1 className="page-title">Admin</h1><p className="muted" style={{ margin: 0 }}>Signed in as <b className="ad-role">{role}</b></p></div>
-        <button className="btn ghost" onClick={() => tab && load(tab)}>Refresh</button></div>
+        {tab !== 'blog' && <button className="btn ghost" onClick={() => tab && load(tab)}>Refresh</button>}</div>
       <nav className="tabs" role="tablist">{tabs.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} data-tab={t.id} onClick={() => setTab(t.id)}>{t.name}</button>)}</nav>
       {err && <p className="status err">{err}</p>}
-      {!d ? <p className="muted" style={{ padding: 20 }}>Loading…</p> : (
+      {tab === 'blog' ? <div className="rv-grid" style={{ marginTop: 16 }}><BlogAdmin /></div> : !d ? <p className="muted" style={{ padding: 20 }}>Loading…</p> : (
         <div className="rv-grid" style={{ marginTop: 16 }}>
           {tab === 'users' && <UsersTab d={d} canRoles={perms.includes('roles:manage')} />}
           {tab === 'finance' && <FinanceTab d={d} />}
@@ -152,6 +154,8 @@ function ProductTab({ d }: { d: any }) {
       <Table cols={[['Measure', (r) => r.m], ['Count', (r) => r.n, 'n']]} rows={[{ m: 'Section seen', n: d.instagram.views }, { m: 'Reels played', n: d.instagram.plays }, { m: 'Cards opened on Instagram', n: d.instagram.card_clicks }, { m: 'Follow on Instagram', n: d.instagram.follows }]} /></Panel>}
     {d.social && <Panel title="Social icons" sub="clicks, last 30 days" span="s6">
       <Table cols={[['Network', (r) => r.network], ['Where', (r) => r.placement], ['Clicks', (r) => r.n, 'n']]} rows={d.social} /></Panel>}
+    {d.blog && <Panel title="Blog" sub={`last 30 days · ${d.blog.uploads} uploads and ${d.blog.signups} sign-ups came from the blog`} span="s12">
+      <Table cols={[['Article', (r) => r.slug], ['Views', (r) => r.views, 'n'], ['“Analyse my trades” clicks', (r) => r.cta, 'n'], ['Landing preview clicks', (r) => r.preview, 'n']]} rows={d.blog.posts} /></Panel>}
     {d.landing && <Panel title="Landing page" sub="visitors, last 30 days: pricing seen and how far they scrolled" span="s12">
       <Table cols={[['Measure', (r) => r.m], ['Count', (r) => r.n, 'n']]} rows={[{ m: 'Pricing section seen', n: d.landing.pricing_views }, { m: 'Scrolled 25% of the page', n: d.landing.d25 }, { m: 'Scrolled 50%', n: d.landing.d50 }, { m: 'Scrolled 75%', n: d.landing.d75 }, { m: 'Reached the end', n: d.landing.d100 }]} /></Panel>}
   </>;

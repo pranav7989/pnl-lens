@@ -123,6 +123,10 @@
                   },
                   "code": {
                     "type": "string"
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 20
                   }
                 },
                 "required": [
@@ -1135,6 +1139,539 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/blog/posts": {
+      "get": {
+        "summary": "Published posts for a site, newest first (12 per page)",
+        "tags": [
+          "blog"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "default": "india",
+              "type": "string",
+              "enum": [
+                "india",
+                "global"
+              ]
+            },
+            "in": "query",
+            "name": "site",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "in": "query",
+            "name": "tag",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/blog/tags": {
+      "get": {
+        "summary": "Tags used by published posts",
+        "tags": [
+          "blog"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "default": "india",
+              "type": "string",
+              "enum": [
+                "india",
+                "global"
+              ]
+            },
+            "in": "query",
+            "name": "site",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/blog/posts/{slug}": {
+      "get": {
+        "summary": "One published post, or {redirect} for an old slug",
+        "tags": [
+          "blog"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "default": "india",
+              "type": "string",
+              "enum": [
+                "india",
+                "global"
+              ]
+            },
+            "in": "query",
+            "name": "site",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "in": "path",
+            "name": "slug",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/blog/feed": {
+      "get": {
+        "summary": "All published posts for a site (sitemap, RSS)",
+        "tags": [
+          "blog"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "default": "india",
+              "type": "string",
+              "enum": [
+                "india",
+                "global"
+              ]
+            },
+            "in": "query",
+            "name": "site",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/blog/media/{key}": {
+      "get": {
+        "summary": "Blog image (WebP)",
+        "tags": [
+          "blog"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blog/posts": {
+      "get": {
+        "summary": "All posts (any status) with views",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a draft",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "slug": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "excerpt": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 400
+                  },
+                  "body_md": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200000
+                  },
+                  "tags": {
+                    "default": [],
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  },
+                  "site": {
+                    "default": "both",
+                    "type": "string",
+                    "enum": [
+                      "india",
+                      "global",
+                      "both"
+                    ]
+                  },
+                  "cover_key": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{32}(-og)?\\.webp$"
+                  },
+                  "cover_alt": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "seo_title": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "meta_description": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "canonical_url": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "starts_with",
+                    "pattern": "^https:\\/\\/.*"
+                  },
+                  "noindex": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blog/posts/{id}": {
+      "get": {
+        "summary": "One post for the editor",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Edit a post",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "slug": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "excerpt": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 400
+                  },
+                  "body_md": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 200000
+                  },
+                  "tags": {
+                    "default": [],
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  },
+                  "site": {
+                    "default": "both",
+                    "type": "string",
+                    "enum": [
+                      "india",
+                      "global",
+                      "both"
+                    ]
+                  },
+                  "cover_key": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{32}(-og)?\\.webp$"
+                  },
+                  "cover_alt": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "seo_title": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "meta_description": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "canonical_url": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "starts_with",
+                    "pattern": "^https:\\/\\/.*"
+                  },
+                  "noindex": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blog/posts/{id}/{action}": {
+      "post": {
+        "summary": "Publish now, schedule (at, IST shown in the editor), unpublish, archive or delete (soft)",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "publish",
+                "schedule",
+                "unpublish",
+                "archive",
+                "delete"
+              ]
+            },
+            "in": "path",
+            "name": "action",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blog/render": {
+      "post": {
+        "summary": "Live preview of Markdown (the same renderer as publishing)",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "markdown": {
+                    "type": "string",
+                    "maxLength": 200000
+                  }
+                },
+                "required": [
+                  "markdown"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blog/media": {
+      "post": {
+        "summary": "Upload an image (JPG, PNG or WebP, ≤ 2 MB) → WebP + 1200×630 social card",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Default Response"

@@ -86,13 +86,13 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 184 files._
+_Generated from file headers by `npm run docs:index` — 204 files._
 
 ### Pages
 
 | File | What it does |
 |---|---|
-| `apps/web/app/layout.tsx` | Root layout: fonts (Manrope + ₹ glyph), header with logo and credits (from the API), browser error reporter. |
+| `apps/web/app/layout.tsx` | Root layout: fonts (Manrope + ₹ glyph), html lang (en-IN / en by site), header with logo and credits (from the API), browser error reporter. |
 | `apps/web/app/not-found.tsx` | 404 page. |
 | `apps/web/components/nav/NavLinks.tsx` | Header navigation links (active-state aware). |
 
@@ -101,8 +101,9 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | File | What it does |
 |---|---|
 | `apps/web/app/page.tsx` | Home page route. Picks India or Global site from the visitor country (?region= overrides) and renders <Landing>. |
+| `apps/web/components/landing/BlogPreview.tsx` | REQ-7 landing section 9 "Read your trades better": the latest 3 published posts for the site; renders nothing when there are none. |
 | `apps/web/components/landing/Instagram.tsx` | REQ-6 Instagram section: 3 posts/reels and a follow card in one row that slides sideways on scroll (landing.js). Self-hosted media only, no Meta resources. |
-| `apps/web/components/landing/Landing.tsx` | Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, privacy, brokers, FAQ (pricing early for mobile, REQ-4). |
+| `apps/web/components/landing/Landing.tsx` | Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, Instagram, privacy, brokers, blog preview, FAQ (pricing early for mobile, REQ-4). |
 | `apps/web/components/landing/Showcase.tsx` | Animated 5-tab sample dashboard on the landing page (illustrative numbers, ₹ or $ by region). |
 | `apps/web/components/landing/Social.tsx` | X and Instagram icon buttons (REQ-5) for the landing header and footer; links come from the per-site config. |
 | `packages/shared/src/site.ts` | Per-site settings (India / Global): social profile links and the Instagram section cards. One place to point a site at its own accounts. |
@@ -185,8 +186,10 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 |---|---|
 | `apps/api/src/routes/admin.ts` | Admin console API ported from apps/web/app/api/admin/* (role read from the DB each request, every read audited) plus the owner-only manual plan grant (D5). |
 | `apps/api/src/routes/telemetry.ts` | POST /events (allow-listed product events; two landing events also from visitors) and POST /errors (browser errors); always 204. |
+| `apps/web/app/admin/blog/preview/[id]/page.tsx` | REQ-7 private article preview (any status) for owner/admin: the public article layout with a "Preview" banner; never indexed. |
 | `apps/web/app/admin/page.tsx` | Admin console page: staff only (role from the API, read from the database on every request). |
-| `apps/web/components/admin/AdminConsole.tsx` | Admin console UI: Users, Finance, Errors, Support, Product tabs (shown per role). |
+| `apps/web/components/admin/AdminConsole.tsx` | Admin console UI: Users, Finance, Errors, Support, Product and Blog tabs (shown per role). |
+| `apps/web/components/admin/BlogAdmin.tsx` | REQ-7 admin "Blog" tab (owner/admin): post list with views, Markdown editor with live preview, cover upload, SEO panel, publish/schedule/unpublish/archive/delete. |
 | `apps/web/components/ErrorReporter.tsx` | Sends browser errors to /api/v1/errors (max 5 per page load). |
 | `packages/shared/src/admin/queries.ts` | SQL behind each admin tab (DAU/MAU, revenue, errors, tickets, product). |
 | `packages/shared/src/admin/rbac.ts` | Roles and permissions (owner, admin, support, finance, analyst): the rules only. The guards live in apps/web and apps/api. |
@@ -199,10 +202,12 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `apps/api/src/app.ts` | Builds the Fastify app (/api/v1): cookies, multipart limits, rate limits, CSRF origin check, zod validation, OpenAPI, every route. |
 | `apps/api/src/config.ts` | API configuration from env, checked once at startup (fails fast on missing secrets). |
 | `apps/api/src/lib/http.ts` | Response helpers with the same JSON shapes as the old Next routes ({ error, message }), session lookup, request adapters. |
+| `apps/api/src/lib/markdown.ts` | REQ-7 blog: Markdown → safe HTML on the server (no raw HTML, no scripts/iframes, safe links), reading time and slugs. |
 | `apps/api/src/lib/queue.ts` | Enqueues analysis jobs on BullMQ (Redis) for apps/worker; job id = analysis id, so a repeat is a no-op. |
 | `apps/api/src/lib/sniff.ts` | Upload type check: the real file type from its bytes (the engine's own detectKind) plus a reject list for non-statements. |
-| `apps/api/src/lib/storage.ts` | Object storage for encrypted statement files (S3 API on Garage). The api's key is write-only by design. |
+| `apps/api/src/lib/storage.ts` | Object storage (S3 API on Garage): encrypted statements (api key write-only), export archives (read-only), blog media (read/write, public via the API). |
 | `apps/api/src/main.ts` | API process entry: config, Postgres (lens_app only), Redis, storage, queue; listens on PORT; graceful shutdown. |
+| `apps/api/src/routes/blog.ts` | REQ-7 blog API: public posts/feed/media (cacheable) and owner/admin-only writing, publishing, live preview and image upload (WebP via sharp). |
 | `apps/api/src/routes/health.ts` | GET /health (liveness) and GET /ready (Postgres as lens_app, Redis, storage). |
 
 ### Worker
@@ -240,6 +245,7 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 
 | File | What it does |
 |---|---|
+| `apps/web/app/blog.css` | REQ-7 blog: list, cards (also the landing preview), article typography, CTA card, editor preview. Uses the design tokens in globals.css. |
 | `apps/web/app/globals.css` | Base app styles: colours, header, panels, buttons, forms, print rules. |
 | `apps/web/app/landing.css` | Landing page styles: one system of centred titles, equal cards, sample dashboard, plans. |
 | `apps/web/app/report.css` | Report, Progress tab, analysing loader and admin console styles (shared by website and offline tool). |
@@ -267,6 +273,7 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `packages/db/migrations/0016_analysis_file_reports.sql` | Per-file dashboards: each statement's own report (ReportV1) for analyses with 2+ files, shown as file tabs next to "All files". |
 | `packages/db/migrations/0017_data_export.sql` | "Export my data": export_user_data(request) for the worker (only for a real export request in progress) and the archive's key columns. |
 | `packages/db/migrations/0018_log_retention.sql` | Retention for logs (privacy policy draft): product/error events after 12 months, audit and file-access logs after 24 months. |
+| `packages/db/migrations/0019_blog.sql` | REQ-7 blog: posts, slug redirects, a public view (the only thing the app role can read), and owner/admin-only SECURITY DEFINER functions that write the audit log. |
 | `packages/db/optional/pg_cron.sql` | Optional: schedule the purge inside Postgres if pg_cron is available. |
 | `packages/db/scripts/seed-dev.mjs` | Applies seed.sql (dev user with credits) — only when SEED_DEV_DATA=true (set by infra/compose.dev.yml only). |
 | `packages/db/scripts/setup-roles.mjs` | Creates/updates the login roles lens_app and lens_worker with passwords from env (runs after migrations, as superuser). |
@@ -276,10 +283,11 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `packages/db/src/index.ts` | Public entry of @pnl-lens/db: connection factory, table types, typed queries and errors for the api and worker. |
 | `packages/db/src/normalise.ts` | Maps one engine ReportV1 to rows for trades, report_metrics and report_traits (pure; used by the worker store step), plus the file-set fingerprint. |
 | `packages/db/src/queries/analyses.ts` | Uploads and analysis jobs: create an upload (api, lens_app), D11 counters, job status and the idempotent store step (worker, lens_worker). |
+| `packages/db/src/queries/blog.ts` | REQ-7 blog: public reads (published posts per site, redirects, feed) and owner/admin writes through the blog_admin_* SQL functions. |
 | `packages/db/src/queries/plans.ts` | Plans: the user's plan card (allowance, validity, statements per report) and the owner-only manual grant (D5). |
 | `packages/db/src/queries/privacy.ts` | Consent history, data export/delete requests, account deletion, and the scheduled purge/sweep jobs (worker). |
 | `packages/db/src/queries/reports.ts` | Reports (api, lens_app): claim an analysis, add files (file-set lock), rename, delete, MON-YY history, Progress history, trades. |
-| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0018 (hand-written; every table is exercised through these types by test/db/*). |
+| `packages/db/src/types.ts` | Kysely table types for the schema after migration 0019 (hand-written; every table is exercised through these types by test/db/*). |
 
 ### Ops
 
@@ -312,6 +320,7 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | File | What it does |
 |---|---|
 | `apps/api/test/auth.test.ts` | Sign-in (email code), session cookie, /me, /plans, CSRF origin check, consents, export and account deletion, health/ready — on real Postgres. |
+| `apps/api/test/blog.test.ts` | REQ-7 blog API: roles (403 for support/finance/analyst/user), CRUD, publish visibility, Markdown sanitising, slug redirects, image upload checks (WebP + 1200×630), cache headers, sign-up/upload attribution. |
 | `apps/api/test/events.test.ts` | POST /events: allow-listed names only; visitors may send only the landing events (REQ-4); journey events from signed-in users (REQ-2). |
 | `apps/api/test/helpers.ts` | API test helpers: app on a fresh migrated database (lens_app connection), session cookies, multipart bodies, captured mail. |
 | `apps/api/test/openapi-doc.ts` | Builds the app with placeholder dependencies (no database connection is opened) to read its OpenAPI document. |
@@ -325,6 +334,7 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `apps/worker/test/hostile.test.ts` | Hostile files: a parse that runs too long is killed, one that exhausts memory crashes only its child; the worker carries on and the job fails cleanly. |
 | `apps/worker/test/pipeline.test.ts` | Every golden case through the real pipeline (encrypted storage → engine child → DB): stored report equals the parity output; failures cost no credit. |
 | `apps/worker/test/queue.test.ts` | Real sample files through the real queue (API producer → Redis → worker consumer); retries then dead letter; nightly purge and storage sweep. |
+| `packages/db/test/db/blog.test.ts` | REQ-7 blog in the database: app role reads the public view only, owner/admin-only functions, audit rows, visibility rules, slug redirects. |
 | `packages/db/test/db/harness.ts` | DB test harness: fresh database per suite on the throwaway test Postgres, real migrate + setup-roles scripts, role-scoped clients, fixtures. |
 | `packages/db/test/db/migrations.test.ts` | Migrations apply from 0001 on an empty database and on top of a 0007 database with old data; the old web flow keeps working. |
 | `packages/db/test/db/plans.test.ts` | Server-side plan rules: create_report_from_analysis (all refusal reasons, races), file-set lock, owner-only manual grant, webhook replay. |
@@ -344,6 +354,7 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `packages/shared/test/payments.test.ts` | Razorpay checkout and webhook signature verification. |
 | `packages/shared/test/pricing.test.ts` | REQ-3: plan durations and prices from the single source of truth, the wording built from them, and no stale copy left in the repo. |
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
+| `tests/e2e-web/blog.spec.ts` | REQ-7 blog end to end: owner drafts, previews, publishes, unpublishes, schedules; /blog, article, landing preview, sitemap; raw-HTML SEO; sanitising; support sees no Blog tab; events. |
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in with an emailed code (read from the API's console mail log), give a user a plan, run SQL as the admin. |
 | `tests/e2e-web/instagram.spec.ts` | REQ-6 Instagram section: scroll-linked row (card 1 → 4), manual takeover, reduced motion, video play rules, exact copy, no Meta requests, no layout shift. |
 | `tests/e2e-web/journey.spec.ts` | REQ-2 journey bar and "What's next" card end to end: Single 2/5 with locks, later month completes step 3, locked step opens pricing, phone view, events in admin. |
@@ -356,5 +367,19 @@ _Generated from file headers by `npm run docs:index` — 184 files._
 | `tests/stack/stack.test.ts` | Dev stack checks: all services healthy, only Caddy published, internal network isolated, least-privilege DB/Redis/storage. |
 | `tests/visual/capture.mjs` | Screenshots of every page at 1440 and 390 px (before/after comparisons for "keep the UI exactly", rule 8). |
 | `tests/visual/compare.mjs` | Pixel comparison of two screenshot folders (from capture.mjs); writes diff images and prints the share of changed pixels per page. |
+
+### Blog
+
+| File | What it does |
+|---|---|
+| `apps/web/app/blog/[slug]/page.tsx` | REQ-7 article page: server-rendered text, SEO metadata (canonical, Open Graph/Twitter, robots, hreflang), JSON-LD BlogPosting + BreadcrumbList, 301 for old slugs. |
+| `apps/web/app/blog/page.tsx` | REQ-7 /blog: published posts for the visitor's site, newest first, 12 per page, tag filter; server-rendered. |
+| `apps/web/app/blog/rss.xml/route.ts` | REQ-7 RSS 2.0 feed of published, indexable posts for the visitor's site (?region= switches). |
+| `apps/web/app/robots.ts` | /robots.txt: public pages open to crawlers; admin, API and signed-in areas closed; points to the sitemap. |
+| `apps/web/app/sitemap.ts` | /sitemap.xml: home, pricing, blog and every published, indexable post (both sites); follows publish/unpublish on the next request. |
+| `apps/web/components/blog/Article.tsx` | REQ-7 article body (H1, date, read time, tag, cover, sanitised HTML) with the automatic footer: CTA card and "Not investment advice." |
+| `apps/web/components/blog/BlogTrack.tsx` | REQ-7 article events: blog_view once per page view and blog_cta_click on "Analyse my trades" (anonymous, allow-listed by the API). |
+| `apps/web/components/blog/PostCard.tsx` | REQ-7 article card (tag, read time, title, excerpt, "Read article →") used on /blog and in the landing preview. |
+| `apps/web/lib/blog.ts` | REQ-7 blog data for server components: which site (India/Global) the visitor sees, public posts from the API, image URLs, dates in IST. |
 
 <!-- FILES:END -->

@@ -36,10 +36,18 @@ Built in backend-v2 Phase 4. The web app still uses its own Next routes until th
 | Payments | `GET /payments/config`, `POST /payments/order`, `POST /payments/verify`, `POST /payments/webhook` | Modes `off \| razorpay` (link mode removed, D5). Only the webhook grants a plan, and it is idempotent. `POST /payments/order` takes an optional `source: "journey"` (REQ-2): it goes into the Razorpay order notes, and the webhook records `upgrade_from_journey` when that payment grants the plan |
 | Admin | `GET /admin/metrics?tab=`, `POST /admin/roles`, `PATCH /admin/tickets`, `GET /admin/user?email=` | Role read from the DB on every request; every read is written to `audit_log` |
 | | `POST /admin/grants { email, planId, reason }` | Owner only (`plans:grant`, D5). Plan values come from `PLANS`; the DB re-checks the owner role and the reason, and writes an audit row |
+| Blog (public) | `GET /blog/posts?site=india\|global&tag=&page=` | Published posts for that site (posts marked for it or for `both`), newest first, 12 per page: `{ posts, total, page, pages }`. Scheduled posts appear once their time has passed. `Cache-Control: public, max-age=60` |
+| | `GET /blog/posts/:slug?site=` | `{ post }` (with `body_html`, already safe), or `{ redirect: "<new-slug>" }` for an old address of a renamed post (the page answers with a permanent redirect), or 404 |
+| | `GET /blog/tags?site=`, `GET /blog/feed?site=` | Tags in use; every published post (sitemap and RSS) |
+| | `GET /blog/media/:key` | Blog images (WebP) from the public `media` bucket; immutable cache. Keys are random (`<32 hex>.webp`, `<32 hex>-og.webp`) |
+| Blog (admin) | `GET /admin/blog/posts`, `GET /admin/blog/posts/:id`, `POST /admin/blog/posts`, `PATCH /admin/blog/posts/:id` | Owner and admin only (`blog:publish`; 403 for support, finance, analyst). The database re-checks the role and writes `audit_log`. The API renders the Markdown to safe HTML (`src/lib/markdown.ts`: no raw HTML, only http(s)/mailto/relative links, `rel="noopener"`, external links `nofollow` and new tab, `#` headings become H2) and computes the read time. 409 `slug_taken`, 400 `alt_required` (cover without alt text), 400 `invalid_slug` |
+| | `POST /admin/blog/posts/:id/publish\|schedule\|unpublish\|archive\|delete` | `schedule` takes `{ at }` (ISO time with offset; the editor sends IST, `+05:30`); 400 `schedule_in_past`. `unpublish` makes it a draft again; `delete` is a soft delete. Renaming a published post records a redirect from the old slug |
+| | `POST /admin/blog/render { markdown }` | Live preview with the same renderer |
+| | `POST /admin/blog/media` | Multipart image, JPG/PNG/WebP checked by its bytes, 2 MB or less (413 / 415). sharp re-encodes it to WebP (up to 1600 px wide) plus a 1200×630 crop for cards and social sharing; returns `{ key, ogKey, width, height, url }` and writes an audit row |
 | Privacy | `GET /me/consents`, `POST /me/consents { purpose: "research", granted }` | Research consent is opt-in, off by default, append-only |
 | | `POST /me/export` | 202; one open request at a time (the worker builds the archive in Phase 6) |
 | | `POST /me/delete` or `DELETE /me` with `{ confirm: true }` | Deletes the account now: reports, trades and files are removed; payments and consent proof are kept |
-| Telemetry | `POST /events`, `POST /errors` | Always 204. Event names must be in `CLIENT_EVENTS` (`packages/shared/src/admin/telemetry.ts`); visitors without a session may send only the landing events (`pricing_viewed`, `landing_scroll_depth`, `social_click`, `ig_section_view`, `ig_card_play`, `ig_card_click`, `ig_follow_click`; stored without a user) |
+| Telemetry | `POST /events`, `POST /errors` | Always 204. Event names must be in `CLIENT_EVENTS` (`packages/shared/src/admin/telemetry.ts`); visitors without a session may send only the landing events (`pricing_viewed`, `landing_scroll_depth`, `social_click`, `ig_section_view`, `ig_card_play`, `ig_card_click`, `ig_follow_click`, `blog_view`, `blog_cta_click`, `blog_preview_click`; stored without a user). The API itself records `signup_from_blog` (first sign-in whose code check or Google `next` came from a blog article) and adds `source: "blog"` to `upload_started` |
 
 The old external URLs `/api/payments/webhook` and `/api/auth/google/callback` are registered too, so the Razorpay dashboard and the Google console need no change. Since the Phase 6 cutover Caddy sends every `/api/*` path to the API; the website has no API routes.
 
@@ -51,6 +59,7 @@ The old external URLs `/api/payments/webhook` and `/api/auth/google/callback` ar
 | `consent` | `true` | "I agree to PnL Lens processing these files to build my report." Stored in `consents` with the policy version and a hash of the text |
 | `research` | optional `true` | The separate research opt-in (unticked by default) |
 | `currency` | optional | Currency override, as in today's app |
+| `source` | optional `blog` | The upload started from a blog article's "Analyse my trades" (`/upload?from=blog`); added to the `upload_started` event (REQ-7) |
 | `reportId` | optional | The "+" flow: the report's current statements are analysed again together with the new ones. 409 `files_expired` once those were deleted after 30 days |
 
 What happens: the API checks the files, encrypts each one with its own key (AES-256-GCM; the key is wrapped by `FILE_KEK_<id>`) and stores it under a random key with a write-only storage key. It then writes the analysis, file and access-log rows in one transaction, records consent, and queues BullMQ job `analysis-<id>` on queue `analyses` (3 attempts, exponential backoff, failed jobs kept 7 days).
@@ -63,6 +72,7 @@ What happens: the API checks the files, encrypts each one with its own key (AES-
 | `src/app.ts` | Plugins, CSRF hook, error handler, route registration, legacy aliases |
 | `src/config.ts` | Env checks (fails fast) |
 | `src/lib/sniff.ts` | Upload type check |
+| `src/lib/markdown.ts` | Blog Markdown → safe HTML (markdown-it 15.0.2), read time, slugs |
 | `src/lib/storage.ts`, `src/lib/queue.ts` | S3 (Garage) and BullMQ adapters, with in-memory versions for tests |
 | `src/routes/*.ts` | One file per area |
 | `scripts/build.mjs` | esbuild bundle into `dist/main.js`. Workspace packages are inlined; npm packages stay external |

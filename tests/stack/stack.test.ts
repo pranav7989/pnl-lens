@@ -378,6 +378,30 @@ describe('exports bucket (Phase 7)', () => {
   });
 });
 
+describe('media bucket (REQ-7 blog images)', () => {
+  const key = `probe-${Date.now()}.webp`;
+  const API = [env.S3_API_ACCESS_KEY_ID, env.S3_API_SECRET_ACCESS_KEY] as const;
+  const WORKER = [env.S3_WORKER_ACCESS_KEY_ID, env.S3_WORKER_SECRET_ACCESS_KEY] as const;
+  it('api key can write and read media; the worker key and anonymous access cannot', () => {
+    expect(aws(...API, ['s3', 'cp', '-', `s3://media/${key}`], 'img').code).toBe(0);
+    expect(aws(...API, ['s3', 'cp', `s3://media/${key}`, '-']).out).toBe('img');
+    expect(aws(...WORKER, ['s3', 'cp', `s3://media/${key}`, '-']).code).not.toBe(0);
+    expect(aws(...WORKER, ['s3', 'cp', '-', `s3://media/${key}-w`], 'x').code).not.toBe(0);
+    expect(aws(null, null, ['s3', 'cp', `s3://media/${key}`, '-']).code).not.toBe(0);
+  });
+  it('the API serves a missing image as 404 with no storage details', async () => {
+    const r = await fetch(`${BASE}/api/v1/blog/media/${'0'.repeat(32)}.webp`);
+    expect(r.status).toBe(404);
+  });
+  it('blog list, robots.txt and sitemap.xml are public', async () => {
+    const list = await fetch(`${BASE}/api/v1/blog/posts?site=india`);
+    expect(list.status).toBe(200);
+    expect(list.headers.get('cache-control')).toBe('public, max-age=60');
+    expect(await (await fetch(`${BASE}/robots.txt`)).text()).toContain('Sitemap:');
+    expect(await (await fetch(`${BASE}/sitemap.xml`)).text()).toContain('/blog</loc>');
+  });
+});
+
 describe('hardening (Phase 7)', () => {
   const inspect = (svc: string) => {
     const id = dc('ps', '-q', svc).out.split(/\r?\n/)[0];

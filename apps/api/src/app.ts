@@ -28,6 +28,7 @@ import { reportRoutes } from './routes/reports.js';
 import { paymentRoutes } from './routes/payments.js';
 import { adminRoutes } from './routes/admin.js';
 import { telemetryRoutes } from './routes/telemetry.js';
+import { blogRoutes } from './routes/blog.js';
 
 export interface Deps {
   config: Config;
@@ -128,6 +129,7 @@ export async function buildApp(deps: Deps): Promise<App> {
     await paymentRoutes(v1 as App, deps);
     await adminRoutes(v1 as App, deps);
     await telemetryRoutes(v1 as App, deps);
+    await blogRoutes(v1 as App, deps);
     if (deps.config.exposeOpenApi) v1.get('/openapi.json', { schema: { hide: true } }, async () => app.swagger());
   }, { prefix: '/api/v1' });
 

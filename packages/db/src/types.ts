@@ -1,7 +1,7 @@
 /**
  * @file  packages/db/src/types.ts
  * @area  Database
- * @what  Kysely table types for the schema after migration 0018 (hand-written; every table is exercised through these types by test/db/*).
+ * @what  Kysely table types for the schema after migration 0019 (hand-written; every table is exercised through these types by test/db/*).
  */
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
 
@@ -323,6 +323,22 @@ export interface AuditLogTable {
   created_at: Generated<Date>;
 }
 
+/** REQ-7 blog (0019). The app role reads blog_public / blog_public_redirects only; writes go through blog_admin_* functions. */
+export type BlogSite = 'india' | 'global' | 'both';
+export type BlogStatus = 'draft' | 'scheduled' | 'published' | 'archived';
+export interface BlogPostsTable {
+  id: Generated<string>; slug: string; title: string; excerpt: string; body_md: string; body_html: string;
+  cover_key: string | null; cover_alt: string | null; tags: string[]; site: BlogSite; status: BlogStatus;
+  seo_title: string | null; meta_description: string | null; canonical_url: string | null; noindex: boolean; reading_minutes: number;
+  author_id: string | null; published_at: Date | null; created_at: Generated<Date>; updated_at: Generated<Date>; deleted_at: Date | null;
+}
+export interface BlogPublicView {
+  id: string; slug: string; title: string; excerpt: string; body_html: string; cover_key: string | null; cover_alt: string | null;
+  tags: string[]; site: BlogSite; seo_title: string | null; meta_description: string | null; canonical_url: string | null;
+  noindex: boolean; reading_minutes: number; published_at: Date; updated_at: Date;
+}
+export interface BlogPublicRedirectsView { old_slug: string; slug: string; site: BlogSite }
+
 export interface Database {
   users: UsersTable;
   credits: CreditsTable;
@@ -342,6 +358,9 @@ export interface Database {
   user_consent_current: UserConsentCurrentView;
   data_requests: DataRequestsTable;
   audit_log: AuditLogTable;
+  blog_posts: BlogPostsTable;
+  blog_public: BlogPublicView;
+  blog_public_redirects: BlogPublicRedirectsView;
 }
 
 export type Analysis = Selectable<AnalysesTable>;

@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { getMe } from '@/lib/api-client';
 import { PERMS, isStaff, type Role } from '@pnl-lens/shared/admin/rbac';
 import AdminConsole from '@/components/admin/AdminConsole';
+import '../blog.css';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'PnL Lens — Admin', robots: { index: false } };

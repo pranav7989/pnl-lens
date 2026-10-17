@@ -132,7 +132,7 @@ export async function analysisRoutes(app: App, deps: Deps) {
     }
 
     await deps.queue.enqueue(analysisId);
-    await trackWith(deps.pool, user.id, 'upload_started', { files: rows.length, ext: rows.map((r) => r.ext.slice(1)).join(',') });
+    await trackWith(deps.pool, user.id, 'upload_started', { files: rows.length, ext: rows.map((r) => r.ext.slice(1)).join(','), ...(fields.source === 'blog' ? { source: 'blog' } : {}) });
     return ok(reply, { analysisId, status: 'queued' }, 202);
   };
   const uploadSchema = {

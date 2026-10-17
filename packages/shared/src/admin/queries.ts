@@ -145,7 +145,17 @@ async function productTab() {
       (select count(*) from events where name='ig_follow_click' and created_at > now() - interval '30 days')::int as follows`);
   const social = await q(`select coalesce(props->>'network','?') as network, coalesce(props->>'placement','?') as placement, count(*)::int as n
       from events where name='social_click' and created_at > now() - interval '30 days' group by 1, 2 order by 3 desc`);
-  return { k, daily, failures, tabs, brokers, landing, journey, instagram, social };
+  // REQ-7: blog views and CTA clicks per article, and uploads/sign-ups that came from the blog
+  const blogPosts = await q(`select props->>'slug' as slug, count(*) filter (where name='blog_view')::int as views,
+      count(*) filter (where name='blog_cta_click')::int as cta, count(*) filter (where name='blog_preview_click')::int as preview
+      from events where name in ('blog_view','blog_cta_click','blog_preview_click') and created_at > now() - interval '30 days' and props ? 'slug'
+      group by 1 order by 2 desc limit 20`);
+  const blogFunnel = await one(`select
+      count(*) filter (where name='upload_started' and props->>'source'='blog')::int as uploads,
+      count(*) filter (where name='signup_from_blog')::int as signups
+      from events where name in ('upload_started','signup_from_blog') and created_at > now() - interval '30 days'`);
+  const blog = { posts: blogPosts, ...blogFunnel };
+  return { k, daily, failures, tabs, brokers, landing, journey, instagram, social, blog };
 }
 
 return { usersTab, financeTab, errorsTab, supportTab, userLookup, productTab };

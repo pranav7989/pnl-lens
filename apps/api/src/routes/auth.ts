@@ -22,6 +22,12 @@ const strict = { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } };
 export async function authRoutes(app: App, deps: Deps, opts: { googleCallbackOnly?: boolean } = {}) {
   const store = new PgAuthStore(deps.pool);
   const track = (u: string | null, name: string, props?: Record<string, unknown>) => trackWith(deps.pool, u, name, props);
+  /** REQ-7: a first sign-in (no earlier login) that started from a blog article. Call before markLogin. */
+  const trackBlogSignup = async (userId: string, fromBlog: boolean, method: 'email' | 'google') => {
+    if (!fromBlog) return;
+    const { rows } = await deps.pool.query('select last_login_at is null as first from public.users where id = $1', [userId]);
+    if (rows[0]?.first) await track(userId, 'signup_from_blog', { method });
+  };
 
   /** GET — finishes Google sign-in, verifies the ID token, links by verified email, sets the session. */
   app.get('/auth/google/callback', { schema: { tags: ['auth'], summary: 'Google sign-in callback', hide: !!opts.googleCallbackOnly } }, async (req, reply) => {
@@ -37,6 +43,7 @@ export async function authRoutes(app: App, deps: Deps, opts: { googleCallbackOnl
       const { profile, next } = await finishGoogle({ origin, code: q.code || '', state: q.state || '', cookie: req.cookies[OAUTH_COOKIE] });
       const user = await store.upsertUserByGoogle({ ...profile, country: clientCountry(r) });
       if (user.status !== 'active') return failed('blocked');
+      await trackBlogSignup(user.id, /[?&]from=blog(&|$)/.test(next), 'google');
       await store.markLogin(user.id, 'google');
       await track(user.id, 'login', { method: 'google' }); await track(user.id, 'active');
       return reply
@@ -79,7 +86,7 @@ export async function authRoutes(app: App, deps: Deps, opts: { googleCallbackOnl
   /** POST { email, code } → sets the session cookie. */
   app.post('/auth/otp/verify', {
     ...strict, attachValidation: true,
-    schema: { tags: ['auth'], summary: 'Check the code and start a session', body: z.object({ email: z.string(), code: z.string() }) },
+    schema: { tags: ['auth'], summary: 'Check the code and start a session', body: z.object({ email: z.string(), code: z.string(), source: z.string().max(20).optional() }) },
   }, async (req, reply) => {
     const body = req.body as any;
     const email = normaliseEmail(body?.email);
@@ -96,6 +103,7 @@ export async function authRoutes(app: App, deps: Deps, opts: { googleCallbackOnl
     if (!(await store.consumeOtp(otp.id))) return bad();
     const user = await store.upsertUserByEmail(email, clientCountry(asFetchLike(req)));
     if (user.status !== 'active') return fail(reply, 403, 'blocked', 'This account is disabled.');
+    await trackBlogSignup(user.id, body?.source === 'blog', 'email');
     await store.markLogin(user.id, 'email');
     await track(user.id, 'login', { method: 'email' }); await track(user.id, 'active');
     return reply.setCookie(SESSION_COOKIE, await createSessionToken({ id: user.id, country: user.country }), sessionCookieOptions)

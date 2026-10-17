@@ -9,9 +9,10 @@ import type { Queryable } from '../db';
 
 export const CLIENT_EVENTS = new Set(['upload_started', 'upload_failed', 'no_trades', 'report_viewed', 'tab_viewed', 'pdf_exported', 'csv_exported', 'pricing_viewed',
   'landing_scroll_depth', 'journey_bar_view', 'journey_step_click', 'journey_next_action_click', 'social_click',
-  'ig_section_view', 'ig_card_play', 'ig_card_click', 'ig_follow_click']);
+  'ig_section_view', 'ig_card_play', 'ig_card_click', 'ig_follow_click', 'blog_view', 'blog_cta_click', 'blog_preview_click']);
 /** Events the public landing page may send without a session (stored with user_id null). REQ-4. */
-export const ANON_EVENTS = new Set(['pricing_viewed', 'landing_scroll_depth', 'social_click', 'ig_section_view', 'ig_card_play', 'ig_card_click', 'ig_follow_click']);
+export const ANON_EVENTS = new Set(['pricing_viewed', 'landing_scroll_depth', 'social_click', 'ig_section_view', 'ig_card_play', 'ig_card_click', 'ig_follow_click',
+  'blog_view', 'blog_cta_click', 'blog_preview_click']);
 
 export async function trackWith(db: Queryable, userId: string | null, name: string, props?: Record<string, unknown>) {
   try {

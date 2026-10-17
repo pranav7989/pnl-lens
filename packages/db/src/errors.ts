@@ -12,6 +12,8 @@ export const DB_ERROR_CODES = [
   'no_plan', 'plan_expired', 'plan_used_up', 'too_many_files',
   // admin_grant_plan
   'forbidden', 'reason_required', 'unknown_user', 'invalid_plan',
+  // 0019 blog (owner/admin publishing)
+  'not_found', 'slug_taken', 'schedule_in_past', 'invalid_action',
   // 0003 (old flow, still used by apps/web until the Phase 6 cutover)
   'no_credits',
 ] as const;

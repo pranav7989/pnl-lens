@@ -11,3 +11,4 @@ export * from './queries/analyses.js';
 export * from './queries/reports.js';
 export * from './queries/plans.js';
 export * from './queries/privacy.js';
+export * from './queries/blog.js';

@@ -23,6 +23,7 @@ const ADMIN = env('GARAGE_ADMIN_URL', 'http://garage:3903');
 const TOKEN = env('GARAGE_ADMIN_TOKEN');
 const BUCKET = env('S3_BUCKET', 'statements');
 const EXPORT_BUCKET = env('S3_EXPORT_BUCKET', 'exports');
+const MEDIA_BUCKET = env('S3_MEDIA_BUCKET', 'media');
 const CAPACITY = Number(env('STORAGE_CAPACITY_BYTES', String(10_000_000_000)));
 const KEYS = [
   { name: 'pnl-lens-api', id: env('S3_API_ACCESS_KEY_ID'), secret: env('S3_API_SECRET_ACCESS_KEY') },
@@ -33,6 +34,8 @@ const KEYS = [
 const GRANTS = {
   [BUCKET]: { 'pnl-lens-api': { allow: { write: true }, deny: { read: true, owner: true } }, 'pnl-lens-worker': { allow: { read: true, write: true }, deny: { owner: true } } },
   [EXPORT_BUCKET]: { 'pnl-lens-api': { allow: { read: true }, deny: { write: true, owner: true } }, 'pnl-lens-worker': { allow: { write: true }, deny: { read: true, owner: true } } },
+  // media (REQ-7 blog images): public content served by the api; the worker has no access. Still not a Garage website bucket.
+  [MEDIA_BUCKET]: { 'pnl-lens-api': { allow: { read: true, write: true }, deny: { owner: true } }, 'pnl-lens-worker': { allow: {}, deny: { read: true, write: true, owner: true } } },
 };
 
 async function call(method, op, { query, body } = {}) {
@@ -96,7 +99,7 @@ for (const k of KEYS) {
     const g = perKey[k.name];
     await must('POST', 'DenyBucketKey', { body: { bucketId: buckets[name].id, accessKeyId: k.id, permissions: g.deny } });
     await must('POST', 'AllowBucketKey', { body: { bucketId: buckets[name].id, accessKeyId: k.id, permissions: g.allow } });
-    log(`key ${k.name}: ${Object.keys(g.allow).join('+')} on ${name}`);
+    log(`key ${k.name}: ${Object.keys(g.allow).join('+') || 'no access'} on ${name}`);
   }
 }
 log('done');

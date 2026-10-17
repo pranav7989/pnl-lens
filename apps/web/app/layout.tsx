@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/app/layout.tsx
  * @area  Pages
- * @what  Root layout: fonts (Manrope + ₹ glyph), header with logo and credits (from the API), browser error reporter.
+ * @what  Root layout: fonts (Manrope + ₹ glyph), html lang (en-IN / en by site), header with logo and credits (from the API), browser error reporter.
  */
 import './globals.css';
 import './report.css';
@@ -10,6 +10,8 @@ import localFont from 'next/font/local';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getMe } from '@/lib/api-client';
+import { requestCountry } from '@/lib/auth/country';
+import { regionFor } from '@pnl-lens/shared/pricing';
 import NavLinks from '@/components/nav/NavLinks';
 import { LogoMark } from '@/components/brand/Logo';
 import ErrorReporter from '@/components/ErrorReporter';
@@ -28,14 +30,16 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const me = await getMe().catch(() => null);
   const user = me?.user ?? null, credits = me ? me.credits : null;
+  // REQ-7 SEO: en-IN on the India site, en on Global (same country rule as the landing page)
+  const lang = regionFor((await requestCountry()) || user?.country) === 'IN' ? 'en-IN' : 'en';
   return (
-    <html lang="en" className={`${manrope.variable} ${rupee.variable}`}>
+    <html lang={lang} className={`${manrope.variable} ${rupee.variable}`}>
       <head><meta name="color-scheme" content="dark" /></head>
       <body>
         <ErrorReporter />
         <header className="app-header">
           <div className="bar">
-            <Link href="/" className="brand" style={{ textDecoration: 'none' }}><LogoMark size={28} /><span>PnL Lens</span></Link>
+            <Link href="/" className="brand" style={{ textDecoration: 'none' }} aria-label="PnL Lens home"><LogoMark size={28} /><span>PnL Lens</span></Link>
             {user ? <NavLinks /> : <div style={{ flex: 1 }} />}
             {user ? (
               <><span className="credits-pill"><b>{credits ?? '—'}</b> credit{credits === 1 ? '' : 's'}</span>

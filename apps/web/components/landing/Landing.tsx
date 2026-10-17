@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/components/landing/Landing.tsx
  * @area  Landing
- * @what  Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, privacy, brokers, FAQ (pricing early for mobile, REQ-4).
+ * @what  Landing page markup for India and Global sites: hero, steps, sample dashboard, benefits, plans, Instagram, privacy, brokers, blog preview, FAQ (pricing early for mobile, REQ-4).
  */
 /**
  * Public landing page. Server-rendered markup; motion comes from /public/landing.js (progressive:
@@ -11,6 +11,8 @@ import Showcase from './Showcase';
 import { LogoMark } from '@/components/brand/Logo';
 import Social from './Social';
 import Instagram from './Instagram';
+import BlogPreview from './BlogPreview';
+import type { BlogCard } from '@/lib/blog';
 import { siteFor } from '@pnl-lens/shared/site';
 import { durationLabel, reportsBullet, validityBullet, REPORTS_KEPT, type Plan } from '@pnl-lens/shared/pricing';
 
@@ -129,7 +131,7 @@ const faq = (single: string, snapshot: string, region: Region) => [
   ['What is the refund policy?', 'Reports cannot be refunded once they have been generated. If something genuinely goes wrong, write to support@pnllens.com. We take responsibility and respond promptly.'],
 ];
 
-export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: boolean; plans: PlanCard[]; region?: Region }) {
+export default function Landing({ signedIn, plans, region = 'IN', posts = [] }: { signedIn: boolean; plans: PlanCard[]; region?: Region; posts?: BlogCard[] }) {
   const LEDGER = LEDGERS[region], inr = money(region), SOURCES = SOURCES_BY[region], MARQUEE = SOURCES.flatMap((g) => g.items);
   const other = region === 'IN' ? { href: '/?region=global', label: 'Global site' } : { href: '/?region=in', label: 'India site' };
   const start = signedIn ? '/upload' : '/login?next=/upload';
@@ -147,6 +149,7 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
           <a href="#report">Product</a>
           <a href="#brokers">Brokers</a>
           <a href="#pricing">Pricing</a>
+          <a href="/blog">Blog</a>
           <a href="#faq">FAQ</a>
           <div className="lp-menu-cta">
             {signedIn ? <a className="lp-btn ghost" href="/dashboard">Dashboard</a> : <a className="lp-btn ghost" href="/login">Sign in</a>}
@@ -279,6 +282,8 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
           </div>
         </section>
 
+        <BlogPreview posts={posts} />
+
         <section className="lp-section" id="faq">
           <header className="lp-head"><h2 className="lp-h2">Questions, answered</h2><p className="lp-sub">Anything else? Write to support@pnllens.com.</p></header>
           <div className="lp-faq">{faq(priceOf('single'), priceOf('snapshot'), region).map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div>
@@ -295,7 +300,7 @@ export default function Landing({ signedIn, plans, region = 'IN' }: { signedIn: 
         <div className="lp-brand"><LogoMark size={26} /><span>PnL Lens</span></div>
         <p>PnL Lens is a trade-analysis tool, not investment advice, and is not registered as an investment adviser or research analyst. Trading involves risk of loss. Figures on this page are illustrative. Reports cannot be refunded once generated; for genuine issues write to support@pnllens.com.</p>
         <p className="lp-legal">{LEGAL.name} · {LEGAL.address}</p>
-        <nav aria-label="Footer"><a href={other.href}>{other.label}</a>{LEGAL.policies.map(([href, label]) => <a key={href} href={href}>{label}</a>)}<a href="mailto:support@pnllens.com">support@pnllens.com</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+        <nav aria-label="Footer"><a href={other.href}>{other.label}</a>{LEGAL.policies.map(([href, label]) => <a key={href} href={href}>{label}</a>)}<a href="mailto:support@pnllens.com">support@pnllens.com</a><a href="#pricing">Pricing</a><a href="/blog">Blog</a><a href="#faq">FAQ</a></nav>
         <Social site={site} placement="footer" className="lp-foot-social" />
       </footer>
     </div>
