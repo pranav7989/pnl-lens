@@ -1,0 +1,35 @@
+# @file  infra/compose.test.yml
+# @area  Ops
+# @what  Throwaway Postgres 16 + Redis 7 for the database, API and worker tests: 127.0.0.1 only, data in memory, separate project.
+#   npm run db:test:up   → starts them (passwords TEST_POSTGRES_PASSWORD / TEST_REDIS_PASSWORD from .env)
+#   npm run test:db      → packages/db tests create fresh databases here and run every migration from 0001
+#   npm run db:test:down → removes it (nothing is kept)
+# Separate compose project, so the dev stack's "only Caddy is published" rule (npm run test:stack) still holds.
+name: pnl-lens-test
+services:
+  postgres:
+    image: postgres:16.14-bookworm
+    environment:
+      POSTGRES_USER: lens_admin
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:?run npm run stack:env}
+      POSTGRES_DB: lens_test
+      POSTGRES_INITDB_ARGS: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
+      TZ: Asia/Kolkata
+    ports: ["127.0.0.1:${TEST_PG_PORT:-55432}:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lens_admin -d lens_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7.4.11-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "noeviction", "--requirepass", "${TEST_REDIS_PASSWORD:?run npm run stack:env}"]
+    ports: ["127.0.0.1:${TEST_REDIS_PORT:-56379}:6379"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    environment:
+      REDIS_PASSWORD: ${TEST_REDIS_PASSWORD:?run npm run stack:env}

@@ -1,24 +1,18 @@
 /**
  * @file  apps/web/app/(app)/upload/page.tsx
  * @area  Reports
- * @what  Upload page wrapper: renders UploadClient (browser-side parsing and analysis).
+ * @what  New report: the workspace upload view (consent, files, loader; the API and worker read the files).
  */
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { getStore } from '@/lib/store';
-import UploadClient from '@/components/UploadClient';
+import { loadPlanData, loadHistory } from '@/lib/workspace-data';
+import Workspace from '@/components/workspace/Workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Upload() {
   const user = await getSessionUser();
   if (!user) redirect('/login?next=/upload');
-  const credits = await getStore().getCredits(user.id);
-  return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      <h1 className="page-title">New report</h1>
-      <p className="page-sub">Your files are read in this browser tab and never uploaded. Only the finished report is saved.</p>
-      <UploadClient credits={credits} />
-    </div>
-  );
+  const [{ plans, prices }, reports] = await Promise.all([loadPlanData(), loadHistory()]);
+  return <Workspace mode="upload" plans={plans} reports={reports} prices={prices} />;
 }
