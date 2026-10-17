@@ -11,10 +11,23 @@
 		max_size 35MB
 	}
 	encode zstd gzip
-	header -Server
+	# Security headers for every response (moved here from next.config in Phase 7; one place for web and api).
+	# CSP: only our own origin plus Razorpay Checkout (script, frames, API) and Google sign-in (form post).
+	# 'unsafe-inline' for scripts/styles is needed by Next.js App Router hydration without nonces (see docs/PRIVACY_NOTES.md §security).
+	header {
+		-Server
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.razorpay.com\")"
+		Cross-Origin-Opener-Policy "same-origin-allow-popups"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com; frame-src https://api.razorpay.com https://checkout.razorpay.com; worker-src 'self' blob:; form-action 'self' https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+	}
 
-	# New API (Fastify). Until the Phase 6 cutover, the existing /api/* routes are still served by the web app.
-	handle /api/v1/* {
+	# Every /api/* request goes to the API (Fastify): /api/v1/* plus the two old external URLs it still answers
+	# (/api/payments/webhook for Razorpay, /api/auth/google/callback for Google). The web app has no API routes.
+	handle /api/* {
 		reverse_proxy api:4000
 	}
 	handle {

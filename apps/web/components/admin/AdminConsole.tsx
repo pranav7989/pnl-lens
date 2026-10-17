@@ -32,7 +32,7 @@ export default function AdminConsole({ role, perms, pg }: { role: string; perms:
   const [tab, setTab] = useState<Tab | null>(tabs[0]?.id || null);
   const [data, setData] = useState<Record<string, any>>({});
   const [err, setErr] = useState('');
-  const load = (t: Tab) => fetch(`/api/admin/metrics?tab=${t}`).then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.message || j.error); setData((d) => ({ ...d, [t]: j })); }).catch((e) => setErr(e.message));
+  const load = (t: Tab) => fetch(`/api/v1/admin/metrics?tab=${t}`).then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.message || j.error); setData((d) => ({ ...d, [t]: j })); }).catch((e) => setErr(e.message));
   useEffect(() => { if (tab && !data[tab]) load(tab); }, [tab]); // eslint-disable-line
   if (!pg) return <div className="panel center-card"><h3>Admin console</h3><p className="muted">Connect PostgreSQL (STORE_DRIVER=pg) to see live metrics.</p></div>;
   const d = tab ? data[tab] : null;
@@ -47,7 +47,7 @@ export default function AdminConsole({ role, perms, pg }: { role: string; perms:
           {tab === 'users' && <UsersTab d={d} canRoles={perms.includes('roles:manage')} />}
           {tab === 'finance' && <FinanceTab d={d} />}
           {tab === 'errors' && <ErrorsTab d={d} />}
-          {tab === 'support' && <SupportTab d={d} reload={() => load('support')} />}
+          {tab === 'support' && <SupportTab d={d} reload={() => load('support')} canGrant={perms.includes('plans:grant')} />}
           {tab === 'product' && <ProductTab d={d} />}
         </div>
       )}
@@ -74,7 +74,7 @@ function UsersTab({ d, canRoles }: { d: any; canRoles: boolean }) {
 
 function RolesPanel() {
   const [email, setEmail] = useState(''), [role, setRole] = useState('support'), [msg, setMsg] = useState('');
-  const save = async () => { const r = await fetch('/api/admin/roles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) }); const j = await r.json(); setMsg(r.ok ? `${email} is now ${role}.` : j.message || 'Not allowed'); };
+  const save = async () => { const r = await fetch('/api/v1/admin/roles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) }); const j = await r.json(); setMsg(r.ok ? `${email} is now ${role}.` : j.message || 'Not allowed'); };
   return <Panel title="Team & roles" sub="who can see what">
     <div className="filters"><input placeholder="teammate@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
       <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Role">{['admin', 'support', 'finance', 'analyst', 'user', 'owner'].map((r) => <option key={r}>{r}</option>)}</select>
@@ -111,10 +111,10 @@ function ErrorsTab({ d }: { d: any }) {
   </>;
 }
 
-function SupportTab({ d, reload }: { d: any; reload: () => void }) {
+function SupportTab({ d, reload, canGrant }: { d: any; reload: () => void; canGrant: boolean }) {
   const [email, setEmail] = useState(''), [u, setU] = useState<any>(null), [msg, setMsg] = useState('');
-  const look = async () => { setMsg(''); setU(null); const r = await fetch('/api/admin/user?email=' + encodeURIComponent(email)); const j = await r.json(); if (r.ok) setU(j); else setMsg(j.message || 'Not found'); };
-  const setStatus = async (id: number, status: string) => { await fetch('/api/admin/tickets', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) }); reload(); };
+  const look = async () => { setMsg(''); setU(null); const r = await fetch('/api/v1/admin/user?email=' + encodeURIComponent(email)); const j = await r.json(); if (r.ok) setU(j); else setMsg(j.message || 'Not found'); };
+  const setStatus = async (id: number, status: string) => { await fetch('/api/v1/admin/tickets', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) }); reload(); };
   return <>
     <div className="rv-kpis s12"><Kpi label="Open tickets" value={d.k.open} tone={d.k.open ? 'loss' : undefined} /><Kpi label="In progress" value={d.k.in_progress} /><Kpi label="Resolved (7 days)" value={d.k.resolved_7d} tone="gain" /><Kpi label="Avg time to resolve" value={`${d.k.avg_hours}h`} sub="last 30 days" /></div>
     <Panel title="Find a user's issue" sub="profile, likely cause and full timeline">
@@ -124,6 +124,7 @@ function SupportTab({ d, reload }: { d: any; reload: () => void }) {
         <div className="ad-diag"><span>Likely cause</span><b>{u.diagnosis}</b></div>
         <div className="ad-prof">{[['Email', u.user.email], ['Role', u.user.role], ['Country', u.user.country || '—'], ['Joined', ago(u.user.created_at)], ['Last sign-in', u.user.last_login_at ? ago(u.user.last_login_at) : '—'], ['Credits', u.user.credits ?? 0]].map(([a, b]) => <div key={a as string}><span>{a}</span><b>{b as any}</b></div>)}</div>
         <Table cols={[['When', (r) => ago(r.at)], ['Type', (r) => <span className={`ad-kind ${r.kind}`}>{r.kind}</span>], ['What', (r) => r.title], ['Detail', (r) => <span className="mut" style={{ fontSize: 12 }}>{String(r.detail || '').slice(0, 140)}</span>]]} rows={u.timeline} />
+        {canGrant && <GrantPlan email={u.user.email} />}
       </div>}
     </Panel>
     <Panel title="Tickets" sub="open first, then by priority" span="s7">
@@ -141,5 +142,36 @@ function ProductTab({ d }: { d: any }) {
     <Panel title="Most-used tabs" span="s5"><Table cols={[['Tab', (r) => r.tab], ['Views', (r) => r.n, 'n']]} rows={d.tabs} /></Panel>
     <Panel title="Why uploads fail" sub="reason and file type" span="s7"><Table cols={[['Reason', (r) => r.reason], ['File type', (r) => r.ext], ['Count', (r) => r.n, 'n']]} rows={d.failures} /></Panel>
     <Panel title="Brokers seen" span="s5"><Table cols={[['Broker / source', (r) => r.broker], ['Reports', (r) => r.n, 'n']]} rows={d.brokers} /></Panel>
+    {d.journey && (() => { const jn = d.journey, pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) + '%' : '–'); return <>
+      <div className="rv-kpis s12"><Kpi label="Single → higher plan" value={pct(jn.single_upgraded, jn.single_first)} sub={`${jn.single_upgraded} of ${jn.single_first} who started on Single`} />
+        <Kpi label="Came back within 45 days" value={pct(jn.returned_45d, jn.with_report)} sub={`${jn.returned_45d} of ${jn.with_report} with a report`} />
+        <Kpi label="Upgrades from the journey" value={jn.upgrades} sub="last 30 days" /><Kpi label="Journey bar views" value={jn.views} sub="last 30 days" /></div>
+      <Panel title="Journey" sub="last 30 days" span="s12"><Table cols={[['Event', (r) => r.m], ['Count', (r) => r.n, 'n']]}
+        rows={[{ m: 'Bar shown (journey_bar_view)', n: jn.views }, { m: 'Locked step tapped (journey_step_click)', n: jn.step_clicks }, { m: 'Next action tapped (journey_next_action_click)', n: jn.action_clicks }, { m: 'Purchase from the journey (upgrade_from_journey)', n: jn.upgrades }]} /></Panel></>; })()}
+    {d.landing && <Panel title="Landing page" sub="visitors, last 30 days: pricing seen and how far they scrolled" span="s12">
+      <Table cols={[['Measure', (r) => r.m], ['Count', (r) => r.n, 'n']]} rows={[{ m: 'Pricing section seen', n: d.landing.pricing_views }, { m: 'Scrolled 25% of the page', n: d.landing.d25 }, { m: 'Scrolled 50%', n: d.landing.d50 }, { m: 'Scrolled 75%', n: d.landing.d75 }, { m: 'Reached the end', n: d.landing.d100 }]} /></Panel>}
   </>;
+}
+
+/** Owner-only manual plan grant (plan D5, W11): plan, reason (required), confirm. The API and the database re-check the owner role and write the audit log. */
+function GrantPlan({ email }: { email: string }) {
+  const [planId, setPlanId] = useState('snapshot'), [reason, setReason] = useState(''), [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
+  const grant = async () => {
+    if (reason.trim().length < 3) { setMsg('Write the reason for this grant.'); return; }
+    if (!confirm(`Grant the ${planId} plan to ${email}? This is recorded in the audit log.`)) return;
+    setBusy(true); setMsg('');
+    const r = await fetch('/api/v1/admin/grants', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, planId, reason }) });
+    const j = await r.json().catch(() => ({}));
+    setBusy(false); setMsg(r.ok ? `Plan granted to ${email}.` : j.message || j.error || 'Not allowed');
+    if (r.ok) setReason('');
+  };
+  return <div className="ad-grant" style={{ marginTop: 14 }}>
+    <h4 style={{ margin: '0 0 8px' }}>Grant plan <small className="mut">owner only</small></h4>
+    <div className="filters">
+      <select value={planId} onChange={(e) => setPlanId(e.target.value)} aria-label="Plan">{['single', 'snapshot', 'progress', 'discipline'].map((p) => <option key={p} value={p}>{p}</option>)}</select>
+      <input placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason" maxLength={500} />
+      <button className="btn" onClick={grant} disabled={busy}>Grant plan</button>
+    </div>
+    {msg && <p className="mut" style={{ fontSize: 13 }}>{msg}</p>}
+  </div>;
 }

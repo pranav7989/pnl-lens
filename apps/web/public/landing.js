@@ -57,7 +57,7 @@
   if (scan && lens && rows.length) {
     if (reduce) { rows.forEach(function (r) { if (r.classList.contains('is-bad')) r.classList.add('flagged'); }); foot && foot.classList.add('show'); }
     else {
-      var CYCLE = 7200, HOLD = 2600, t0 = null, visible = true, lastPhase = -1;
+      var CYCLE = 8000, HOLD = 3000, t0 = null, visible = true, lastPhase = -1;
       new IntersectionObserver(function (e) { visible = e[0].isIntersecting; }).observe(scan);
       var tick = function (ts) {
         if (!t0) t0 = ts;
@@ -66,7 +66,7 @@
           var t = (ts - t0) % (CYCLE + HOLD), p = Math.min(1, t / CYCLE);
           var ease = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
           var y = top - lh / 2 + ease * h;
-          lens.style.transform = 'translate3d(' + (Math.sin(p * Math.PI * 2) * 36).toFixed(1) + 'px,' + (y - 40).toFixed(1) + 'px,0)';
+          lens.style.transform = 'translate3d(0,' + (y - 40).toFixed(1) + 'px,0)';   // straight down the ledger, no sideways wobble
           var centre = y;
           if (t < 40 && lastPhase !== 0) { rows.forEach(function (r) { r.classList.remove('flagged'); }); foot && foot.classList.remove('show'); lastPhase = 0; }
           rows.forEach(function (r) { if (r.classList.contains('is-bad') && !r.classList.contains('flagged') && centre > r.offsetTop + r.offsetHeight * 0.55) r.classList.add('flagged'); });
@@ -120,4 +120,37 @@
     }, { threshold: 0.3 }).observe(dx);
     if (reduce) dpan.forEach(function (p) { p.classList.add('in'); });
   }
+
+  /* REQ-4: pricing view and scroll depth (anonymous, allow-listed by the API), and the "See plans" pill */
+  var region = root.getAttribute('data-region') || '';
+  var send = function (name, props) {
+    try { fetch('/api/v1/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, props: props }), keepalive: true }).catch(function () {}); } catch (e) { /* ignore */ }
+  };
+  var pricing = document.getElementById('pricing'), hero = root.querySelector('.lp-hero'), pill = root.querySelector('[data-pill]');
+  var pastHero = false, pricingOn = false, pricingSeen = false, footOn = false;
+  var showPill = function () { if (pill) pill.hidden = !(pastHero && !pricingOn && !footOn); };
+  if ('IntersectionObserver' in window) {
+    if (pricing) new IntersectionObserver(function (es) {
+      pricingOn = es[0].isIntersecting; showPill();
+      if (pricingOn && !pricingSeen) { pricingSeen = true; send('pricing_viewed', { region: region, from: 'landing' }); }
+    }, { threshold: 0.15 }).observe(pricing);
+    if (hero) new IntersectionObserver(function (es) { pastHero = !es[0].isIntersecting && es[0].boundingClientRect.top < 0; showPill(); }).observe(hero);
+    // the pill would cover the footer links and icons: hide it while the footer is on screen
+    var footer = root.querySelector('.lp-foot');
+    if (footer) new IntersectionObserver(function (es) { footOn = es[0].isIntersecting; showPill(); }).observe(footer);
+  }
+  if (pill) pill.addEventListener('click', function () { pill.hidden = true; });
+  var depths = [25, 50, 75, 100], sent = {};
+  var onDepth = function () {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    var pct = max > 0 ? Math.round((window.scrollY / max) * 100) : 100;
+    depths.forEach(function (d) { if (pct >= d && !sent[d]) { sent[d] = true; send('landing_scroll_depth', { depth: d, region: region }); } });
+  };
+  window.addEventListener('scroll', onDepth, { passive: true });
+
+  /* REQ-5: social icon clicks (header, footer, Instagram section) */
+  root.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('[data-social]');
+    if (a) send('social_click', { network: a.getAttribute('data-social'), placement: a.getAttribute('data-placement') || 'header', region: region });
+  });
 })();

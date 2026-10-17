@@ -9,9 +9,20 @@ name: pnl-lens
 x-tz: &tz
   TZ: Asia/Kolkata
 
+# Container hardening for the app services (Phase 7): read-only root filesystem, no privilege escalation,
+# no Linux capabilities, a small writable /tmp. Data services keep their volumes.
+x-hardened: &hardened
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
 services:
   # ---------------------------------------------------------------- edge
   caddy:
+    <<: *hardened
+    cap_add: [NET_BIND_SERVICE]               # binds :80 inside the container
+    tmpfs: ["/tmp:size=16m"]
+    mem_limit: 256m
     image: caddy:2.11.4-alpine
     ports: ["${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:80"]
     environment:
@@ -31,25 +42,26 @@ services:
     restart: unless-stopped
 
   web:
+    <<: *hardened
+    tmpfs: ["/tmp:size=64m", "/app/apps/web/.next/cache:uid=1000,gid=1000,size=128m"]
+    mem_limit: 768m
     build: { context: .., dockerfile: infra/docker/web.Dockerfile }
     image: pnl-lens/web:dev
     environment:
       <<: *tz
-      AUTH_MODE: dev
-      ALLOW_DEV_AUTH_IN_PROD: "true"          # dev stack only: the image runs NODE_ENV=production
-      STORE_DRIVER: pg
-      DATABASE_URL: postgres://lens_app:${LENS_APP_PASSWORD:?run npm run stack:env}@postgres:5432/lens
+      AUTH_MODE: dev                          # shows/hides the logout button only; the API owns sessions
+      API_INTERNAL_URL: http://api:4000       # server-side calls to the API (forwarding the visitor's cookie)
       APP_URL: http://localhost:${HTTP_PORT:-8080}
-      MAIL_DRIVER: console
-      PAYMENTS_MODE: "off"
-    # Transitional until the Phase 6 cutover: the web app still holds today's API routes and talks to
-    # Postgres directly, so it sits on the internal network too. After Phase 6 it is edge-only.
-    networks: [edge, internal]
+    # Since the Phase 6 cutover the web app has no database access and no API routes: edge network only.
+    networks: [edge]
     depends_on:
-      migrate: { condition: service_completed_successfully }
+      api: { condition: service_healthy }
     restart: unless-stopped
 
   api:
+    <<: *hardened
+    tmpfs: ["/tmp:size=64m", "/app/.data:uid=1000,gid=1000,mode=0700,size=16m"]   # .data: console mail log (dev only)
+    mem_limit: 768m
     build: { context: .., dockerfile: infra/docker/api.Dockerfile }
     image: pnl-lens/api:dev
     environment:
@@ -61,6 +73,18 @@ services:
       S3_BUCKET: statements
       S3_ACCESS_KEY_ID: ${S3_API_ACCESS_KEY_ID:?run npm run stack:env}
       S3_SECRET_ACCESS_KEY: ${S3_API_SECRET_ACCESS_KEY:?run npm run stack:env}
+      AUTH_MODE: dev
+      ALLOW_DEV_AUTH_IN_PROD: "true"          # dev stack only (same as web): every request is the seeded dev user
+      SESSION_SECRET: ${SESSION_SECRET:?run npm run stack:env}
+      OTP_PEPPER: ${OTP_PEPPER:?run npm run stack:env}
+      IP_HASH_SECRET: ${IP_HASH_SECRET:?run npm run stack:env}
+      FILE_KEK_ID: ${FILE_KEK_ID:?run npm run stack:env}
+      FILE_KEK_K1: ${FILE_KEK_K1:?run npm run stack:env}
+      APP_URL: http://localhost:${HTTP_PORT:-8080}
+      EXTRA_ALLOWED_ORIGINS: http://127.0.0.1:${HTTP_PORT:-8080}   # the same dev site opened by IP (a different origin to the browser)
+      MAIL_DRIVER: console
+      PAYMENTS_MODE: "off"
+      EXPOSE_OPENAPI: "true"                  # dev only: GET /api/v1/openapi.json
     networks: [edge, internal]             # edge = egress for email, Google, Razorpay
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -70,9 +94,14 @@ services:
     develop:
       watch:
         - { action: rebuild, path: ../apps/api/src }
+        - { action: rebuild, path: ../packages/db/src }
+        - { action: rebuild, path: ../packages/shared/src }
 
   # ---------------------------------------------------------------- internal only (no internet)
   worker:
+    <<: *hardened
+    tmpfs: ["/tmp:size=128m"]
+    mem_limit: 2g                             # 2 jobs x 512 MB engine child + the worker itself
     build: { context: .., dockerfile: infra/docker/worker.Dockerfile }
     image: pnl-lens/worker:dev
     environment:
@@ -84,6 +113,11 @@ services:
       S3_BUCKET: statements
       S3_ACCESS_KEY_ID: ${S3_WORKER_ACCESS_KEY_ID:?run npm run stack:env}
       S3_SECRET_ACCESS_KEY: ${S3_WORKER_SECRET_ACCESS_KEY:?run npm run stack:env}
+      FILE_KEK_ID: ${FILE_KEK_ID:?run npm run stack:env}
+      FILE_KEK_K1: ${FILE_KEK_K1:?run npm run stack:env}
+      WORKER_CONCURRENCY: "2"
+      ENGINE_TIMEOUT_MS: "60000"
+      ENGINE_MEMORY_MB: "512"
     networks: [internal]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -93,6 +127,8 @@ services:
     develop:
       watch:
         - { action: rebuild, path: ../apps/worker/src }
+        - { action: rebuild, path: ../packages/engine/src }
+        - { action: rebuild, path: ../packages/db/src }
 
   postgres:
     image: postgres:16.14-bookworm

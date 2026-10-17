@@ -1,0 +1,53 @@
+<!-- @file docs/DESIGN.md · @area Docs · @what The visual system: colour tokens, type scale, spacing, radius, motion and component rules for every screen. -->
+# Design system
+
+The website is dark, with yellow as the brand signature. The quality comes from proportion, typography, spacing and restraint, not from effects. All values live as tokens in `apps/web/app/globals.css` (`:root`). The landing page (`landing.css`, `.lp`) and the report, workspace and admin styles (`report.css`, `workspace.css`) use the same tokens. Set up 17 Oct 2026 (PR #3, an approved exception to rule 8: visual only, no wording or behaviour changes).
+
+## Colour
+
+| Role | Token | Value | Use |
+|---|---|---|---|
+| Page | `--bg` | `#000` | Page background |
+| Surface 1 | `--s1` (`--panel`) | `#0C0C0D` | Cards and panels |
+| Surface 2 | `--s2` (`--panel2`) | `#151517` | Inputs, nested cards, menus |
+| Surface 3 | `--s3` | `#1D1D20` | Hover fills, selected segment, tooltips |
+| Hairline | `--line` / `--line-strong` / `--line-hover` | `#232326` / `#38383C` / `#4A4A50` | Borders: resting, control, hover |
+| Text | `--ink` / `--ink-2` / `--ink-3` (`--muted`) | `#F5F5F7` / `#C2C2C7` / `#8E8E93` | Primary, secondary, labels. All pass WCAG AA on every surface |
+| Brand | `--y`, `--y-hover`, `--y-press` | `#FFD60A` … | Primary action, selected tab underline, current level, key emphasis only |
+| Brand tint | `--y-tint`, `--y-line` | 8% / 42% yellow | Selected items, "Medium" pills, highlighted plan |
+| Text on yellow | `--on-y` | `#0A0A0A` | 14:1 on yellow |
+| Data | `--gain`, `--loss`, `--warn` | `#3DD68C`, `#FF6961`, `#FFB27A` | Profit, loss, flagged patterns |
+
+Rules:
+- Yellow is a signature, not a background. There are no yellow slabs and no glows. One yellow primary button per view.
+- No gradients on surfaces. Charts may use a soft area fill.
+- Shadows only on floating layers (`--shadow`): tooltip, dialog, loader, the lock message.
+
+## Type (Manrope; system font as fallback)
+- **Sizes:** 11 / 12 / 13 / 14 (body) / 15 / 17 / 20 / 24 / 32 / 40, plus `clamp()` display sizes for page and landing titles.
+- **Weights:**
+  - 400 for body, 500 for labels and nav, 600 for headings and buttons;
+  - 650–700 only for large numbers and the H1;
+  - never above 700 (Manrope's variable font stops at 800, and heavier weights looked crude).
+- **Letter-spacing:** -.015 to -.035em on headings and large numbers, 0 on body, +.06–.08em on small uppercase labels.
+- **Numbers** are `tabular-nums` everywhere.
+
+## Shape and spacing
+- **Radius:** 8 for controls (`--r-sm`), 10–12 for small cards and items (`--r`), 16 for panels (`--r-lg`). 999 only for real pills.
+- **Spacing:** panels pad 20px, grids gap 16px, and section rhythm on the landing page uses one ramp. Phones keep the REQ-4 rule: pricing within 4 screen-heights.
+
+## Motion
+- **Timing:** one easing, `--ease: cubic-bezier(.2,0,0,1)`; durations `--t-fast` 150ms (hover), `--t` 200ms (tabs, colour), `--t-slow` 250ms (overlays).
+- **Hover:** a colour or border change only. No lifts, scaling or wobble.
+- **Entrances:** at most 6px and 300–350ms. Charts draw once in ≤ 1s.
+- **Reduced motion:** `prefers-reduced-motion` stops every animation and transition, and charts render fully drawn (checked in the reduced-motion pass of the PR #3 verification).
+
+## Components
+- **Buttons:**
+  - `.btn` (yellow), `.btn.ghost` (hairline), `.btn-danger`;
+  - states: hover lightens, active presses, disabled at 45%, focus is a 2px yellow ring.
+- **Inputs:** `.field` (and the filters): `--s2` fill, a `--line-strong` border, and a yellow border plus a soft ring on focus.
+- **Tabs:** grey text, white when selected, with a 2px yellow underline that slides.
+- **Segmented controls** (report groups, sample dashboard): the selected segment is a raised `--s3` chip, not yellow.
+- **Pills:** severity uses a tinted background with a coloured hairline (`.lv`, `.rv-lv`).
+- **Social icons** (`components/landing/Social.tsx`, links in `packages/shared/src/site.ts`): 38 px (40 px on phones) square buttons, grey hairline; yellow with a black icon on hover and focus.
