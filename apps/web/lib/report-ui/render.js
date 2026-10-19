@@ -8,6 +8,21 @@
  * Report renderer v2 (website + offline app). DOM-string rendering scoped to `root`, no dependencies.
  * Every user-derived string goes through esc(). Tiles carry data-behav="<key>" for the behaviour card.
  */
+/** Level names and score ranges. Mirrors the thresholds in packages/engine/src/engine.js buildProgress (engine unchanged). */
+export const LEVEL_RANGES = [['Building', 0, 39], ['Developing', 40, 54], ['Steady', 55, 69], ['Disciplined', 70, 84], ['Elite', 85, 100]];
+
+/**
+ * The level ladder under the score: 5 segments in one row, each label centred in its own column below
+ * (never overlapping). Narrow cards (ladder under 344 px) show only the current level's label (report.css).
+ * Hover or tap a segment for its name and score range.
+ */
+export function ladderHtml(index) {
+  const cl = (i) => (i < index ? 'done' : i === index ? 'on' : '');
+  return `<div class="pg-ladder" role="list" aria-label="Levels">
+    <div class="pg-lad-bar">${LEVEL_RANGES.map(([n, a, b], i) => `<i class="${cl(i)}" role="listitem" tabindex="0" aria-label="${n}: ${a}–${b}${i === index ? ' (your level)' : ''}" data-tip="${n}: ${a}–${b}"></i>`).join('')}</div>
+    <div class="pg-lad-lab" aria-hidden="true">${LEVEL_RANGES.map(([n], i) => `<span class="${cl(i)}">${n}</span>`).join('')}</div></div>`;
+}
+
 export function mountReport(root, R, fmt) {
   const inr = fmt.inr, pct = fmt.pct;
   const $ = (s) => root.querySelector(s), $$ = (s) => [...root.querySelectorAll(s)];
@@ -62,6 +77,19 @@ export function mountReport(root, R, fmt) {
   }
 
   /* ---------- overview ---------- */
+  /**
+   * REQ-2 "What's next" card at the end of Overview and Progress (website only: fmt.next comes from the journey in
+   * packages/shared/src/journey.ts). Single users also see a blurred, illustrative trend preview (no numbers).
+   */
+  function whatsNext() {
+    const n = fmt.next; if (!n) return '';
+    const preview = n.kind === 'upgrade'
+      ? `<div class="wn-preview" aria-hidden="true"><svg viewBox="0 0 400 120" preserveAspectRatio="none"><polyline points="0,95 60,80 120,86 180,62 240,58 300,40 360,34 400,22" fill="none" stroke="#FFD60A" stroke-width="4"/><polyline points="0,110 400,110" stroke="#333" stroke-width="2"/></svg><span>Unlock month-by-month progress with Snapshot</span></div>`
+      : '';
+    return `<div class="rv-panel s12 wn" data-whats-next><div><h3>What's next</h3><p>${esc(n.text)}</p></div>
+      <a class="btn" href="${esc(n.href)}" data-wn-cta="${esc(n.kind)}">${esc(n.cta)} →</a>${preview}</div>`;
+  }
+
   function overview() {
     const dn = { dp: 'DP charges', amc: 'Demat AMC', autosq: 'Auto square-off fees', margin: 'Margin penalties', other: 'Other debits' };
     const heads = Object.entries(R.heads || {}).filter(([, v]) => v).sort((a, b) => b[1] - a[1]);
@@ -101,7 +129,7 @@ export function mountReport(root, R, fmt) {
         <p class="rv-note">Worst streak ${R.seq.worstStreak} losses in a row${R.seq.worstDay ? ` · worst day ${esc(R.seq.worstDay.date)} (${inr(R.seq.worstDay.pnl)})` : ''}.</p>`, 's6');
     }
     if ((R.b.year || []).length > 1) h += panel('year', 'By expiry year', 'F&amp;O only', bars(R.b.year), 's6');
-    $('#overview').innerHTML = h + '</div>';
+    $('#overview').innerHTML = h + whatsNext() + '</div>';
   }
 
   /* ---------- insights ---------- */
@@ -180,7 +208,7 @@ export function mountReport(root, R, fmt) {
       goals: { now: 'Targets set from your weakest habits this month.', ideal: 'Work on one or two goals at a time. Small, steady improvements compound.' },
       heatmap: { now: 'Each habit scored month by month. Brighter cells are stronger habits.', ideal: 'Rows turning brighter from left to right, with no column suddenly dark.' },
       saved: { now: P.saved ? `Habit-related losses ${P.saved.total >= 0 ? 'fell' : 'rose'} by ${inr(Math.abs(P.saved.total))} since your first month.` : 'Needs two or more months of trades.', ideal: 'Habit-related losses shrinking every month, so more of each gain is kept.' },
-      checkups: { now: H.length ? `${H.length} check-up${H.length === 1 ? '' : 's'} saved on this device.` : 'No earlier check-ups saved yet.', ideal: 'A check-up every month, on the same day, with the full month\'s tradebook.' },
+      checkups: { now: H.length ? `${H.length} check-up${H.length === 1 ? '' : 's'} saved ${fmt.historyWhere || 'on this device'}.` : 'No earlier check-ups saved yet.', ideal: 'A check-up every month, on the same day, with the full month\'s tradebook.' },
     });
   }
   function ring(score, delta) {
@@ -218,13 +246,12 @@ export function mountReport(root, R, fmt) {
     const headScore = cur ? cur.score : P.overall.score;
     const lab = (k) => { const [y, mo] = k.split('-'); return new Date(Date.UTC(+y, +mo - 1, 1)).toLocaleString('en', { month: 'short', timeZone: 'UTC' }) + ' ' + y.slice(2); };
     const lv = P.level || { name: '', index: 0, next: null };
-    const LADDER = ['Building', 'Developing', 'Steady', 'Disciplined', 'Elite'];
     let h = '<div class="rv-grid">';
     // 1 — hero
     h += `<div class="rv-panel s12 pg-hero" data-behav="score">${info('score')}
       <div class="pg-hero-ring">${ring(headScore, P.delta)}</div>
       <div class="pg-hero-mid"><span class="pg-kicker">Level</span><b class="pg-level">${esc(lv.name)}</b>
-        <div class="pg-ladder">${LADDER.map((n, i) => `<i class="${i < lv.index ? 'done' : i === lv.index ? 'on' : ''}" title="${n}"><span>${n}</span></i>`).join('')}</div>
+        ${ladderHtml(lv.index)}
         <p class="pg-next">${lv.next ? `<b>${lv.next.gap}</b> point${lv.next.gap === 1 ? '' : 's'} to <b>${esc(lv.next.name)}</b>` : 'Top level reached. Keep it steady.'}</p></div>
       <div class="pg-hero-note"><span class="pg-kicker">${cur ? esc(lab(cur.key)) + ' summary' : 'Summary'}</span><p>${esc(P.summary || '')}</p>
         ${(P.badges || []).length ? `<div class="pg-badges">${P.badges.map((b) => `<span class="pg-badge" title="${esc(b.desc)}"><i></i>${esc(b.name)}</span>`).join('')}</div>` : ''}</div></div>`;
@@ -285,7 +312,7 @@ export function mountReport(root, R, fmt) {
     h += `<div class="rv-panel s12" data-behav="checkups"><div class="rv-ph"><h3>Check-up history</h3><small>${H.length ? `next check-up due ${due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'your first check-up'}</small>${info('checkups')}</div>
       ${H.length ? `<div class="pg-hist">${H.map((c, i) => `<div class="pg-hc${i === H.length - 1 ? ' cur' : ''}"><span>${esc(new Date(c.savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }))}</span><b class="${c.score >= 70 ? 'gain' : c.score >= 50 ? '' : 'loss'}">${c.score}</b><small>${esc(c.label)}</small>${i ? `<em class="${c.score - H[i - 1].score >= 0 ? 'gain' : 'loss'}">${c.score - H[i - 1].score >= 0 ? '+' : ''}${c.score - H[i - 1].score}</em>` : '<em>baseline</em>'}</div>`).join('')}</div>` : ''}
       <p class="rv-note">Come back every month with that month's tradebook. Each check-up is compared with the last, so you can see which habits changed.</p></div>`;
-    el.innerHTML = h + '</div>';
+    el.innerHTML = h + whatsNext() + '</div>';
   }
   /* ---------- positions ---------- */
   let sortKey = 'pnl', sortDir = 1;

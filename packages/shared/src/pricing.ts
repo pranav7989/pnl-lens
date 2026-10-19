@@ -12,16 +12,33 @@
 export type PlanId = 'single' | 'snapshot' | 'progress' | 'discipline';
 export interface Plan {
   id: PlanId; name: string; inrMinor: number; usdMinor: number; reports: number; filesPerReport: number;
+  /** length of the plan in months, shown to users (null = Single: a few days of access) */
   months: number | null; retentionDays: number; progress: boolean;
-  /** how long the plan stays valid after purchase */
+  /** how long the plan stays valid after purchase (window for creating new reports; API + DB grant use this) */
   days: number;
 }
+// Durations as of 15 Oct 2026 (owner, REQ-3): Single 7 days, Snapshot 3 months, Progress 6 months, Discipline 12 months.
 export const PLANS: Plan[] = [
-  { id: 'single', name: 'Single', inrMinor: 9900, usdMinor: 499, reports: 1, filesPerReport: 2, months: null, retentionDays: 7, progress: false, days: 7 },
-  { id: 'snapshot', name: 'Snapshot', inrMinor: 49900, usdMinor: 1900, reports: 5, filesPerReport: 3, months: null, retentionDays: 180, progress: false, days: 183 },
-  { id: 'progress', name: 'Progress', inrMinor: 149900, usdMinor: 4900, reports: 25, filesPerReport: 3, months: 3, retentionDays: 120, progress: true, days: 92 },
+  { id: 'single', name: 'Single', inrMinor: 9900, usdMinor: 900, reports: 1, filesPerReport: 2, months: null, retentionDays: 7, progress: false, days: 7 },
+  { id: 'snapshot', name: 'Snapshot', inrMinor: 49900, usdMinor: 1900, reports: 5, filesPerReport: 3, months: 3, retentionDays: 92, progress: false, days: 92 },
+  { id: 'progress', name: 'Progress', inrMinor: 149900, usdMinor: 4900, reports: 25, filesPerReport: 3, months: 6, retentionDays: 183, progress: true, days: 183 },
   { id: 'discipline', name: 'Discipline', inrMinor: 399900, usdMinor: 12900, reports: 90, filesPerReport: 3, months: 12, retentionDays: 395, progress: true, days: 365 },
 ];
+
+/* Plan wording, built only from PLANS so durations are written in one place. */
+const reportsWord = (n: number) => `${n} report${n === 1 ? '' : 's'}`;
+/** Pricing card subtitle: "one-time" (Single) or "for 3 months". */
+export const durationLabel = (p: Plan) => (p.months ? `for ${p.months} months` : 'one-time');
+/** Short length: "7 days" or "6 months". */
+export const lengthLabel = (p: Plan) => (p.months ? `${p.months} months` : `${p.days} days`);
+/** First card bullet: "1 report", "5 reports", or "25 reports over 6 months" for progress plans. */
+export const reportsBullet = (p: Plan) => (p.progress && p.months ? `${reportsWord(p.reports)} over ${p.months} months` : reportsWord(p.reports));
+/** Validity bullet for plans without "over N months": "Access for 7 days", "Use within 3 months". */
+export const validityBullet = (p: Plan) => (p.progress ? null : p.months ? `Use within ${p.months} months` : `Access for ${p.days} days`);
+/** Checkout description / plan name on payments: "Snapshot plan · 5 reports · 3 months". */
+export const planSummary = (p: Plan) => `${p.name} plan · ${reportsWord(p.reports)} · ${lengthLabel(p)}`;
+/** Approved decision D4: reports never expire. Shown on every pricing card. */
+export const REPORTS_KEPT = 'Reports kept until you delete them';
 
 export interface Price { country: string; currency: 'INR' | 'USD'; amountMinor: number; label: string }
 const fmtINR = (minor: number) => '₹' + (minor / 100).toLocaleString('en-IN');

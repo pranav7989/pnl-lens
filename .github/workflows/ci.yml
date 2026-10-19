@@ -1,0 +1,62 @@
+# @file  .github/workflows/ci.yml
+# @area  Ops
+# @what  CI on every push and pull request: lint, typecheck, unit + parity tests, DB/API/worker tests on real Postgres/Redis, audit, secret scan, full Docker stack + browser e2e.
+name: ci
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["v*"]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }                  # full history for the secret scan
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run stack:env                    # random throwaway secrets for this run only
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run docs:index && git diff --exit-code docs/INDEX.md
+      - name: Test services (Postgres 16 + Redis 7, same images as production)
+        run: npm run db:test:up
+      - run: npm test                             # engine parity, shared, api, worker (DB/queue suites use the test services)
+      - run: npm run test:db
+      - run: npm run audit:prod
+      - run: npm run check:secrets
+
+  stack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run stack:env
+      - name: Build images and start the dev stack
+        run: npm run stack:up
+      - run: npm run test:stack
+      - name: Browser end to end (jwt mode)
+        run: |
+          npx playwright install --with-deps chromium webkit   # webkit = Safari engine (score-card and landing specs)
+          npm run stack:e2e
+          npm run test:e2e
+      - name: Production compose file is valid
+        run: |
+          grep -E '^[A-Z_0-9]+=' .env.example | sed -E 's/^([A-Z_0-9]+)=$/\1=ci-dummy/' > /tmp/prod.env
+          docker compose --env-file /tmp/prod.env -f infra/compose.prod.yml config --quiet
+      - name: Shell scripts (shellcheck)
+        run: docker run --rm -v "$PWD:/mnt:ro" -w /mnt koalaman/shellcheck:v0.11.0 -x infra/scripts/*.sh tests/load/run.sh
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --env-file .env -f infra/compose.dev.yml logs --tail=200
