@@ -1,0 +1,22 @@
+# @file  infra/security/gitleaks.toml
+# Secret scan rules: gitleaks defaults, plus ignores for generated or test-only material that is not a secret.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "not secrets"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.env$''',                                # the real secrets file is git-ignored and never scanned as source
+  '''(^|/)\.env\.example$''',                        # template: checked separately (every secret must be empty), see check-secrets.sh
+  '''packages/engine/test/(fixtures|golden)/''',     # sample broker statements and their expected outputs
+  '''package-lock\.json''',                         # integrity hashes
+  '''apps/web/public/''',                           # vendored static assets
+]
+regexes = [
+  '''test-(session|otp|ip-hash)-[a-z-]*secret[0-9a-z-]*''',   # fixed values used only by the test suites
+  '''whsec_test_secret''',
+  '''rzp_key_secret_test''',
+]

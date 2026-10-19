@@ -1,0 +1,10 @@
+# @file  infra/compose.mail.yml
+# @area  Ops
+# @what  Overlay for trying real sign-in locally: email codes are really sent over SMTP (Google Workspace) using SMTP_* from .env.
+#   npm run stack:signin   (= compose.dev.yml + compose.e2e.yml + this file)
+#   Needs in .env: SMTP_USER, SMTP_PASS (a Google App password), MAIL_FROM (that mailbox or a "Send mail as" alias).
+#   Do not run the Playwright tests against this stack: they read codes from the mail log, and would email test addresses.
+services:
+  api:
+    environment:
+      MAIL_DRIVER: smtp
