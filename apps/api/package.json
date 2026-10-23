@@ -4,16 +4,33 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/build.mjs",
     "start": "node dist/main.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "openapi": "UPDATE_OPENAPI=1 vitest run test/openapi.test.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1141.0",
+    "@fastify/cookie": "11.1.2",
+    "@fastify/multipart": "10.1.2",
+    "@fastify/rate-limit": "11.2.0",
+    "@fastify/swagger": "9.9.0",
+    "@pnl-lens/db": "0.1.0",
+    "@pnl-lens/shared": "0.1.0",
+    "@types/markdown-it": "14.2.0",
+    "bullmq": "5.81.5",
     "fastify": "5.12.5",
+    "fastify-type-provider-zod": "7.0.0",
     "ioredis": "5.11.1",
-    "pg": "^8.23.0"
+    "markdown-it": "15.0.2",
+    "pg": "^8.23.0",
+    "sharp": "0.35.5",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@types/pg": "^8.23.1"
+    "@types/pg": "^8.23.1",
+    "esbuild": "0.28.2",
+    "openapi-types": "12.1.3"
   }
 }
