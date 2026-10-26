@@ -1,62 +1,65 @@
-# Build → push to ECR → migrate → deploy to ECS. Template: fill in the env block.
+# @file  .github/workflows/deploy.yml
+# @area  Ops
+# @what  On a v* tag: build the four images, push them to GHCR, then SSH to the VM and run infra/scripts/deploy.sh <tag> (rolls back by itself on failure).
+#
+# Repository secrets: DEPLOY_HOST, DEPLOY_USER (deploy), DEPLOY_SSH_KEY (private key of a key in the deploy user's
+# authorized_keys), DEPLOY_KNOWN_HOSTS (output of `ssh-keyscan -t ed25519 <host>`). Environment "production" can
+# require a manual approval (Settings → Environments). On the VM, .env has IMAGE_REGISTRY=ghcr.io/<owner>/pnl-lens
+# and the deploy user is logged in to ghcr.io (docs/DEPLOYMENT_VM.md). Tag only commits that passed CI.
 name: deploy
 on:
   push:
-    branches: [main]
+    tags: ["v*"]
 permissions:
-  id-token: write
   contents: read
-env:
-  AWS_REGION: ap-south-1
-  AWS_ACCOUNT_ID: "000000000000"
-  DEPLOY_ROLE_ARN: arn:aws:iam::000000000000:role/lens-github-deploy
-  ECR_REPO: lens
-  ECS_CLUSTER: lens
-  ECS_SERVICE: lens-web
-  MIGRATE_TASK_DEF: lens-migrate
-  PRIVATE_SUBNETS: subnet-aaa,subnet-bbb
-  TASK_SECURITY_GROUP: sg-web
+  packages: write
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      matrix:
+        service: [web, api, worker, tools]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
-          role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      - uses: aws-actions/amazon-ecr-login@v2
-      - name: Build and push
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image name (GHCR needs lower case)
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pnl-lens/${{ matrix.service }}:${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/${{ matrix.service }}.Dockerfile
+          push: true
+          tags: ${{ steps.name.outputs.image }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: SSH key
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          IMAGE=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${GITHUB_SHA}
-          docker build -t $IMAGE .
-          docker push $IMAGE
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-      - name: Run migrations
-        run: |
-          TASK=$(aws ecs run-task --cluster $ECS_CLUSTER --launch-type FARGATE \
-            --task-definition $MIGRATE_TASK_DEF \
-            --network-configuration "awsvpcConfiguration={subnets=[$PRIVATE_SUBNETS],securityGroups=[$TASK_SECURITY_GROUP]}" \
-            --overrides "{\"containerOverrides\":[{\"name\":\"migrate\",\"image\":\"$IMAGE\"}]}" \
-            --query 'tasks[0].taskArn' --output text)
-          aws ecs wait tasks-stopped --cluster $ECS_CLUSTER --tasks $TASK
-          CODE=$(aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks $TASK --query 'tasks[0].containers[0].exitCode' --output text)
-          test "$CODE" = "0"
-      - name: Deploy web service
-        run: |
-          TD=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].taskDefinition' --output text)
-          aws ecs describe-task-definition --task-definition $TD --query taskDefinition > td.json
-          jq --arg IMG "$IMAGE" '.containerDefinitions[0].image=$IMG | del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)' td.json > td-new.json
-          NEW=$(aws ecs register-task-definition --cli-input-json file://td-new.json --query 'taskDefinition.taskDefinitionArn' --output text)
-          aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --task-definition $NEW
-          aws ecs wait services-stable --cluster $ECS_CLUSTER --services $ECS_SERVICE
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Deploy (rolls back automatically if the site does not become ready)
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER_NAME: ${{ secrets.DEPLOY_USER }}
+        run: ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes "${USER_NAME}@${HOST}" "cd /srv/pnl-lens && infra/scripts/deploy.sh '${GITHUB_REF_NAME}'"
