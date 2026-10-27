@@ -50,9 +50,9 @@ A **file** is one P&L statement or tradebook downloaded from your broker (Excel,
 
 | Plan | Reports | Files per report | Create reports within | Price (India / elsewhere) |
 |---|---|---|---|---|
-| Single | 1 | 2 | 7 days | ₹99 / US$4.99 |
-| Snapshot | 5 | 3 | 6 months (183 days) | ₹499 / US$19 |
-| Progress | 25 | 3 | 3 months (92 days) | ₹1,499 / US$49 |
+| Single | 1 | 2 | 7 days | ₹99 / US$9 |
+| Snapshot | 5 | 3 | 3 months (92 days) | ₹499 / US$19 |
+| Progress | 25 | 3 | 6 months (183 days) | ₹1,499 / US$49 |
 | Discipline | 90 | 3 | 12 months (365 days) | ₹3,999 / US$129 |
 
 - The **validity period** is how long you can **create new reports**. It starts when payment is confirmed. Unused reports **expire** at the end of it and are not refunded or carried over. **LAWYER CHECK**
@@ -78,7 +78,7 @@ A **file** is one P&L statement or tradebook downloaded from your broker (Excel,
 
 To keep PnL Lens fast and safe for everyone, you agree not to:
 
-- run more than **20 analyses per day** or **3 at the same time** (limits may change, see below) **BUILD CHECK**
+- run more than **20 analyses per day** or **3 at the same time** (limits may change, see below) **BUILT ✓**
 - upload malware, files designed to harm our systems, or files that are not genuine broker statements
 - scrape, overload, probe or attack the Service, or bypass its limits or security
 - copy, resell or re-publish the Service or its reports as your own product, or use them to build a competing product
@@ -94,7 +94,7 @@ We may change usage limits to protect the Service. If a change reduces what a pa
 
 ## 9. Suspending or closing accounts
 
-- You can close your account at any time: **[Settings → Delete account]** **BUILD CHECK**. Closing an account does not refund unused plan fees (section 6).
+- You can close your account at any time: **Dashboard → Your data → Delete my account** **BUILT ✓**. Closing an account does not refund unused plan fees (section 6).
 - We may suspend or close an account that breaks these terms, or where the law requires it. Where reasonable, we will tell you first and give you the chance to download your reports. If we close the Service entirely, we will give at least **[30 days']** notice and refund the unused part of active plans. **LAWYER CHECK**
 
 ## 10. Availability and changes to the Service
