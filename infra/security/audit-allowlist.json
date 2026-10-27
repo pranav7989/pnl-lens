@@ -1,0 +1,15 @@
+{
+  "_what": "Dependency advisories accepted for a limited time, each with a reason and an end date. infra/scripts/audit.mjs fails on any other high/critical production advisory, and on any entry past its date.",
+  "entries": [
+    {
+      "package": "markdown-it",
+      "until": "2026-10-31",
+      "reason": "GHSA-gfr2-rv44-r23c (quadratic rendering of a multi-line link reference definition) and GHSA-vfgh-jcmw-g37q (only with html enabled; ours is html:false). Input is trusted only: blog posts written by the owner/admin and our own docs/legal files. Fixed in 15.0.3 (released 2026-10-16), which passes the 2-week rule on 2026-10-30."
+    },
+    {
+      "package": "next",
+      "until": "2026-10-29",
+      "reason": "next <= 15.5.27: critical RCE in the image optimizer with SVG files, and a Server Actions DoS (plus moderate ISR cache advisories). Mitigated now: no next/image, images.unoptimized in next.config, and Caddy answers /_next/image with 404; no Server Actions in the app; pages are force-dynamic. Fixed in 15.5.28 (released 2026-10-14), which passes the 2-week rule on 2026-10-28: bump then and remove this entry. postcss/source-map-js are pinned by npm overrides (8.5.29 / 1.2.2)."
+    }
+  ]
+}

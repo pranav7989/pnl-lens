@@ -1,0 +1,113 @@
+/**
+ * @file  apps/web/app/motion.css
+ * @area  Styles
+ * @what  Motion system (19 Oct 2026): easing/duration tokens, a CSS spring, page and view transitions, entrances, reveal-on-scroll, press/lift, sliding tab ink, shimmer, sheets. Reduced motion turns it all off.
+ */
+/*
+ * Rules: animate only transform, opacity and clip-path (never filter: animated blur crashes Linux WebKit) (GPU, no layout shift). Entrances never delay
+ * content for long: everything is fully visible within ~600 ms. Without JavaScript nothing is hidden (reveal
+ * states only apply under html.mo, set by an inline script in the layout). prefers-reduced-motion = static.
+ */
+:root {
+  --ease-out-expo: cubic-bezier(.16, 1, .3, 1);      /* Apple-style decelerate */
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: var(--ease-out-expo);
+  --d-1: 160ms; --d-2: 280ms; --d-3: 520ms; --d-4: 900ms;
+  --stagger: 60ms;
+}
+/* a gentle spring (≈4% overshoot) where linear() easing is supported */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root { --ease-spring: linear(0, .18 6%, .52 13%, .8 21%, .96 29%, 1.035 37%, 1.045 43%, 1.035 50%, 1.012 62%, .998 75%, 1); }
+}
+
+/* ---------------------------------------------------------------- page transitions (app/template.tsx) */
+@keyframes mo-page { from { opacity: 0; transform: translate3d(0, 10px, 0); } to { opacity: 1; transform: none; } }
+/* backwards, not both: a held transform animation would make this wrapper the containing block of position:fixed
+   children (the "See plans" pill, modals) in WebKit */
+.mo-page { animation: mo-page 460ms var(--ease-out-expo) backwards; }
+
+/* in-place swaps (document.startViewTransition): report tabs, sign-in steps, admin tabs */
+@keyframes mo-vt-out { to { opacity: 0; transform: translate3d(0, -4px, 0); } }
+@keyframes mo-vt-in { from { opacity: 0; transform: translate3d(0, 8px, 0); } }
+/* the page itself never cross-fades; only the named regions do (report tab panel, sign-in card, admin tab) */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-old(rv-tab), ::view-transition-old(mo-swap) { animation: mo-vt-out 180ms var(--ease-in-out) both; }
+::view-transition-new(rv-tab), ::view-transition-new(mo-swap) { animation: mo-vt-in 360ms var(--ease-out-expo) both; }
+/* the sign-in card morphs to the next step's height */
+.login-card { view-transition-name: mo-card; }
+::view-transition-group(mo-card) { animation-duration: 460ms; animation-timing-function: var(--ease-out-expo); }
+::view-transition-old(mo-card) { animation: mo-vt-out 160ms var(--ease-in-out) both; height: 100%; object-fit: none; object-position: top; }
+::view-transition-new(mo-card) { animation: mo-vt-in 380ms var(--ease-out-expo) 60ms both; height: 100%; object-fit: none; object-position: top; }
+
+/* ---------------------------------------------------------------- entrances on mount (no JS needed) */
+@keyframes mo-rise { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
+@keyframes mo-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mo-scale { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes mo-blur { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes mo-mask { from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translate3d(0, 40%, 0); } to { opacity: 1; clip-path: inset(0 0 -20% 0); transform: none; } }
+.mo-rise { animation: mo-rise var(--d-3) var(--ease-out-expo) both; }
+.mo-fade { animation: mo-fade var(--d-3) var(--ease-out-expo) both; }
+.mo-scale { animation: mo-scale var(--d-3) var(--ease-spring) both; }
+/* children of [data-stagger] enter one after another (index via --i, set inline or by the motion runtime) */
+[data-stagger] > * { animation: mo-rise var(--d-3) var(--ease-out-expo) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+
+/* ---------------------------------------------------------------- reveal on scroll (motion runtime adds .in) */
+html.mo [data-reveal]:not(.in) { opacity: 0; transform: translate3d(0, 18px, 0); }
+html.mo [data-reveal="scale"]:not(.in) { transform: scale(.94); }
+html.mo [data-reveal="blur"]:not(.in) { transform: translate3d(0, 10px, 0) scale(.985); }
+html.mo [data-reveal] { transition: opacity 640ms var(--ease-out-expo), transform 760ms var(--ease-out-expo);
+  transition-delay: calc(var(--i, 0) * var(--stagger)); }
+
+/* ---------------------------------------------------------------- touch feedback */
+.btn, .lp-btn, .linkbtn, .tabs button, .um-chips button, .bl-tags a, .dx-tabs button {
+  transition-property: background-color, border-color, color, opacity, transform, box-shadow;
+  transition-duration: var(--d-2); transition-timing-function: var(--ease-out-expo);
+}
+.btn:active:not(:disabled), .lp-btn:active, .um-chips button:active, .bl-tags a:active { transform: scale(.97); transition-duration: var(--d-1); }
+.btn:not(.ghost):not(:disabled):hover, .lp-btn:not(.ghost):hover { box-shadow: 0 8px 24px -10px rgba(255, 214, 10, .55); }
+.btn:disabled { transform: none; }
+/* lift: cards that respond to the pointer */
+.lift { transition: transform 420ms var(--ease-spring), border-color var(--d-2) var(--ease-out-expo), box-shadow 420ms var(--ease-out-expo); }
+@media (hover: hover) {
+  .lift:hover { transform: translate3d(0, -3px, 0); box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 214, 10, .08); }
+}
+/* focus rings settle into place */
+:focus-visible { transition: outline-offset var(--d-1) var(--ease-out-expo); }
+
+/* ---------------------------------------------------------------- sliding tab ink (motion runtime) */
+.mo-ink { position: absolute; left: 0; bottom: -1px; height: 2px; width: 1px; border-radius: 2px 2px 0 0; background: var(--y); pointer-events: none;
+  transform-origin: 0 50%; transition: transform 460ms var(--ease-spring), opacity var(--d-2) var(--ease-out-expo); will-change: transform; }
+.tabs.mo-has-ink button[aria-selected="true"] { border-bottom-color: transparent; }
+.tabs.mo-has-ink button::after { display: none; }
+
+/* ---------------------------------------------------------------- skeleton shimmer */
+@keyframes mo-shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+.shimmer { background: linear-gradient(90deg, var(--s2) 0%, var(--s3) 40%, var(--s2) 80%) 0 0 / 200% 100%; animation: mo-shimmer 1.6s linear infinite; border-radius: var(--r-sm); }
+.mo-skel { display: grid; gap: 10px; padding: 8px 0; } .mo-skel i { display: block; height: 14px; } .mo-skel i:nth-child(2) { width: 82%; } .mo-skel i:nth-child(3) { width: 64%; }
+
+/* ---------------------------------------------------------------- sheets (modals, lock messages) */
+@keyframes mo-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mo-sheet { from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.97); } to { opacity: 1; transform: none; } }
+.sheet-backdrop { animation: mo-backdrop 260ms var(--ease-out-expo) both; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.sheet { animation: mo-sheet 420ms var(--ease-spring) both; }
+
+/* status messages slide in where they appear */
+@keyframes mo-toast { from { opacity: 0; transform: translate3d(0, -6px, 0); } to { opacity: 1; transform: none; } }
+.status { animation: mo-toast 360ms var(--ease-out-expo) both; }
+@keyframes mo-shake { 0%, 100% { transform: none; } 20% { transform: translate3d(-6px, 0, 0); } 45% { transform: translate3d(5px, 0, 0); } 70% { transform: translate3d(-3px, 0, 0); } 85% { transform: translate3d(2px, 0, 0); } }
+.status.err { animation: mo-toast 300ms var(--ease-out-expo) both, mo-shake 420ms var(--ease-out-expo) 80ms; }
+
+/* header glass deepens once the page scrolls (motion runtime toggles .scrolled) */
+.app-header { transition: background-color var(--d-3) var(--ease-out-expo), border-color var(--d-3) var(--ease-out-expo), box-shadow var(--d-3) var(--ease-out-expo); }
+.app-header.scrolled { background: rgba(0, 0, 0, .86); box-shadow: 0 10px 30px -18px rgba(0, 0, 0, .9); }
+@keyframes mo-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 214, 10, .45); } 100% { box-shadow: 0 0 0 10px rgba(255, 214, 10, 0); } }
+.credits-pill { animation: mo-pulse 1.4s var(--ease-out-expo) 600ms 1 both; }
+
+/* ---------------------------------------------------------------- reduced motion: everything static */
+@media (prefers-reduced-motion: reduce) {
+  .mo-page, .mo-rise, .mo-fade, .mo-scale, [data-stagger] > *, .status, .sheet, .sheet-backdrop, .credits-pill { animation: none !important; }
+  html.mo [data-reveal]:not(.in) { opacity: 1; transform: none; }
+  .lift:hover { transform: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .mo-ink { transition: none; }
+}
