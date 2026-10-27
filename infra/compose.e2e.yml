@@ -1,0 +1,20 @@
+# @file  infra/compose.e2e.yml
+# @area  Ops
+# @what  Overlay for browser end-to-end tests: real sign-in (AUTH_MODE=jwt, codes written to the API's console mail log).
+#   docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.e2e.yml up -d --build --wait
+#   npm run test:e2e
+services:
+  api:
+    environment:
+      AUTH_MODE: jwt
+      ALLOW_DEV_AUTH_IN_PROD: "false"
+      MAIL_DRIVER: console                  # tests read the codes from the mail log; never send real email
+      # every test browser comes from this one machine, so the suite shares one rate-limit bucket (300/min) and hit 429s;
+      # local and Docker addresses are exempt here only (compose.prod.yml never passes it). Sign-in code limits still apply.
+      RATE_LIMIT_EXEMPT_IPS: 127.0.0.1,::1,172.16.0.0/12,192.168.0.0/16
+      OTP_PER_IP_PER_HOUR_OVERRIDE: "200"     # the suite signs up ~20 accounts per run from one address (production: 20)
+      PLAN_REMINDER_INTERVAL_MS: "2000"       # check-up reminders: checked every 2 s, any hour (production: 10 min, from 09:00 IST)
+      PLAN_REMINDER_FROM_HOUR: "0"
+  web:
+    environment:
+      AUTH_MODE: jwt
