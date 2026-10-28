@@ -27,7 +27,7 @@ for (const id of ids) {
     const plan = ['single', 'snapshot', 'snapshot', 'progress', 'progress', 'discipline'][r(0, 5)], inr = { single: 9900, snapshot: 49900, progress: 149900, discipline: 399900 }[plan];
     const intl = Math.random() < 0.2;
     await c.query(`insert into payments (user_id, gateway_order_id, gateway_payment_id, amount_minor, currency, status, plan_id, created_at) values ($1, $2, $3, $4, $5, $6, $7, now() - ($8 || ' days')::interval)`,
-      [id, 'order_' + Math.random().toString(36).slice(2), 'pay_' + Math.random().toString(36).slice(2), intl ? { single: 499, snapshot: 1900, progress: 4900, discipline: 12900 }[plan] : inr, intl ? 'USD' : 'INR', Math.random() < 0.06 ? 'failed' : 'paid', plan, r(0, 160)]);
+      [id, 'order_' + Math.random().toString(36).slice(2), 'pay_' + Math.random().toString(36).slice(2), intl ? { single: 900, snapshot: 1900, progress: 4900, discipline: 12900 }[plan] : inr, intl ? 'USD' : 'INR', Math.random() < 0.06 ? 'failed' : 'paid', plan, r(0, 160)]);
   }
 }
 const errs = [['Cannot read properties of undefined (reading \'symbol\')', 'client', '/upload'], ['PDF has no readable text', 'server', 'POST /api/reports'], ['ECONNRESET talking to Resend', 'server', 'POST /api/auth/otp/request'], ['Worker terminated: out of memory', 'client', '/upload']];

@@ -1,0 +1,19 @@
+# @file  infra/compose.load.yml
+# @area  Ops
+# @what  Overlay for the k6 load test: real sessions (AUTH_MODE=jwt) and the rate limiter skipping Docker's private ranges (k6 runs in a container).
+#   docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.load.yml up -d --build --wait
+#   node tests/load/prepare.mjs && tests/load/run.sh          (docs/LOAD_TEST.md)
+# Dev machine only. compose.prod.yml never passes RATE_LIMIT_EXEMPT_IPS, so production always rate-limits.
+services:
+  api:
+    environment:
+      AUTH_MODE: jwt
+      ALLOW_DEV_AUTH_IN_PROD: "false"
+      RATE_LIMIT_EXEMPT_IPS: 172.16.0.0/12,192.168.0.0/16
+  web:
+    environment:
+      AUTH_MODE: jwt
+  worker:
+    mem_limit: ${WORKER_MEM_LIMIT:-2g}
+    environment:
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
