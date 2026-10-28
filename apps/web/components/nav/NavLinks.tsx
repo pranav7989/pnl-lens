@@ -7,7 +7,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const LINKS = [['/dashboard', 'Dashboard'], ['/upload', 'New report'], ['/pricing', 'Credits']] as const;
+const LINKS = [['/dashboard', 'Dashboard'], ['/upload', 'New report'], ['/pricing', 'Plans']] as const;
 export default function NavLinks() {
   const path = usePathname();
   return (
