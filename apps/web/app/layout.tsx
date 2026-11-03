@@ -1,19 +1,23 @@
 /**
  * @file  apps/web/app/layout.tsx
  * @area  Pages
- * @what  Root layout: fonts (Manrope + ₹ glyph), header with logo and credits, browser error reporter.
+ * @what  Root layout: fonts (Manrope + ₹ glyph), html lang (en-IN / en by site), header with logo and reports left (from the API), browser error reporter.
  */
 import './globals.css';
 import './report.css';
+import './workspace.css';
+import './motion.css';
 import localFont from 'next/font/local';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getSessionUser } from '@/lib/auth/session';
-import { getStore } from '@/lib/store';
+import { getMe } from '@/lib/api-client';
+import { requestCountry } from '@/lib/auth/country';
+import { regionFor } from '@pnl-lens/shared/pricing';
 import NavLinks from '@/components/nav/NavLinks';
 import { LogoMark } from '@/components/brand/Logo';
 import ErrorReporter from '@/components/ErrorReporter';
 import LogoutButton from '@/components/auth/LogoutButton';
+import MotionRuntime from '@/components/motion/MotionRuntime';
 
 export const dynamic = 'force-dynamic';
 const manrope = localFont({ src: './fonts/manrope.woff2', variable: '--f-sans', weight: '200 800', display: 'swap', adjustFontFallback: false });
@@ -26,19 +30,24 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSessionUser();
-  const credits = user ? await getStore().getCredits(user.id).catch(() => null) : null;
+  const me = await getMe().catch(() => null);
+  const user = me?.user ?? null, left = me ? me.reportsLeft ?? 0 : null;
+  // REQ-7 SEO: en-IN on the India site, en on Global (same country rule as the landing page)
+  const lang = regionFor((await requestCountry()) || user?.country) === 'IN' ? 'en-IN' : 'en';
   return (
-    <html lang="en" className={`${manrope.variable} ${rupee.variable}`}>
+    <html lang={lang} className={`${manrope.variable} ${rupee.variable}`}>
       <head><meta name="color-scheme" content="dark" /></head>
       <body>
         <ErrorReporter />
+        <MotionRuntime />
         <header className="app-header">
           <div className="bar">
-            <Link href="/" className="brand" style={{ textDecoration: 'none' }}><LogoMark size={28} /><span>PnL Lens</span></Link>
-            {user ? <NavLinks /> : <div style={{ flex: 1 }} />}
+            <Link href="/" className="brand" style={{ textDecoration: 'none' }} aria-label="PnL Lens home"><LogoMark size={28} /><span>PnL Lens</span></Link>
+            {user ? <NavLinks /> : <nav className="app-nav guest"><Link href="/manual">User manual</Link></nav>}
             {user ? (
-              <><span className="credits-pill"><b>{credits ?? '—'}</b> credit{credits === 1 ? '' : 's'}</span>
+              <>{/* credits spec: customers see "reports"; usable reports of plans still open */}
+                {left ? <span className="credits-pill"><b>{left}</b> report{left === 1 ? '' : 's'} left</span>
+                  : <Link className="credits-pill" href="/pricing" aria-label="No reports left · See plans"><span className="pill-long">No reports left · </span><b>See plans</b></Link>}
                 {process.env.AUTH_MODE === 'jwt' && <LogoutButton />}</>
             ) : (
               <Link href="/login" className="btn">Sign in</Link>
