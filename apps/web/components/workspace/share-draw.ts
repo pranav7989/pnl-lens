@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/components/workspace/share-draw.ts
  * @area  Reports
- * @what  Draws the "My Trading Edge" share card on a canvas (card 1080×1728 or story 1080×1920) from shareCard()'s data; all text, colours and geometry come from packages/shared/src/insights/share.ts. No React, so tests can draw it on a plain page.
+ * @what  Draws the "My Trading Discipline" share card on a canvas (card 1080×1728 or story 1080×1920) from shareCard()'s data; all text, colours and geometry come from packages/shared/src/insights/share.ts. No React, so tests can draw it on a plain page.
  */
 import { CARD, STORY, COLORS, TEXT, LAYOUT, SLOT_STYLE, COPY, type ShareCardData, type PlacedTile, type TileKey } from '@pnl-lens/shared/insights/share';
 import { SHARE_QR } from '@pnl-lens/shared/insights/share-qr';
@@ -86,8 +86,12 @@ function tile(ctx: Ctx, F: string, t: PlacedTile) {
   if (st.icon) { ctx.fillStyle = st.value; ctx.strokeStyle = st.value; trophy(ctx, t.x + t.w - P - iconW, t.y + P - 4, iconW); }
   // label
   const L = TEXT.label;
-  ctx.fillStyle = st.labelInk; ctx.font = font(F, L, L.size); spacing(ctx, L.spacing, L.size); ctx.textBaseline = 'alphabetic';
-  ctx.fillText(t.label.toUpperCase(), t.x + P, t.y + P + L.size, t.w - P * 2 - iconW);
+  ctx.fillStyle = st.labelInk; ctx.textBaseline = 'alphabetic';
+  // the label shrinks (to 22px) rather than being squeezed in a narrow tile
+  const lw = t.w - P * 2 - iconW, ltext = t.label.toUpperCase();
+  let ls = L.size; ctx.font = font(F, L, ls); spacing(ctx, L.spacing, ls);
+  while (ctx.measureText(ltext).width > lw && ls > 22) { ls -= 1; ctx.font = font(F, L, ls); spacing(ctx, L.spacing, ls); }
+  ctx.fillText(ltext, t.x + P, t.y + P + L.size, lw);
   spacing(ctx, 0, 0);
   // sub line
   const B = TEXT.body;
@@ -138,7 +142,7 @@ export function drawCard(cv: HTMLCanvasElement, d: ShareCardData, format: ShareF
   }
   // tiles
   for (const t of [d.hero, ...d.tiles]) tile(ctx, F, t);
-  // footer: QR (dark modules on white, 4-module quiet zone), line, site, note
+  // footer: QR (dark modules on white, 4-module quiet zone), line, site, disclaimer
   const fy = L.footer.y, m = L.footer.qrModule, q = 4;
   ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.roundRect(L.margin, fy, L.footer.qr, L.footer.qr, 12); ctx.fill();
   ctx.fillStyle = '#000000';
@@ -147,6 +151,9 @@ export function drawCard(cv: HTMLCanvasElement, d: ShareCardData, format: ShareF
   ctx.fillStyle = COLORS.white; ctx.font = font(F, TEXT.body, TEXT.body.size); ctx.fillText(COPY.footer, fx, L.footer.line1Y, L.margin + L.width - fx);
   ctx.strokeStyle = COLORS.yellow; globe(ctx, fx + 18, L.footer.urlY - 15, 17);
   ctx.fillStyle = COLORS.yellow; ctx.font = font(F, TEXT.body, TEXT.body.url); ctx.fillText(COPY.url, fx + 50, L.footer.urlY);
-  ctx.fillStyle = COLORS.grey; ctx.font = font(F, TEXT.small, TEXT.small.size); ctx.fillText(COPY.note, fx, L.footer.noteY, L.margin + L.width - fx);
+  // the disclaimer: on every card, never switched off
+  ctx.fillStyle = COLORS.grey; ctx.font = font(F, TEXT.small, TEXT.small.size);
+  ctx.fillText(d.disclaimer[0], fx, L.footer.noteY, L.margin + L.width - fx);
+  ctx.fillText(d.disclaimer[1], fx, L.footer.note2Y, L.margin + L.width - fx);
   ctx.restore();
 }

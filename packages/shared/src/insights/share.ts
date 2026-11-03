@@ -1,25 +1,25 @@
 /**
  * @file  packages/shared/src/insights/share.ts
  * @area  Reports
- * @what  The "My Trading Edge" share card (v2, docs/SHARE_CARD.md): the tile catalogue (positives only), the deterministic slot filling, the founding badge text and every layout, colour and text style the browser draws with.
+ * @what  The "My Trading Discipline" share card (docs/SHARE_CARD.md): habit and discipline tiles only (no results, returns, money, names or securities), the deterministic slot filling, the founding badge text, the disclaimer and every layout, colour and text style the browser draws with.
  */
 /**
- * Pure. Every value is a count, a percentage, a weekday or month name, a level or an underlying's name: never a money
- * amount, a currency, a person's name or a contract symbol, so a card can be posted publicly. A tile is shown only
- * when it passes its strength rule; weak stats are left out, never shown in red. The browser draws the card
- * (apps/web/components/workspace/ShareCard.tsx); all text and geometry live here, once.
+ * Pure. Legal safety rule (owner, 3 Nov 2026): the card shows how a trader keeps to their process, never what they
+ * earned. No profit or loss, no return or win rate, no best trade/day/month, no security or underlying name, no money,
+ * no person's name: so a card can never read as a claim of returns or performance in a security (SEBI circular of
+ * Oct 2024 on unregistered persons) or as investment advice. Every value is a count of plan rules, habits, months or
+ * trades reviewed, a habit's name or a level. The disclaimer is drawn on every card and cannot be switched off. The
+ * browser draws the card (apps/web/components/workspace/share-draw.ts); all text and geometry live here, once.
  */
-import { consistency } from './deep';
 
-export type TileKey = 'streak' | 'planKept' | 'level' | 'winRun' | 'proIn' | 'bestDay' | 'bestTrade' | 'bestMonth'
-  | 'greenDays' | 'winRate' | 'tradesRead' | 'months' | 'habits';
+export type TileKey = 'planKept' | 'habitsFixed' | 'improving' | 'level' | 'topHabit' | 'months' | 'habits' | 'tradesReviewed';
 export interface Tile { key: TileKey; label: string; value: string; sub?: string }
 export type SlotId = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3';
 export interface PlacedTile extends Tile { slot: SlotId; x: number; y: number; w: number; h: number }
 export interface ShareOpts {
   planCheck?: { met: number; measured: number } | null;
   foundingNo?: number | null;
-  /** the hero the user picked (must be eligible); default: the first in HERO_ORDER */
+  /** the hero the user picked (must be eligible); default: the first in the hero order */
   hero?: TileKey | null;
   /** tiles the user switched off; the pool refills their slots (never below min(7, eligible)) */
   exclude?: TileKey[];
@@ -37,7 +37,9 @@ export interface ShareCardData {
   /** keys that may be switched off now (a spare tile can take the slot) */
   removable: TileKey[];
   founding: string | null;
-  /** tiles shown (hero included); fewer than 7 when the report has fewer strengths */
+  /** the two disclaimer lines drawn on every card */
+  disclaimer: [string, string];
+  /** tiles shown (hero included); fewer than 7 when the report has fewer */
   count: number;
   summary: string;
 }
@@ -71,7 +73,7 @@ export const LAYOUT = {
   } as Record<'A' | 'B' | 'C', { y: number; h: number; slots: [SlotId, number][] }>,
   /** tiles sit between the badge and the footer; fewer rows are centred in this band */
   band: { top: 620, bottom: 1470 },
-  footer: { y: 1500, qr: 164, qrModule: 4, line1Y: 1556, urlY: 1614, noteY: 1676 },
+  footer: { y: 1500, qr: 164, qrModule: 4, line1Y: 1540, urlY: 1596, noteY: 1644, note2Y: 1676 },
 } as const;
 export interface SlotStyle { fill: string; border: string | null; value: string; labelInk: string; icon?: 'trophy' }
 export const SLOT_STYLE: Record<SlotId, SlotStyle> = {
@@ -84,41 +86,35 @@ export const SLOT_STYLE: Record<SlotId, SlotStyle> = {
   C3: { fill: COLORS.card, border: COLORS.yellow, value: COLORS.yellow, labelInk: COLORS.grey },
 };
 export const COPY = {
-  title1: 'MY TRADING', title2: 'EDGE', brand: 'PnL Lens', founding: 'FOUNDING TRADER',
-  footer: 'Read your own P&L, trade by trade.', url: 'pnllens.com', note: 'Analysis of my own trades. Not investment advice.',
-  file: { card: 'pnl-lens-edge.png', story: 'pnl-lens-edge-story.png' },
-  shareText: 'My trading edge, from PnL Lens',
+  title1: 'MY TRADING', title2: 'DISCIPLINE', brand: 'PnL Lens', founding: 'FOUNDING TRADER',
+  footer: 'My own trades, reviewed with PnL Lens.', url: 'pnllens.com',
+  /** always on the card, never switched off */
+  note: 'Not investment advice or a recommendation.',
+  /** India: SEBI by name; elsewhere the general wording */
+  note2: { india: 'PnL Lens is not registered with SEBI.', global: 'PnL Lens is not a registered investment adviser.' },
+  file: { card: 'pnl-lens-discipline.png', story: 'pnl-lens-discipline-story.png' },
+  shareText: 'My trading discipline, reviewed with PnL Lens',
 } as const;
 
-/* ------------------------------------------------------------------ tile catalogue (spec §3) */
+/* ------------------------------------------------------------------ tile catalogue: discipline only */
 export const LABELS: Record<TileKey, string> = {
-  streak: 'Biggest achievement', planKept: 'Biggest achievement', level: 'Biggest achievement', winRun: 'Biggest achievement',
-  proIn: 'Pro in', bestDay: 'Best day', bestTrade: 'Best trade', bestMonth: 'Best month', greenDays: 'Green days',
-  winRate: 'Trades won', tradesRead: 'Trades read', months: 'Months analysed', habits: 'Habits tracked',
+  planKept: '30-day plan', habitsFixed: 'Habits fixed', improving: 'Months improving', level: 'Level reached',
+  topHabit: 'Strongest habit', months: 'Months reviewed', habits: 'Habits tracked', tradesReviewed: 'Trades reviewed',
 };
 /** short names for the dialog's chips */
 export const CHIP: Record<TileKey, string> = {
-  streak: 'Win streak', planKept: '30-day plan kept', level: 'Level reached', winRun: 'Wins in a row', proIn: 'Pro in',
-  bestDay: 'Best day', bestTrade: 'Best trade', bestMonth: 'Best month', greenDays: 'Green days', winRate: 'Trades won',
-  tradesRead: 'Trades read', months: 'Months analysed', habits: 'Habits tracked',
+  planKept: '30-day plan kept', habitsFixed: 'Habits fixed', improving: 'Months improving', level: 'Level reached',
+  topHabit: 'Strongest habit', months: 'Months reviewed', habits: 'Habits tracked', tradesReviewed: 'Trades reviewed',
 };
-const DEFAULTS: [SlotId, TileKey][] = [['A2', 'proIn'], ['B1', 'bestDay'], ['B2', 'bestTrade'], ['C1', 'bestMonth'], ['C2', 'greenDays'], ['C3', 'tradesRead']];
-/** spec pool, then (only when it runs dry on a small report) the achievements not used as the hero */
-const POOL: TileKey[] = ['winRate', 'planKept', 'bestTrade', 'months', 'habits', 'tradesRead', 'level', 'streak', 'winRun'];
+const HERO_ORDER: TileKey[] = ['planKept', 'habitsFixed', 'improving', 'level', 'tradesReviewed'];
+const DEFAULTS: [SlotId, TileKey][] = [['A2', 'topHabit'], ['B1', 'level'], ['B2', 'habitsFixed'], ['C1', 'months'], ['C2', 'habits'], ['C3', 'tradesReviewed']];
+const POOL: TileKey[] = ['planKept', 'improving', 'level', 'habitsFixed', 'topHabit', 'months', 'habits', 'tradesReviewed'];
 export const MIN_TILES = 7;
-export const BEST_TRADE_CAP = 999;
 
-const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const MON = MONTH.map((m) => m.slice(0, 3));
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const HIGH_LEVELS = ['Steady', 'Disciplined', 'Elite'];
-/** strike, expiry or option-type codes: never on a card (e.g. BANKNIFTY2262333000CE, NIFTY24OCT52000PE) */
-export const CONTRACT_RE = /\d{2}(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)|\d(CE|PE|C|P)\b|\d{5,}|\s/i;
-
-type Trade = Record<string, any>;
-const pct = (x: number) => `${Math.round(x * 100)}%`;
-const dayOf = (t: Trade): string | null => (t.exitDate || t.entryDate ? String(t.exitDate || t.entryDate).slice(0, 10) : null);
-const validDay = (d: string | null): d is string => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d);
+/** a habit dimension counts as "strongest" from this Progress score up */
+const TOP_HABIT_MIN = 70;
 
 export function periodLabel(from?: string | null, to?: string | null): string {
   if (!from || !to) return '';
@@ -132,98 +128,50 @@ export function periodLabel(from?: string | null, to?: string | null): string {
 /** "#0427 / 1000" */
 export const foundingLabel = (n: number) => `#${String(Math.trunc(n)).padStart(4, '0')} / 1000`;
 
-/** "+184%", capped at "+999%" */
-export const plusPct = (p: number) => `+${Math.min(BEST_TRADE_CAP, Math.round(p))}%`;
+/** India reports name SEBI in the disclaimer; others use the general wording. */
+export const isIndia = (report: any) => report?.m?.market === 'India' || report?.m?.currency === 'INR';
+export const disclaimerFor = (report: any): [string, string] => [COPY.note, isIndia(report) ? COPY.note2.india : COPY.note2.global];
 
-/** An underlying's name is allowed on a card; anything that looks like a contract code is not. */
-export const safeUnderlying = (u: unknown): string | null => {
-  const s = typeof u === 'string' ? u.trim().toUpperCase() : '';
-  return s && s.length <= 20 && /^[A-Z0-9&.-]+$/.test(s) && !CONTRACT_RE.test(s) && /[A-Z]/.test(s) ? s : null;
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const HERO_TEXT: Partial<Record<TileKey, (t: Tile) => Pick<Tile, 'value' | 'sub'>>> = {
+  planKept: (t) => ({ value: t.value, sub: 'from my 30-day plan' }),
+  habitsFixed: (t) => ({ value: `${plural(Number(t.value), 'habit')} fixed` }),
+  improving: (t) => ({ value: `${t.value} months improving` }),
+  level: (t) => ({ value: `Reached ${t.value}` }),
 };
 
-/** Every tile this report can show, keyed; only the ones that pass their strength rule. */
-export function eligibleTiles(report: any, opts: Pick<ShareOpts, 'planCheck'> = {}): { tiles: Map<TileKey, Tile>; streakDays: number } {
-  const T: Trade[] = (report?.trades || []).filter((t: Trade) => Number.isFinite(t?.pnl));
+/** Every tile this report can show: each only when it is a real discipline strength. */
+export function eligibleTiles(report: any, opts: Pick<ShareOpts, 'planCheck'> = {}): Map<TileKey, Tile> {
+  const n = (report?.trades || []).filter((t: any) => Number.isFinite(t?.pnl)).length;
   const P = report?.progress || null;
   const out = new Map<TileKey, Tile>();
   const put = (key: TileKey, value: string, sub?: string) => out.set(key, { key, label: LABELS[key], value, ...(sub ? { sub } : {}) });
 
-  // trading days in order (needs dates)
-  const byDay = new Map<string, number>();
-  for (const t of T) { const d = dayOf(t); if (validDay(d)) byDay.set(d, (byDay.get(d) || 0) + t.pnl); }
-  const days = [...byDay.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-  let streak = 0, run = 0;
-  for (const [, p] of days) { run = p > 0 ? run + 1 : 0; streak = Math.max(streak, run); }
-  if (streak >= 3) put('streak', `${streak}-day win streak`);
-
   const pc = opts.planCheck;
   if (pc && pc.measured > 0 && pc.met >= 3) put('planKept', `${pc.met} of ${pc.measured} rules kept`);
 
+  const fixed = Array.isArray(P?.tracker) ? P.tracker.filter((t: any) => t?.status === 'fixed').length : 0;
+  if (fixed >= 1) put('habitsFixed', String(fixed));
+
+  const streak = Number(P?.improvingStreak) || 0;
+  if (streak >= 2) put('improving', String(streak));
+
   const lvl = P?.level?.name;
-  if (typeof lvl === 'string' && HIGH_LEVELS.includes(lvl)) put('level', `Reached ${lvl}`);
+  if (typeof lvl === 'string' && HIGH_LEVELS.includes(lvl)) put('level', lvl);
 
-  // wins in a row, in time order (needs dates; trades on the same day keep the statement's order)
-  const dated = T.map((t, i) => ({ t, i, d: dayOf(t) })).filter((x) => validDay(x.d));
-  if (dated.length === T.length && T.length) {
-    dated.sort((a, b) => (a.d! < b.d! ? -1 : a.d! > b.d! ? 1 : a.i - b.i));
-    let best = 0, r = 0;
-    for (const { t } of dated) { r = t.pnl > 0 ? r + 1 : 0; best = Math.max(best, r); }
-    if (best >= 5) put('winRun', `${best} wins in a row`);
-  }
+  // the habit dimension with the highest Progress score (70+), named; ties keep the Progress order
+  const labels = P?.labels && typeof P.labels === 'object' ? P.labels as Record<string, string> : {};
+  const d = P?.overall?.d && typeof P.overall.d === 'object' ? P.overall.d as Record<string, number> : {};
+  const top = Object.keys(labels).filter((k) => Number.isFinite(d[k]) && d[k] >= TOP_HABIT_MIN)
+    .reduce<string | null>((best, k) => (best === null || d[k] > d[best] ? k : best), null);
+  if (top) put('topHabit', labels[top]);
 
-  // pro in: an underlying with 15+ trades, 55%+ won, net positive; the highest win rate
-  const byU = new Map<string, Trade[]>();
-  for (const t of T) { const u = safeUnderlying(t.underlying); if (u) byU.set(u, [...(byU.get(u) || []), t]); }
-  const pro = [...byU.entries()]
-    .map(([u, xs]) => ({ u, n: xs.length, wr: xs.filter((t) => t.pnl > 0).length / xs.length, pnl: xs.reduce((s, t) => s + t.pnl, 0) }))
-    .filter((x) => x.n >= 15 && x.wr >= 0.55 && x.pnl > 0)
-    .sort((a, b) => b.wr - a.wr || b.n - a.n || (a.u < b.u ? -1 : 1))[0];
-  if (pro) put('proIn', pro.u, `${pct(pro.wr)} win rate`);
-
-  // best weekday (5+ trades that weekday, net positive)
-  const byW = new Map<number, { n: number; pnl: number }>();
-  for (const t of T) { const d = dayOf(t); if (!validDay(d)) continue; const w = new Date(`${d}T00:00:00Z`).getUTCDay(); const c = byW.get(w) || { n: 0, pnl: 0 }; c.n++; c.pnl += t.pnl; byW.set(w, c); }
-  const bw = [...byW.entries()].filter(([, c]) => c.n >= 5 && c.pnl > 0).sort((a, b) => b[1].pnl - a[1].pnl || a[0] - b[0])[0];
-  if (bw) put('bestDay', DOW[bw[0]]);
-
-  // best trade by return on what was paid; only trades at least the median size, so a tiny lottery ticket can't top it
-  const sized = T.filter((t) => Number.isFinite(t.pct) && Number(t.buy) > 0);
-  if (sized.length) {
-    const buys = sized.map((t) => Number(t.buy)).sort((a, b) => a - b);
-    const med = buys[Math.floor((buys.length - 1) / 2)];
-    const top = sized.filter((t) => Number(t.buy) >= med && t.pct >= 1).sort((a, b) => b.pct - a.pct)[0];
-    if (top) put('bestTrade', plusPct(top.pct), top.isOpt ? 'return on premium' : 'return on trade');
-  }
-
-  // best month (2+ months; net positive); the year when the period spans more than 12 months
-  const byM = new Map<string, number>();
-  for (const [d, p] of days) byM.set(d.slice(0, 7), (byM.get(d.slice(0, 7)) || 0) + p);
-  if (byM.size >= 2) {
-    const ms = [...byM.keys()].sort();
-    const span = (Number(ms.at(-1)!.slice(0, 4)) - Number(ms[0].slice(0, 4))) * 12 + Number(ms.at(-1)!.slice(5, 7)) - Number(ms[0].slice(5, 7));
-    const bm = [...byM.entries()].filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
-    if (bm) put('bestMonth', `${MONTH[Number(bm[0].slice(5, 7)) - 1]}${span >= 12 ? ` ${bm[0].slice(0, 4)}` : ''}`);
-  }
-
-  const c = consistency(T as any);
-  if (c && c.days >= 5 && c.greenDays >= 0.5) put('greenDays', pct(c.greenDays));
-
-  if (T.length >= 20) { const wr = T.filter((t) => t.pnl > 0).length / T.length; if (wr >= 0.5) put('winRate', pct(wr)); }
-  if (T.length) put('tradesRead', String(T.length));
-  if (byM.size >= 1) put('months', String(byM.size));
-  const habits = P?.labels && typeof P.labels === 'object' ? Object.keys(P.labels).length : 0;
+  const months = Array.isArray(P?.months) ? P.months.length : 0;
+  if (months >= 1) put('months', String(months));
+  const habits = Object.keys(labels).length;
   if (habits) put('habits', String(habits));
-  return { tiles: out, streakDays: streak };
-}
-
-/** Hero order: streak ≥ 5 days → plan kept → level → streak 3–4 days → wins in a row → trades read. */
-function heroOrder(tiles: Map<TileKey, Tile>, streakDays: number): TileKey[] {
-  const o: TileKey[] = [];
-  if (tiles.has('streak') && streakDays >= 5) o.push('streak');
-  for (const k of ['planKept', 'level'] as TileKey[]) if (tiles.has(k)) o.push(k);
-  if (tiles.has('streak') && streakDays < 5) o.push('streak');
-  for (const k of ['winRun', 'tradesRead'] as TileKey[]) if (tiles.has(k)) o.push(k);
-  return o;
+  if (n) put('tradesReviewed', String(n));
+  return out;
 }
 
 /** Fill the 6 other slots: defaults first, then the pool, skipping used and excluded tiles; empty when nothing is left. */
@@ -259,9 +207,9 @@ function place(filled: [SlotId, Tile][]): PlacedTile[] {
 }
 
 export function shareCard(report: any, opts: ShareOpts = {}): ShareCardData {
-  const { tiles, streakDays } = eligibleTiles(report, opts);
-  const heroOptions = heroOrder(tiles, streakDays);
-  const hero = opts.hero && heroOptions.includes(opts.hero) ? opts.hero : heroOptions[0] ?? 'tradesRead';
+  const tiles = eligibleTiles(report, opts);
+  const heroOptions = HERO_ORDER.filter((k) => tiles.has(k));
+  const hero = opts.hero && heroOptions.includes(opts.hero) ? opts.hero : heroOptions[0] ?? 'tradesReviewed';
   const exclude = new Set((opts.exclude || []).filter((k) => k !== hero));
   const want = Math.min(MIN_TILES, tiles.size);
   // a switched-off tile stays off only while the card still shows min(7, eligible) tiles
@@ -271,7 +219,9 @@ export function shareCard(report: any, opts: ShareOpts = {}): ShareCardData {
   const shown = new Set<TileKey>([hero, ...slots.map(([, k]) => k).filter((k): k is TileKey => !!k)]);
   const options = [...tiles.keys()].filter((k) => k !== hero);
   const removable = [...shown].filter((k) => k !== hero && fill(tiles, hero, new Set([...keep, k])).filter(([, x]) => x).length + 1 >= want);
-  const heroTile = tiles.get(hero) ?? { key: 'tradesRead' as TileKey, label: LABELS.tradesRead, value: '0' };
+  // as the hero, an achievement reads as one sentence under "Biggest achievement"
+  const base = tiles.get(hero) ?? { key: 'tradesReviewed' as TileKey, label: LABELS.tradesReviewed, value: '0' };
+  const heroTile: Tile = HERO_TEXT[hero] ? { key: hero, label: 'Biggest achievement', ...HERO_TEXT[hero]!(base) } : base;
   const placed = place([['A1', heroTile], ...slots.filter((s): s is [SlotId, TileKey] => !!s[1]).map(([s, k]) => [s, tiles.get(k)!] as [SlotId, Tile])]);
   const fno = Number.isInteger(opts.foundingNo) && opts.foundingNo! >= 1 && opts.foundingNo! <= 1000 ? opts.foundingNo! : null;
   const founding = fno && opts.badge !== false ? foundingLabel(fno) : null;
@@ -279,6 +229,6 @@ export function shareCard(report: any, opts: ShareOpts = {}): ShareCardData {
   const summary = placed.map((t) => `${t.label}: ${t.value}${t.sub ? ` (${t.sub})` : ''}`).join('; ');
   return {
     period: periodLabel(m.from, m.to), hero: placed[0], tiles: placed.slice(1), heroOptions, options, removable, founding,
-    count: placed.length, summary,
+    disclaimer: disclaimerFor(report), count: placed.length, summary,
   };
 }

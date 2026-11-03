@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/components/workspace/ShareCard.tsx
  * @area  Reports
- * @what  "Share progress": the "My Trading Edge" card (strengths only, no money, no names, no contract codes) drawn on a canvas in the browser, as a 1080×1728 card or a 1080×1920 story; pick the hero and tiles, show or hide the founding badge, download or share.
+ * @what  "Share progress": the "My Trading Discipline" card (habits and plan discipline only: no results, returns, money, names or securities; disclaimer always on) drawn on a canvas in the browser, as a 1080×1728 card or a 1080×1920 story; pick the hero and tiles, show or hide the founding badge, download or share.
  */
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -55,7 +55,7 @@ export default function ShareCard({ report, planCheck, onUsed }: { report: any; 
         <div className="sc-backdrop" role="dialog" aria-modal="true" aria-label="Share your progress" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
           <div className="sc-dialog" data-share>
             <div className="sc-head"><h3>Share your progress</h3><button type="button" className="btn ghost" onClick={() => setOpen(false)} aria-label="Close">×</button></div>
-            <p className="muted sc-note">Only your strengths, as percentages, counts and names of days, months and underlyings (like NIFTY): no money amounts, no names and no contract codes.</p>
+            <p className="muted sc-note">Shows how you keep to your process: plan rules kept, habits fixed, your level and habits. Never your profit or loss, returns, win rate, money, names or what you traded. The disclaimer is always on the card.</p>
             {data.heroOptions.length > 1 && <>
               <p className="sc-lbl">Biggest achievement</p>
               <div className="rw-chips sc-pick" data-share-hero>{data.heroOptions.map((k) => (
@@ -67,13 +67,13 @@ export default function ShareCard({ report, planCheck, onUsed }: { report: any; 
               const on = shown.has(k), locked = on && !data.removable.includes(k);
               return <button key={k} type="button" className={`rw-chip${on ? ' on' : ''}`} aria-pressed={on} disabled={locked} title={locked ? 'Needed to fill the card' : undefined} onClick={() => toggle(k)}>{CHIP[k]}</button>;
             })}</div>
-            {data.count < 7 && <p className="muted sc-note">Add more statements to unlock more tiles.</p>}
+            {data.count < 7 && <p className="muted sc-note">Upload more months and follow a 30-day plan to unlock more tiles.</p>}
             <div className="rw-chips sc-pick">
               <button type="button" className={`rw-chip${format === 'card' ? ' on' : ''}`} aria-pressed={format === 'card'} onClick={() => setFormat('card')} data-share-format="card">Card</button>
               <button type="button" className={`rw-chip${format === 'story' ? ' on' : ''}`} aria-pressed={format === 'story'} onClick={() => setFormat('story')} data-share-format="story">Story</button>
               {foundingNo !== null && <button type="button" className={`rw-chip${badge ? ' on' : ''}`} aria-pressed={badge} onClick={() => setBadge((b) => !b)} data-share-badge>Founding badge</button>}
             </div>
-            <canvas ref={cv} className="sc-canvas" width={S.w} height={S.h} role="img" aria-label={`My trading edge card${data.period ? `, ${data.period}` : ''}${data.founding ? `, founding trader ${data.founding}` : ''}: ${data.summary}`} data-share-canvas />
+            <canvas ref={cv} className="sc-canvas" width={S.w} height={S.h} role="img" aria-label={`My trading discipline card${data.period ? `, ${data.period}` : ''}${data.founding ? `, founding trader ${data.founding}` : ''}: ${data.summary}. ${data.disclaimer.join(' ')}`} data-share-canvas />
             <ul className="sc-items" data-share-items>{[data.hero, ...data.tiles].map((t) => <li key={t.key}>{t.label}: {t.value}{t.sub ? ` (${t.sub})` : ''}</li>)}</ul>
             <div className="sc-actions">
               <button type="button" className="btn" onClick={download} data-share-download>Download image</button>

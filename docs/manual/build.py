@@ -240,13 +240,13 @@ def build(key):
 <p>When you upload your next statement, the new report's Progress tab scores the plan: how many measurable rules you met, rule by rule. The next plan PDF opens with “Your last plan: X of Y measurable rules met.”</p>''')
 
   S('share', 'Share your progress', f'''
-<p><b>Share progress</b> in the report header makes a <b>My Trading Edge</b> image of your strengths: a <b>Card</b> (1080 × 1728, for a post) or a <b>Story</b> (1080 × 1920).</p>
-<ul><li><b>Biggest achievement</b>, the large yellow tile: a winning-day streak, 30-day plan rules kept, the level you reached (Steady or higher), or wins in a row. Pick another one if you have more than one.</li>
-<li>Up to six more tiles, only the ones that are real strengths: the underlying you are best at (for example {'BANKNIFTY' if india else 'AAPL'}, with 15 or more trades and most of them won), best weekday, best trade as a %, best month, green days, trades won, trades read, months analysed and habits tracked. A weak stat is left out, never shown. Switch a tile off and the next strength takes its place.</li>
-<li>A small report shows fewer tiles; more statements unlock more.</li>
+<p><b>Share progress</b> in the report header makes a <b>My Trading Discipline</b> image: a <b>Card</b> (1080 × 1728, for a post) or a <b>Story</b> (1080 × 1920). It shows how well you keep to your process, never what you earned.</p>
+<ul><li><b>Biggest achievement</b>, the large yellow tile: 30-day plan rules kept, habits fixed, months in a row your score improved, or the level you reached (Steady or higher). Pick another one if you have more than one.</li>
+<li>Up to six more tiles: your strongest habit (for example Cost efficiency), your level, habits fixed, months reviewed, habits tracked and trades reviewed. Switch one off and the next one takes its place, when there is one.</li>
+<li>A small report shows fewer tiles; more months and a 30-day plan unlock more.</li>
 <li><b>Founding trader</b>: the first 1,000 paying traders get a number (for example #0427 / 1000) that can appear on the card. Hide it with <b>Founding badge</b>.</li>
 <li>A QR code takes anyone who scans it to pnllens.com. It carries nothing about you.</li></ul>
-<p>The card never shows money amounts, your name or contract codes (strike, expiry, call/put); the name of an underlying (like {'NIFTY' if india else 'AAPL'}) can appear. It is made in your browser and nothing is sent anywhere until you choose <b>Download image</b>, or <b>Share…</b> on a phone to send it straight to an app.</p>''')
+<p>The card never shows your profit or loss, returns, win rate, best trades, money amounts, your name or anything you traded{' (no stock, index or contract names)' if india else ' (no stock, option or coin names)'}. Every card carries the line “Not investment advice or a recommendation.” and “{'PnL Lens is not registered with SEBI.' if india else 'PnL Lens is not a registered investment adviser.'}”, which cannot be removed. It is made in your browser and nothing is sent anywhere until you choose <b>Download image</b>, or <b>Share…</b> on a phone to send it straight to an app.</p>''')
 
   S('lifetime', 'All my trading (lifetime view)', f'''
 <p>With two or more reports, the dashboard shows <b>All my trading</b>: one picture of all your reports together.</p>

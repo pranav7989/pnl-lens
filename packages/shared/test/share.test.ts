@@ -1,122 +1,125 @@
 /**
  * @file  packages/shared/test/share.test.ts
  * @area  Tests
- * @what  Share card v2 on every golden report: no money, currency, contract symbol or name; positives only; deterministic slot filling (dates or not, 1 or many months, plan or not, founding number or not); formats; layout fits; the committed QR reads back as SHARE_URL.
+ * @what  Share card ("My Trading Discipline") on every golden report: no results, returns, percentages, money, names, securities or underlyings (legal safety rule); the disclaimer always present (SEBI named for India); deterministic slot filling; formats; layout fits; the committed QR reads back as SHARE_URL.
  */
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import jsQR from 'jsqr';
-import {
-  shareCard, eligibleTiles, periodLabel, foundingLabel, plusPct, safeUnderlying, LAYOUT, CARD, COLORS, SLOT_STYLE, TEXT, MIN_TILES,
-  type TileKey,
-} from '../src/insights/share';
+import { shareCard, eligibleTiles, periodLabel, foundingLabel, disclaimerFor, LAYOUT, CARD, TEXT, MIN_TILES, COPY, type TileKey } from '../src/insights/share';
 import { SHARE_QR, SHARE_URL } from '../src/insights/share-qr';
 
 const dir = join(__dirname, '../../engine/test/golden');
 const goldens = readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => ({ name: f, report: JSON.parse(readFileSync(join(dir, f), 'utf8')).report })).filter((g) => g.report);
 const get = (n: string) => goldens.find((g) => g.name === n)!.report;
-const tb = get('zerodha_tradebook_csv.json');           // dated, 3 months, 96 trades
-const fo = get('zerodha_fo_statement_xlsx.json');       // no dates
-const dhan = get('dhan_tradebook_csv.json');            // dated, 1 month
-const groww = get('groww_pnl_csv.json');                // 5 trades, mostly losses
+const tb = get('zerodha_tradebook_csv.json');           // 3 months, Disciplined, 2 habits fixed
+const fo = get('zerodha_fo_statement_xlsx.json');       // no dates, no months
+const groww = get('groww_pnl_csv.json');                // 5 trades, 1 month
+const ibkr = get('ibkr_tradebook_csv.json');            // USD
 const keys = (c: ReturnType<typeof shareCard>) => [c.hero.key, ...c.tiles.map((t) => t.key)];
+const PLAN = { planCheck: { met: 4, measured: 5 } };
 
-describe('share card v2: privacy and positives on every golden report', () => {
+/** anything that would make the card a claim of results or returns, or name a security or a person */
+const RESULT_WORDS = /%|[₹$€£¥]|\b(INR|USD|EUR|GBP|Rs\.?|rupees?|dollars?|lakh|crore|profit|loss|losses|gain|return|returns|won|win|wins|winning|best|worst|green|red|P&L|pnl|points?|target|edge|pro)\b/i;
+
+describe('legal safety: no results, returns, money, names or securities on any golden report', () => {
   for (const g of goldens) {
-    it(`${g.name}`, () => {
-      for (const opts of [{}, { planCheck: { met: 4, measured: 5 }, foundingNo: 427 }]) {
+    it(g.name, () => {
+      for (const opts of [{}, { ...PLAN, foundingNo: 427 }]) {
         const c = shareCard(g.report, opts);
-        const text = JSON.stringify(c);
-        // no money: no currency signs or codes, no amounts with units
-        expect(text).not.toMatch(/[₹$€£¥]|\b(INR|USD|EUR|GBP|Rs\.?|rupees?|dollars?|lakh|crore|L\b|Cr\b|k\b)/i);
-        // no contract symbols: only an underlying's plain name may appear
-        for (const t of g.report.trades) if (t.symbol !== t.underlying) expect(text).not.toContain(String(t.symbol));
-        expect(text).not.toMatch(/\d{2}(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\d|\d(CE|PE)\b/);
-        // no names
-        if (g.report.m.clientId) expect(text).not.toContain(String(g.report.m.clientId));
-        // positives only: no minus signs, no negative numbers, no red
-        for (const t of [c.hero, ...c.tiles]) {
-          expect(t.value).not.toMatch(/[−-]\s*\d|negative|loss|worst/i);
-          expect(t.value.length).toBeGreaterThan(0);
+        const shown = [c.hero, ...c.tiles].flatMap((t) => [t.label, t.value, t.sub ?? '']).join(' | ');
+        expect(shown).not.toMatch(RESULT_WORDS);
+        // no security, contract or underlying name anywhere on the card
+        for (const t of g.report.trades) {
+          for (const name of [t.symbol, t.underlying].filter((x) => typeof x === 'string' && x.length >= 2)) {
+            const esc = String(name).toUpperCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            expect(shown.toUpperCase()).not.toMatch(new RegExp(`(^|[^A-Z0-9])${esc}([^A-Z0-9]|$)`));
+          }
         }
-        const palette: string[] = [...Object.values(COLORS), ...Object.values(SLOT_STYLE).flatMap((s) => [s.fill, s.value, s.border ?? ''])];
-        for (const red of ['#FF6961', '#FF3B30', '#E5484D', '#FF0000']) expect(palette).not.toContain(red);
-        // no duplicates; deterministic
+        if (g.report.m.clientId) expect(JSON.stringify(c)).not.toContain(String(g.report.m.clientId));
+        // the disclaimer is always there
+        expect(c.disclaimer[0]).toBe('Not investment advice or a recommendation.');
+        expect(c.disclaimer[1]).toMatch(/^PnL Lens is not (registered with SEBI|a registered investment adviser)\.$/);
+        // no duplicates; same report, same card
         expect(new Set(keys(c)).size).toBe(keys(c).length);
         expect(shareCard(g.report, opts)).toEqual(c);
-        expect(c.count).toBe(Math.min(MIN_TILES, eligibleTiles(g.report, opts).tiles.size));
+        expect(c.count).toBe(Math.min(MIN_TILES, eligibleTiles(g.report, opts).size));
+        expect(c.count).toBeGreaterThanOrEqual(1);
       }
     });
   }
+  it('the card copy itself makes no claim', () => {
+    const copy = [COPY.title1, COPY.title2, COPY.footer, COPY.note, COPY.note2.india, COPY.note2.global, COPY.shareText].join(' ');
+    expect(copy.replaceAll('PnL Lens', '')).not.toMatch(RESULT_WORDS);
+  });
 });
 
-describe('strength rules', () => {
-  it('every shown tile passes its own rule (checked independently on the trades)', () => {
+describe('disclaimer', () => {
+  it('names SEBI for India, general wording elsewhere', () => {
+    expect(disclaimerFor(tb)[1]).toBe('PnL Lens is not registered with SEBI.');
+    expect(disclaimerFor(ibkr)[1]).toBe('PnL Lens is not a registered investment adviser.');
+    expect(shareCard(tb).disclaimer).toEqual(disclaimerFor(tb));
+  });
+});
+
+describe('tiles', () => {
+  it('each tile only when it is a real discipline strength', () => {
     for (const g of goldens) {
-      const T = g.report.trades.filter((t: any) => Number.isFinite(t.pnl));
-      const { tiles } = eligibleTiles(g.report, { planCheck: { met: 2, measured: 5 } });
-      expect(tiles.has('planKept')).toBe(false);                                       // 2 kept is not a strength
-      const wr = T.filter((t: any) => t.pnl > 0).length / T.length;
-      expect(tiles.has('winRate')).toBe(T.length >= 20 && wr >= 0.5);
-      const lvl = g.report.progress?.level?.name;
-      expect(tiles.has('level')).toBe(['Steady', 'Disciplined', 'Elite'].includes(lvl));
-      const pro = tiles.get('proIn');
-      if (pro) {
-        const xs = T.filter((t: any) => String(t.underlying).toUpperCase() === pro.value);
-        expect(xs.length).toBeGreaterThanOrEqual(15);
-        expect(xs.filter((t: any) => t.pnl > 0).length / xs.length).toBeGreaterThanOrEqual(0.55);
-        expect(xs.reduce((s: number, t: any) => s + t.pnl, 0)).toBeGreaterThan(0);
-      }
+      const P = g.report.progress;
+      const t = eligibleTiles(g.report, { planCheck: { met: 2, measured: 5 } });
+      expect(t.has('planKept')).toBe(false);                                         // 2 kept is not shown
+      expect(t.has('level')).toBe(['Steady', 'Disciplined', 'Elite'].includes(P?.level?.name));
+      expect(t.has('habitsFixed')).toBe((P?.tracker || []).some((x: any) => x.status === 'fixed'));
+      expect(t.has('improving')).toBe((P?.improvingStreak || 0) >= 2);
+      expect(t.has('months')).toBe((P?.months || []).length >= 1);
+      const top = t.get('topHabit');
+      if (top) expect(Object.values(P.labels)).toContain(top.value);
     }
   });
-  it('reports without dates show no date tiles', () => {
-    const { tiles } = eligibleTiles(fo);
-    for (const k of ['streak', 'winRun', 'bestDay', 'bestMonth', 'greenDays', 'months'] as TileKey[]) expect(tiles.has(k)).toBe(false);
+  it('values', () => {
+    const t = eligibleTiles(tb, PLAN);
+    expect(t.get('planKept')).toMatchObject({ label: '30-day plan', value: '4 of 5 rules kept' });
+    expect(t.get('habitsFixed')).toMatchObject({ label: 'Habits fixed', value: '2' });
+    expect(t.get('level')!.value).toBe('Disciplined');
+    expect(t.get('topHabit')!.value).toBe('Trade selection');                     // activity 100 comes before costs 100
+    expect(t.get('months')!.value).toBe('3');
+    expect(t.get('habits')!.value).toBe('6');
+    expect(t.get('tradesReviewed')!.value).toBe('96');
   });
-  it('one month: no best month; many months: best month is a month name', () => {
-    expect(eligibleTiles(dhan).tiles.has('bestMonth')).toBe(false);
-    expect(eligibleTiles(tb).tiles.get('bestMonth')!.value).toMatch(/^(January|February|March|April|May|June|July|August|September|October|November|December)$/);
-  });
-  it('a losing, small report still gets a card, with fewer tiles and no weak stat', () => {
-    const c = shareCard(groww);
+  it('a statement without dates still gets a card, with fewer tiles', () => {
+    const c = shareCard(fo);
+    expect(keys(c)).not.toContain('months');
     expect(c.count).toBeLessThan(MIN_TILES);
-    expect(keys(c)).not.toContain('winRate');
-    expect(keys(c)).not.toContain('bestTrade');
+    expect(c.hero.key).toBe('tradesReviewed');
+    expect(c.hero.label).toBe('Trades reviewed');
   });
 });
 
 describe('slot filling', () => {
-  it('dated report, no plan: defaults where eligible, pool for the rest', () => {
-    const c = shareCard(tb);
-    expect(c.hero.slot).toBe('A1');
-    expect(c.tiles.map((t) => t.slot)).toEqual(['A2', 'B1', 'B2', 'C1', 'C2', 'C3']);
-    expect(c.tiles[0]).toMatchObject({ key: 'proIn', value: 'RELIANCE', sub: '60% win rate' });
-    expect(c.tiles[1]).toMatchObject({ key: 'bestDay', value: 'Monday' });
-    expect(c.tiles[2].key).toBe('bestTrade');
+  it('hero order: plan kept → habits fixed → months improving → level → trades reviewed', () => {
+    expect(shareCard(tb, PLAN).hero).toMatchObject({ key: 'planKept', label: 'Biggest achievement', value: '4 of 5 rules kept', sub: 'from my 30-day plan' });
+    expect(shareCard(tb).hero).toMatchObject({ key: 'habitsFixed', label: 'Biggest achievement', value: '2 habits fixed' });
+    expect(shareCard(tb, PLAN).tiles.find((t) => t.key === 'habitsFixed')).toMatchObject({ label: 'Habits fixed', value: '2' });
+    for (const t of shareCard(tb, PLAN).tiles) expect(t.label).not.toBe('Biggest achievement');
+    const lvl = shareCard(tb, { hero: 'level' });
+    expect(lvl.hero).toMatchObject({ key: 'level', label: 'Biggest achievement', value: 'Reached Disciplined' });
+    expect(lvl.tiles.map((t) => t.key)).not.toContain('level' as TileKey);
+    expect(lvl.tiles.map((t) => t.key)).toContain('habitsFixed');
+    expect(shareCard(tb, { hero: 'topHabit' }).hero.key).toBe('habitsFixed');      // not a hero achievement
   });
-  it('hero order: plan kept before level; level when no plan; the user may pick another eligible hero', () => {
-    expect(shareCard(tb, { planCheck: { met: 4, measured: 5 } }).hero).toMatchObject({ key: 'planKept', value: '4 of 5 rules kept' });
-    const noPlan = shareCard(tb);
-    const { streakDays } = eligibleTiles(tb);
-    expect(noPlan.hero.key).toBe(streakDays >= 5 ? 'streak' : 'level');
-    expect(noPlan.heroOptions).toContain('level');
-    expect(shareCard(tb, { hero: 'tradesRead' }).hero.key).toBe('tradesRead');
-    expect(shareCard(tb, { hero: 'proIn' }).hero.key).toBe(noPlan.hero.key);         // not a hero achievement
-    const tr = shareCard(tb, { hero: 'tradesRead' });
-    expect(tr.tiles.map((t) => t.key)).not.toContain('tradesRead');                    // C3 takes the next pool item
-    expect(tr.count).toBe(7);
+  it('defaults, then the pool; 7 tiles with a plan', () => {
+    const c = shareCard(tb, PLAN);
+    expect(c.tiles.map((t) => [t.slot, t.key])).toEqual([['A2', 'topHabit'], ['B1', 'level'], ['B2', 'habitsFixed'], ['C1', 'months'], ['C2', 'habits'], ['C3', 'tradesReviewed']]);
+    expect(c.count).toBe(7);
   });
-  it('switching a tile off: the pool refills it; never below 7 when 7 are eligible', () => {
-    const base = shareCard(tb);
-    const off = shareCard(tb, { exclude: ['bestDay'] });
-    expect(keys(off)).not.toContain('bestDay');
-    expect(off.count).toBe(7);
-    const all = shareCard(tb, { exclude: base.options });
-    expect(all.count).toBe(7);
-    expect(shareCard(groww, { exclude: ['habits'] }).count).toBe(shareCard(groww).count);   // nothing spare: it stays
+  it('switching a tile off: refilled from the pool when a spare exists; otherwise it stays', () => {
+    const c = shareCard(tb, { ...PLAN, exclude: ['months'] });
+    expect(c.count).toBe(7);                                                       // nothing spare: months stays
+    expect(c.removable).toEqual([]);
+    expect(shareCard(groww, { exclude: ['habits'] }).count).toBe(shareCard(groww).count);
   });
-  it('founding badge: shown with a number unless hidden; never without one', () => {
+  it('founding badge: shown with a number unless hidden; never changes the tiles', () => {
     expect(shareCard(tb, { foundingNo: 427 }).founding).toBe('#0427 / 1000');
     expect(shareCard(tb, { foundingNo: 427, badge: false }).founding).toBeNull();
     expect(shareCard(tb).founding).toBeNull();
@@ -125,34 +128,24 @@ describe('slot filling', () => {
   });
 });
 
-describe('formats', () => {
-  it('percentages, names, founding number, cap', () => {
-    expect(plusPct(184.4)).toBe('+184%');
-    expect(plusPct(5000)).toBe('+999%');
+describe('formats and layout', () => {
+  it('period and founding labels', () => {
     expect(foundingLabel(427)).toBe('#0427 / 1000');
     expect(foundingLabel(1000)).toBe('#1000 / 1000');
-    expect(eligibleTiles(tb).tiles.get('proIn')!.sub).toMatch(/^\d{1,3}% win rate$/);
     expect(periodLabel('2026-04-02', '2026-09-30')).toBe('Apr–Sep 2026');
     expect(periodLabel('2024-11-02', '2025-02-01')).toBe('Nov 2024 – Feb 2025');
     expect(periodLabel(null, null)).toBe('');
   });
-  it('underlying names allowed, contract codes not', () => {
-    for (const ok of ['BANKNIFTY', 'NIFTY', 'RELIANCE', 'BAJFINANCE', 'AAPL', 'M&M', 'BTC']) expect(safeUnderlying(ok)).toBe(ok);
-    for (const bad of ['BANKNIFTY2262333000CE', 'NIFTY24OCT52000PE', 'AAPL 250117C00150000', '500325', '']) expect(safeUnderlying(bad)).toBeNull();
-  });
-});
-
-describe('layout', () => {
-  it('each full row spans the content width; rows and footer fit the card', () => {
+  it('rows span the content width; tiles and footer fit the card', () => {
     for (const r of Object.values(LAYOUT.rows)) expect(r.slots.reduce((s, [, w]) => s + w, 0) + LAYOUT.gap * (r.slots.length - 1)).toBe(LAYOUT.width);
     expect(LAYOUT.margin * 2 + LAYOUT.width).toBe(CARD.w);
     expect(LAYOUT.rows.C.y + LAYOUT.rows.C.h).toBeLessThanOrEqual(LAYOUT.footer.y);
-    expect(LAYOUT.footer.y + LAYOUT.footer.qr).toBeLessThanOrEqual(CARD.h - 40);
+    expect(LAYOUT.footer.note2Y).toBeLessThanOrEqual(CARD.h - 40);
     expect(Object.keys(TEXT)).toHaveLength(5);
-  });
-  it('fewer tiles share the row and are centred', () => {
-    const c = shareCard(groww);
-    for (const t of [c.hero, ...c.tiles]) { expect(t.x + t.w).toBeLessThanOrEqual(LAYOUT.margin + LAYOUT.width + 0.01); expect(t.y).toBeGreaterThanOrEqual(LAYOUT.band.top); expect(t.y + t.h).toBeLessThanOrEqual(LAYOUT.band.bottom); }
+    for (const g of goldens) {
+      const c = shareCard(g.report, PLAN);
+      for (const t of [c.hero, ...c.tiles]) { expect(t.x + t.w).toBeLessThanOrEqual(LAYOUT.margin + LAYOUT.width + 0.01); expect(t.y).toBeGreaterThanOrEqual(LAYOUT.band.top); expect(t.y + t.h).toBeLessThanOrEqual(LAYOUT.band.bottom); }
+    }
   });
 });
 

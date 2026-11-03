@@ -1,31 +1,52 @@
 <!--
 @file  docs/SHARE_CARD.md
 @area  Docs
-@what  Share card v2 ("My Trading Edge"): the spec as built — rules, layout, tile catalogue, slot filling, text styles, founding trader numbers, QR, dialog, tests — and where the owner's 29 Oct review changed the original brief.
+@what  Share card ("My Trading Discipline"): the spec as built — the legal safety rule (no results, returns or securities; SEBI disclaimer), layout, tile catalogue, slot filling, text styles, founding trader numbers, QR, dialog, tests — and the owner decisions of 29 Oct and 3 Nov.
 -->
-# Share card v2: "My Trading Edge"
+# Share card: "My Trading Discipline"
 
 The card a trader posts from **Share progress** in the report header. It replaces the PR #24 progress card.
 Code: `packages/shared/src/insights/share.ts` (content, slots, layout, text styles, colours),
 `packages/shared/src/insights/share-qr.ts` (QR), `apps/web/components/workspace/share-draw.ts` (canvas drawing),
 `ShareCard.tsx` (dialog), migration `0032_founding_traders.sql`.
 
+## Legal safety rule (owner, 3 Nov 2026)
+The card shows **how a trader keeps to their process, never what they earned**, so it cannot read as a claim of returns or performance in a security (SEBI circular of October 2024 on unregistered persons, FAQs January 2025) or as investment advice.
+
+**Never on the card:**
+- profit or loss, returns, %, win rate, best or worst trade/day/month, green days;
+- any security, contract or underlying name;
+- money or currency;
+- a person's name or client id.
+
+**Only:**
+- counts of plan rules kept, habits fixed, months, habits and trades reviewed;
+- the name of a habit dimension (Progress);
+- the level.
+
+**The disclaimer** is drawn on every card and cannot be switched off:
+- *"Not investment advice or a recommendation."*
+- plus *"PnL Lens is not registered with SEBI."* (India, i.e. INR or market India) or *"PnL Lens is not a registered investment adviser."* (Global).
+
+`share.test.ts` enforces this on every golden report: no result words, %, currency or security names.
+
+**Conduct rules for PnL Lens itself** (not code):
+- never repost user cards on PnL Lens accounts or use them in ads;
+- no rewards for posting;
+- the QR goes to the general home page;
+- no broker affiliate or referral deals before the lawyer has seen the card.
+
 ## Rules
-1. **Strengths only.** No losses, worst day or trade, negative numbers, "edge negative" or red. A tile appears only
-   when it passes its strength rule. Otherwise the next tile in the pool takes its slot.
-2. **Privacy.**
-   - No money amounts, currency signs, or names (person or client id).
-   - An underlying's plain name is allowed: BANKNIFTY, RELIANCE, AAPL.
-   - Contract codes (strike, expiry, CE/PE) never appear (`safeUnderlying`, `CONTRACT_RE`).
-3. **Drawn in the browser** on a canvas, after `document.fonts.ready`. Nothing is sent to a server to build it.
-4. **The engine is unchanged.** Everything is computed from the stored report.
-5. **One source of truth.** Labels, chip names, copy, colours, layout and text styles live only in `share.ts`.
+1. **Discipline only**, as above. A tile appears only when it is a real strength. Otherwise the next tile in the pool takes its slot.
+2. **Drawn in the browser** on a canvas, after `document.fonts.ready`. Nothing is sent to a server to build it.
+3. **The engine is unchanged.** Everything is computed from the stored report.
+4. **One source of truth.** Labels, chip names, copy, the disclaimer, colours, layout and text styles live only in `share.ts`.
 
 ## Canvas
 - **Card** 1080 × 1728. **Story** 1080 × 1920: the card centred on black, with the glow continuing.
 - Margin 72, content width 936, gap 20. Black background with a soft yellow glow top-right.
 - Logo and "PnL Lens" at the top left; the period ("Jan–Mar 2025") in grey, right-aligned.
-- Title: "MY TRADING" in white, "EDGE" in yellow #FFD400.
+- Title: "MY TRADING" in white, "DISCIPLINE" in yellow #FFD400.
 - **Founding badge** (when the user has a number and has not hidden it):
   - a gold gradient #FFE27A → #E0A800 with a star and a soft glow;
   - text "FOUNDING TRADER / #0427 / 1000".
@@ -54,9 +75,9 @@ Code: `packages/shared/src/insights/share.ts` (content, slots, layout, text styl
 - **Each tile:** an UPPERCASE label, a big value and an optional sub-line. The value shrinks in 4px steps (88 → 40). It goes onto two lines when that allows a bigger size.
 - **Footer:**
   - QR 164 × 164: 33 modules × 4px plus a white 4-module quiet zone;
-  - "Read your own P&L, trade by trade.";
+  - "My own trades, reviewed with PnL Lens.";
   - 🌐 "pnllens.com" in yellow at 44px;
-  - "Analysis of my own trades. Not investment advice." in small grey.
+  - the two disclaimer lines in small grey.
 
 ## Text styles (Manrope, the site's `--f-sans`)
 
@@ -70,39 +91,32 @@ Code: `packages/shared/src/insights/share.ts` (content, slots, layout, text styl
 
 ## Tile catalogue
 
-| Key | Label | Value | Shown only if |
+| Key | Label | Value (as the hero, under "Biggest achievement") | Shown only if |
 |---|---|---|---|
-| streak | Biggest achievement | "9-day win streak" | Longest run of trading days with net P&L > 0 is ≥ 3 (dates) |
-| planKept | Biggest achievement | "4 of 5 rules kept" | The earlier 30-day plan has ≥ 3 rules met |
-| level | Biggest achievement | "Reached Steady" | Level is Steady, Disciplined or Elite |
-| winRun | Biggest achievement | "7 wins in a row" | ≥ 5 winning trades in a row, in date order (all trades dated) |
-| proIn | Pro in | "BANKNIFTY" / "62% win rate" | Underlying with ≥ 15 trades, ≥ 55% won and net > 0; highest win rate |
-| bestDay | Best day | "Tuesday" | Weekday with the highest net P&L, > 0, with ≥ 5 trades (dates) |
-| bestTrade | Best trade | "+184%" / "return on premium" (options) or "return on trade" | Highest P&L ÷ buy value ≥ 1%, among trades at least the median buy value; capped "+999%" |
-| bestMonth | Best month | "July" (plus the year when the months span 12+) | ≥ 2 months with dates; best net > 0 |
-| greenDays | Green days | "58%" | ≥ 5 trading days and ≥ 50% green |
-| winRate | Trades won | "54%" | ≥ 20 trades and ≥ 50% won |
-| tradesRead | Trades read | "312" | Always |
-| months | Months analysed | "6" | ≥ 1 month with dates |
+| planKept | 30-day plan | "4 of 5 rules kept" (+ "from my 30-day plan") | The earlier 30-day plan has ≥ 3 rules met |
+| habitsFixed | Habits fixed | "2" ("2 habits fixed") | Progress tracker has ≥ 1 habit marked fixed |
+| improving | Months improving | "3" ("3 months improving") | Progress score improved ≥ 2 months in a row |
+| level | Level reached | "Disciplined" ("Reached Disciplined") | Level is Steady, Disciplined or Elite |
+| topHabit | Strongest habit | "Cost efficiency" | The highest Progress dimension, scoring 70+ |
+| months | Months reviewed | "3" | ≥ 1 month in Progress |
 | habits | Habits tracked | "6" | Always (the Progress dimensions) |
+| tradesReviewed | Trades reviewed | "96" | Always |
 
 ## Slot filling (same report → same card)
 1. **Hero (A1):** the first eligible tile from
-   - streak (≥ 5 days)
-   - → planKept
+   - planKept
+   - → habitsFixed
+   - → improving
    - → level
-   - → streak (3–4 days)
-   - → winRun
-   - → tradesRead.
+   - → tradesReviewed.
 
-   The user may pick another eligible hero.
-2. **Default tiles:** A2 proIn, B1 bestDay, B2 bestTrade, C1 bestMonth, C2 greenDays, C3 tradesRead.
+   The user may pick another eligible hero. Only the hero carries the "Biggest achievement" label.
+2. **Default tiles:** A2 topHabit, B1 level, B2 habitsFixed, C1 months, C2 habits, C3 tradesReviewed.
 3. **Pool**, in order, when a default isn't eligible, is used or was switched off:
-   - winRate → planKept → bestTrade → months → habits → tradesRead;
-   - then, only for small reports, the hero achievements not used as the hero (level, streak, winRun).
+   - planKept → improving → level → habitsFixed → topHabit → months → habits → tradesReviewed.
 4. **No duplicates.**
    - The card always shows min(7, eligible) tiles.
-   - A tile can be switched off only while a spare can take its place.
+   - A tile can be switched off only while a spare can take its place; otherwise its chip is locked.
 
 ## Founding trader numbers (migration 0032)
 - **Storage:** `users.founding_no` (1–1000, unique), from a one-row counter updated inside the granting transaction. A rolled-back grant leaves no gap.
@@ -125,35 +139,39 @@ Code: `packages/shared/src/insights/share.ts` (content, slots, layout, text styl
 
 ## Dialog
 - **Contents:**
-  - a note on what is never shown;
+  - a note on what is never shown (results, returns, money, names, securities) and that the disclaimer is always on;
   - **Biggest achievement** chips;
   - **Tiles** chips (switch one off and the pool refills it);
   - **Card / Story**;
   - **Founding badge** (only with a number);
   - a live preview, with an `aria-label` summarising the tiles and a plain-text list under it;
-  - **Download image** (`pnl-lens-edge.png` / `pnl-lens-edge-story.png`) and **Share…** (where the phone supports sharing files).
+  - **Download image** (`pnl-lens-discipline.png` / `pnl-lens-discipline-story.png`) and **Share…** (where the phone supports sharing files).
 - **Event:** `share_card_used { how, format, hero, tiles, badge }`.
 - **Placement:** the button is in the report header on every view. Inside one file's tab, the card uses only that file's data, without the plan check.
 
-## Changes from the original brief (owner review, 29 Oct)
-- **Founding numbers:** manual grants count only when ticked, because payments are off and manual grants mostly go to testers.
-- **QR:** pre-made instead of the `qrcode` package.
-- **"Minimum 7 tiles":** small reports show fewer tiles instead of weak padding.
-- **Tighter rules:**
-  - `winRun` needs dates;
-  - `bestMonth` uses trade dates only;
-  - `bestTrade` ignores trades smaller than the median buy.
-- **Open for the owner:**
-  - attach the target design image as `docs/design/share-card-v2-target.jpg`;
-  - scan the QR on a phone from a downloaded card;
-  - have a lawyer review best-stat cards against SEBI's rules on performance claims.
+## Changes from the original brief
+**29 Oct (owner review):**
+- founding numbers: manual grants count only when ticked;
+- QR pre-made;
+- small reports show fewer tiles instead of padding.
+
+**3 Nov (owner: "no law issues or SEBI issues"):**
+- every results tile removed: pro in (underlying), best day, best trade %, best month, green days, trades won, win streak, wins in a row;
+- the title is "MY TRADING DISCIPLINE" instead of "MY TRADING EDGE";
+- the SEBI / registered-adviser disclaimer is always on;
+- discipline tiles added: habits fixed, months improving, strongest habit.
+
+**Still open for the owner:**
+- lawyer sign-off on the final card (questions in the PR);
+- a phone scan of the QR;
+- the target design image.
 
 ## Tests
 - `packages/shared/test/share.test.ts`, on every golden report:
-  - privacy;
-  - positives;
-  - each strength rule checked on its own;
-  - slot filling (with and without dates, 1 or many months, with and without a plan, with and without a number);
+  - the legal safety rule: no result words, %, currency, security or underlying names;
+  - the disclaimer, SEBI for India;
+  - each tile rule checked on its own;
+  - slot filling (hero order, defaults and pool, switching off, with and without a number);
   - no duplicates; determinism;
   - formats; layout sums; the committed QR decodes.
 - `packages/db/test/db/founding.test.ts`:
