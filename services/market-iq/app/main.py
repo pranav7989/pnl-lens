@@ -7,6 +7,7 @@ Set MARKET_IQ_SCHEDULER=off to run without the daily jobs (tests do). Sheet data
 from __future__ import annotations
 
 import hmac
+import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -15,11 +16,12 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 
 from app import config
 from app.auth import token
-from app.dhan import feed, instruments
+from app.dhan import chain, feed, instruments
 from app.nse import holidays
 from app.store import db
 
 MIN_KEY = 32
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")   # our loggers into the container log
 
 
 @asynccontextmanager
@@ -32,10 +34,14 @@ async def lifespan(_: FastAPI):
         if feed.in_window() and not config.secrets().missing():   # restarted during market hours: resume now
             import threading
             threading.Thread(target=scheduler.run_job, args=("feed_start", feed.start_job), daemon=True).start()
+        if chain.in_window() and not config.secrets().missing():
+            import threading
+            threading.Thread(target=scheduler.run_job, args=("chain_start", chain.start_job), daemon=True).start()
     yield
     if sched:
         sched.shutdown(wait=False)
     feed.FEED.stop()
+    chain.POLLER.stop()
 
 
 app = FastAPI(title="Market IQ (internal)", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
@@ -82,11 +88,31 @@ def status() -> dict:
     return {"as_of": now.isoformat(), "token": tok, "instruments": {"count": n, "as_of": instruments.as_of(con)},
             "market": {"trading_day": trading, "session": _session_state(now, trading)}, "jobs": jobs,
             "feed": {k: v for k, v in feed.FEED.summary(now).items() if k != "recent"},
+            "chain": chain.POLLER.summary(now),
             "bars_today": con.execute("select count(*) as n from bars_1m where ts >= ?", (now.strftime("%Y-%m-%dT00:00"),)).fetchone()["n"],
-            "phase": "Phase 3: live feed; the sheets arrive with Phases 4-7"}
+            "phase": "Phase 4: option chain; the sheets arrive with Phases 5-7"}
 
 
 @app.get("/internal/feed", dependencies=[Depends(require_key)])
 def feed_debug() -> dict:
     """The build manual's /debug/feed: instrument counts and the 10 most recently updated symbols."""
     return feed.FEED.summary()
+
+
+@app.get("/internal/chain/{underlying}", dependencies=[Depends(require_key)])
+def chain_rows(underlying: str, expiry: str | None = None, at: str | None = None, window: int = 20) -> dict:
+    """Phase 4 check: the chain around ATM (live, or the snapshot at `at` = 'YYYY-MM-DDTHH:MM' IST)."""
+    u = underlying.upper()
+    if u not in chain.UNDERLYINGS:
+        raise HTTPException(404, "unknown underlying")
+    when = datetime.fromisoformat(at).replace(tzinfo=config.IST) if at else None
+    c = chain.get_chain(u, expiry, when)
+    if not c:
+        return {"available": False}
+    strikes = list(c.rows)
+    atm = min(strikes, key=lambda k: abs(k - (c.spot or 0))) if strikes and c.spot else None
+    i = strikes.index(atm) if atm is not None else 0
+    pick = strikes[max(0, i - window): i + window + 1]
+    return {"available": True, "underlying": u, "expiry": c.expiry, "spot": c.spot, "atm": atm, "as_of": c.as_of.isoformat(),
+            "live": c.live, "fresh": c.fresh(), "expiries": chain.expiries(db.connect(), u),
+            "rows": [{"strike": k, "ce": c.rows[k]["ce"], "pe": c.rows[k]["pe"]} for k in pick]}

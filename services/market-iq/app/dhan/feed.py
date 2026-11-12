@@ -87,7 +87,7 @@ def backfill_today(con, client: httpx.Client, now: datetime | None = None) -> in
     for i, inst, oi in targets:
         body = {"securityId": i.security_id, "exchangeSegment": i.exch_segment, "instrument": inst, "interval": "1", "oi": oi,
                 "fromDate": f"{day} 09:15:00", "toDate": now.strftime("%Y-%m-%d %H:%M:%S")}
-        r = _post(con, client, "/charts/intraday", body)
+        r = token.dhan_post(con, client, "/charts/intraday", body)
         if r.status_code != 200:
             log.warning("backfill %s: HTTP %s", i.symbol, r.status_code)
             continue
@@ -102,17 +102,6 @@ def backfill_today(con, client: httpx.Client, now: datetime | None = None) -> in
             con.executemany("insert into bars_1m values (?,?,?,?,?,?,?,?,?,?) on conflict do nothing", rows)
         n += len(rows)
     return n
-
-
-def _post(con, client: httpx.Client, path: str, body: dict) -> httpx.Response:
-    s = config.secrets()
-    for attempt in (0, 1):
-        t = token.get_token(con, client, s, force=attempt == 1)
-        r = client.post(f"{config.DHAN_API_BASE}{path}", json=body,
-                        headers={"access-token": t.access_token, "client-id": s.client_id, "Content-Type": "application/json", "Accept": "application/json"})
-        if not token.is_auth_error(r):
-            return r
-    return r
 
 
 # ---------------------------------------------------------------- the collector

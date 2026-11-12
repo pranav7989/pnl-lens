@@ -1,6 +1,6 @@
 # @file  services/market-iq/app/store/db.py
 # @area  Market IQ
-# @what  SQLite (WAL) connection and schema: token, instruments, 1-minute bars, job_log.
+# @what  SQLite (WAL) connection and schema: token, instruments, 1-minute bars, option chain snapshots, spot snapshots, expiries, job_log.
 """SQLite (WAL mode): one file in data/, tables created on first use. Schema follows the build manual §5,
 with one correction: instruments are keyed by (exch_id, segment, security_id) because Dhan reuses a
 security id across segments."""
@@ -45,6 +45,20 @@ create table if not exists bars_1m (
   volume integer, oi integer,
   source text not null,              -- feed | history
   primary key (exch_segment, security_id, ts)
+);
+create table if not exists chain_snap (
+  underlying text not null, expiry text not null, ts text not null,   -- ts: minute, IST 'YYYY-MM-DDTHH:MM'
+  strike real not null, side text not null,                           -- CE / PE
+  ltp real, prev_close real, oi integer, prev_oi integer, volume integer,
+  iv real, delta real, gamma real, theta real, vega real, bid real, ask real,
+  primary key (underlying, expiry, ts, strike, side)
+);
+create table if not exists spot_snap (
+  underlying text not null, ts text not null, spot real, fut_ltp real, expiry text,
+  primary key (underlying, ts)
+);
+create table if not exists expiries (
+  underlying text not null, expiry text not null, as_of text not null, primary key (underlying, expiry)
 );
 create table if not exists job_log (
   id integer primary key autoincrement,

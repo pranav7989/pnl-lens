@@ -12,7 +12,7 @@ PnL Lens users with a plan (India) get three live sheets: **Nifty**, **Bank Nift
 Browser ──> Caddy ──> web (Next): /market
                 └──> api (Fastify): /api/v1/market-iq/*  ── sign-in, plan, India, flag ──>
                                                             marketiq (Python, private) :8000/internal/*
-marketiq ──> Dhan API (login, instruments, live feed, history; later the option chain) · NSE (holidays; later FII/DII, weights)
+marketiq ──> Dhan API (login, instruments, live feed, history, option chain) · NSE (holidays; later FII/DII, weights)
 ```
 - **`services/market-iq/`** is the data service, an approved exception to the repo's Node stack (owner, 12 Nov 2026). It's Python 3.11, FastAPI and SQLite in the volume `marketiq_data`.
   - It has no published port and no login of its own.
@@ -61,7 +61,7 @@ An "open plan window" means a subscription with `starts_at ≤ now < ends_at`.
 | 0–2 | Skeleton, Dhan login (client ID + PIN + TOTP, no browser), instruments (segment-safe keys, 218 F&O stocks), NSE holidays, daily jobs 08:20 / 08:30 / 08:45 IST | done |
 | PnL Lens foundation (PR #31) | Internal API with key, Docker service in dev and prod, API access rules, `/market` page, stack/API/e2e tests, CI | done |
 | 3 (PR #32) | Live feed: one Dhan WebSocket, Ticker + Quote for 444 instruments (6 indices, Nifty/Bank Nifty futures, 218 F&O stocks cash + near-month futures), 1-minute bars in SQLite, today's backfill, auto-reconnect, 09:00–15:35; status on the Market page | done (live check 12 Nov: 444/444 updating) |
-| 4 | Option chain poller + 60 s snapshots (time bar) | |
+| 4 (PR #33) | Option chain for Nifty and Bank Nifty (all strikes, both sides: LTP, OI, previous OI, volume, IV, Greeks, bid/ask), one request every 3 s in turns (Dhan answers 429 otherwise), snapshot every minute for the time bar, read back at any minute, expiries, 23:00 clean-up (chains 30 days, bars 90) | done (live: 0 errors, 264 + 400 strikes fresh) |
 | 5 | NSE jobs: FII/DII, index weights | |
 | 6 | Formulas (`app/calc`) with tests, with the wording above | |
 | 7 | Sheet data through the API (`/market-iq/sheet/*`) | |

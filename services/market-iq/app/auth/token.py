@@ -150,6 +150,19 @@ def dhan_get(con: sqlite3.Connection, client: httpx.Client, path: str, **kw) -> 
     return r
 
 
+def dhan_post(con: sqlite3.Connection, client: httpx.Client, path: str, body: dict) -> httpx.Response:
+    """POST a Dhan v2 data endpoint with the current token; on an auth error, renew once and retry."""
+    s = config.secrets()
+    for attempt in (0, 1):
+        t = get_token(con, client, s, force=attempt == 1)
+        r = client.post(f"{config.DHAN_API_BASE}{path}", json=body, headers={"access-token": t.access_token, "client-id": s.client_id,
+                                                                            "Content-Type": "application/json", "Accept": "application/json"})
+        if not is_auth_error(r):
+            return r
+        log.warning("Dhan rejected the token (%s); renewing", r.status_code)
+    return r
+
+
 def profile(con: sqlite3.Connection, client: httpx.Client) -> dict:
     r = dhan_get(con, client, "/profile")
     if r.status_code != 200:

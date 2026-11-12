@@ -66,4 +66,8 @@ The sheets are PnL Lens React pages using the PnL Lens design system, NOT static
   Live index volume is 0 (use the index future's volume). 444 instruments on one connection, all updating.
 - generateAccessToken may replace the previous token: run the service in ONE place (the stack); the local
   --check CLI is for checks only.
+- Option chain (verified live 12 Nov 2026): POST /v2/optionchain {UnderlyingScrip 13|25, UnderlyingSeg IDX_I, Expiry}
+  -> data.last_price, data.oc{"25250.000000": {ce, pe}} with last_price, previous_close_price, oi, previous_oi, volume,
+  implied_volatility, greeks{delta,gamma,theta,vega}, top_bid/ask. OI is in units. The real limit is ONE chain request
+  per 3 s per account (a second underlying in the same 3 s gets HTTP 429), so Nifty and Bank Nifty alternate (~6 s each).
 
