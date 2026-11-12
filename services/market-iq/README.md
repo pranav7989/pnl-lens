@@ -30,4 +30,5 @@ This is the private data service behind PnL Lens's live Market sheets (Nifty, Ba
 | 4 | Option chain poller (Nifty/Bank Nifty in turns, one request per 3 s), snapshots every minute, time-bar read-back, expiries, nightly clean-up | done |
 | 5 | FII/DII cash (daily), FII index futures (30 days at once), index constituents, index weights estimated from minute bars, previous closes | done |
 | 6 | Formulas in `app/calc` (KPIs, max pain, ΔOI, sentiment as positioning, decoder, contributions, scanners) with hand-checked tests; nightly volume baselines | done |
-| 7 | Sheet data through the internal API | next |
+| 7 | Sheet data through the internal API: `/internal/sheet/{NIFTY\|BANKNIFTY}?expiry=&at=`, `/internal/decoder/...`, `/internal/market`, `/internal/header` | done |
+| 8–9 | The sheets as PnL Lens pages | next |

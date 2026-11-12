@@ -86,7 +86,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 375 files._
+_Generated from file headers by `npm run docs:index` — 377 files._
 
 ### Pages
 
@@ -306,6 +306,7 @@ _Generated from file headers by `npm run docs:index` — 375 files._
 | `services/market-iq/app/nse/holidays.py` | NSE F&O trading holidays (stored in SQLite) and is_trading_day(). |
 | `services/market-iq/app/nse/session.py` | Polite NSE HTTP client: browser headers, home-page cookies, max 1 request per 2 s, one retry on 401/403. |
 | `services/market-iq/app/nse/weights.py` | Nifty 50 and Nifty Bank constituents (niftyindices.com lists) and their index weights, estimated each day from our own 1-minute bars (the index moves as the weighted sum of its stocks' moves). |
+| `services/market-iq/app/sheets.py` | Assembles the JSON for Sheet 1/2 (index: KPIs, sentiment, contributions, 5-minute candles with levels, time bar, ΔOI bars/donut/compass, chain rows, decoder) and Sheet 3 (market: breadth, FII/DII, momentum, R-factor, futures buildup, movers), live or at a past minute; every payload carries fresh + as_of. |
 | `services/market-iq/app/state.py` | In-memory live state per instrument (LTP, OHLC, volume, OI, previous close/OI, last update) and the 1-minute bar builder; thread-safe. |
 | `services/market-iq/app/store/__init__.py` | Package: SQLite storage. |
 | `services/market-iq/app/store/db.py` | SQLite (WAL) connection and schema: token, instruments, 1-minute bars, option chain snapshots, spot snapshots, expiries, previous closes, FII/DII, FII index futures, index constituents and weights, job_log. |
@@ -504,6 +505,7 @@ _Generated from file headers by `npm run docs:index` — 375 files._
 | `services/market-iq/tests/test_instruments.py` | Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays. |
 | `services/market-iq/tests/test_nse_flows.py` | Phase 5 on real NSE files: FII/DII cash parsing, the FII index futures row of the derivatives .xls, the evening job (cash + missing futures days), CSV backfill, constituents, and index weights recovered from minute bars. |
 | `services/market-iq/tests/test_scheduler.py` | Daily jobs: IST times, skipped on holidays, failures recorded without crashing, token job waits for .env. |
+| `services/market-iq/tests/test_sheets.py` | Phase 7 assembly: a full Nifty sheet from the real chain fixture + minute bars (KPIs, sentiment, chain rows with tags and ITM, 5-minute candles with futures volume, time bar, contributions), replay at a past minute, the decoder, Sheet 3 from live state, and the internal routes. |
 | `services/market-iq/tests/test_token.py` | Dhan token manager with mocked HTTP: login, reuse, renewal on expiry and rejection, clear errors, no secrets in logs. |
 | `tests/e2e-web/blog.spec.ts` | REQ-7 blog end to end: owner drafts, previews, publishes, unpublishes, schedules; /blog, article, landing preview, sitemap; raw-HTML SEO; sanitising; support sees no Blog tab; events. |
 | `tests/e2e-web/credits.spec.ts` | Credits spec (19 Oct 2026) in the browser: "N reports left" pill and "Plans" menu, plan card wording, free preview (3 numbers, 2 insights, blurred, from ₹99/$9), plan window end, no "credit" on customer screens. |

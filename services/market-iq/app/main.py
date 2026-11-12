@@ -14,7 +14,7 @@ from datetime import datetime
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 
-from app import config
+from app import config, sheets
 from app.auth import token
 from app.dhan import chain, feed, instruments
 from app.nse import holidays
@@ -90,7 +90,7 @@ def status() -> dict:
             "feed": {k: v for k, v in feed.FEED.summary(now).items() if k != "recent"},
             "chain": chain.POLLER.summary(now),
             "bars_today": con.execute("select count(*) as n from bars_1m where ts >= ?", (now.strftime("%Y-%m-%dT00:00"),)).fetchone()["n"],
-            "phase": "Phase 4: option chain; the sheets arrive with Phases 5-7"}
+            "phase": "Phase 7: sheet data ready; the PnL Lens pages are next"}
 
 
 @app.get("/internal/feed", dependencies=[Depends(require_key)])
@@ -116,3 +116,46 @@ def chain_rows(underlying: str, expiry: str | None = None, at: str | None = None
     return {"available": True, "underlying": u, "expiry": c.expiry, "spot": c.spot, "atm": atm, "as_of": c.as_of.isoformat(),
             "live": c.live, "fresh": c.fresh(), "expiries": chain.expiries(db.connect(), u),
             "rows": [{"strike": k, "ce": c.rows[k]["ce"], "pe": c.rows[k]["pe"]} for k in pick]}
+
+
+def _at(at: str | None) -> datetime | None:
+    if not at:
+        return None
+    try:
+        return datetime.fromisoformat(at).replace(tzinfo=config.IST)
+    except ValueError:
+        raise HTTPException(400, "at must be YYYY-MM-DDTHH:MM (IST)") from None
+
+
+@app.get("/internal/sheet/{underlying}", dependencies=[Depends(require_key)])
+def sheet(underlying: str, expiry: str | None = None, at: str | None = None) -> dict:
+    """Sheet 1/2: everything for the Nifty or Bank Nifty page, live or at a past minute of today."""
+    u = underlying.upper()
+    if u not in sheets.INDEX_NAME:
+        raise HTTPException(404, "unknown underlying")
+    try:
+        return sheets.index_sheet(u, expiry, _at(at))
+    except LookupError as e:
+        raise HTTPException(503, f"not ready: {e}") from None
+
+
+@app.get("/internal/decoder/{underlying}", dependencies=[Depends(require_key)])
+def decoder_route(underlying: str, strike: float, side: str, expiry: str | None = None, at: str | None = None) -> dict:
+    u = underlying.upper()
+    if u not in sheets.INDEX_NAME or side.lower() not in ("ce", "pe"):
+        raise HTTPException(404, "unknown underlying or side")
+    d = sheets.decode_strike(u, strike, side, expiry, _at(at))
+    if not d:
+        raise HTTPException(404, "no such strike")
+    return d
+
+
+@app.get("/internal/market", dependencies=[Depends(require_key)])
+def market() -> dict:
+    """Sheet 3: breadth, flows, momentum, R-factor, futures buildup, movers."""
+    return sheets.market_sheet()
+
+
+@app.get("/internal/header", dependencies=[Depends(require_key)])
+def header_route() -> dict:
+    return {"as_of": datetime.now(config.IST).isoformat(), "indices": sheets.header()}
