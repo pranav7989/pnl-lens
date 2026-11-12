@@ -1,3 +1,6 @@
+# @file  services/market-iq/tests/test_scheduler.py
+# @area  Tests
+# @what  Daily jobs: IST times, skipped on holidays, failures recorded without crashing, token job waits for .env.
 """Daily jobs: registered at the right IST times, skipped on holidays, failures recorded without crashing."""
 import json
 from datetime import date, datetime

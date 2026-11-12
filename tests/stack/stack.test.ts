@@ -62,7 +62,7 @@ beforeAll(() => {
 });
 
 describe('services', () => {
-  const LONG = ['caddy', 'web', 'api', 'worker', 'postgres', 'redis', 'garage'];
+  const LONG = ['caddy', 'web', 'api', 'worker', 'postgres', 'redis', 'garage', 'marketiq'];
   for (const name of LONG) {
     it(`${name} is running and healthy`, () => {
       const s = services.find((x) => x.Service === name);
@@ -91,7 +91,7 @@ describe('exposure: only Caddy is reachable from outside the Docker networks', (
       } else expect(published, `${s.Service} publishes ${JSON.stringify(published)}`).toEqual([]);
     }
   });
-  for (const [name, port] of [['web', 3000], ['api', 4000], ['postgres', 5432], ['redis', 6379], ['garage S3', 3900], ['garage admin', 3903]] as const) {
+  for (const [name, port] of [['web', 3000], ['api', 4000], ['postgres', 5432], ['redis', 6379], ['garage S3', 3900], ['garage admin', 3903], ['marketiq', 8000]] as const) {
     it(`${name} (:${port}) is not reachable from the host`, async () => expect(await tcpOpen(port)).toBe(false));
   }
   it('the internal network has no route to the internet (Docker internal: true)', () => {
@@ -104,7 +104,9 @@ describe('exposure: only Caddy is reachable from outside the Docker networks', (
     };
     const E = `${PROJECT}_edge`, I = INTERNAL;
     expect(nets('caddy')).toEqual([E]);
-    expect(nets('api')).toEqual([E, I].sort());
+    const M = `${PROJECT}_marketiq`;
+    expect(nets('api')).toEqual([E, I, M].sort());
+    expect(nets('marketiq')).toEqual([M]);               // Market IQ data service: only the api shares its network
     expect(nets('web')).toEqual([E]);                    // Phase 6: no database access, talks only to the api
     for (const s of ['worker', 'postgres', 'redis', 'garage']) expect(nets(s), s).toEqual([I]);
   });
@@ -115,6 +117,37 @@ describe('exposure: only Caddy is reachable from outside the Docker networks', (
   it('the api can reach the internet (email, Google, Razorpay)', () => {
     const r = dc('exec', '-T', 'api', 'node', '-e', "fetch('https://example.com',{signal:AbortSignal.timeout(10000)}).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))");
     expect(r.code).toBe(0);
+  });
+});
+
+describe('Market IQ data service (docs/MARKET_IQ.md)', () => {
+  const fromApi = (path: string, key: string | null) => dc('exec', '-T', 'api', 'node', '-e',
+    `fetch('http://marketiq:8000${path}',{headers:${key === null ? '{}' : `{'x-internal-key':process.env.MARKETIQ_INTERNAL_KEY${key === 'wrong' ? "+'x'" : ''}}`},signal:AbortSignal.timeout(5000)}).then(r=>console.log(r.status),()=>console.log('unreachable'))`).out.trim();
+  it('the api reaches it, and every /internal call needs the shared key', () => {
+    expect(fromApi('/healthz', null)).toBe('200');
+    expect(fromApi('/internal/status', null)).toBe('401');
+    expect(fromApi('/internal/status', 'wrong')).toBe('401');
+    expect(fromApi('/internal/status', 'right')).toBe('200');
+  });
+  it('web, worker and caddy cannot reach it at all', () => {
+    for (const svc of ['web', 'worker']) {
+      const r = dc('exec', '-T', svc, 'node', '-e', "fetch('http://marketiq:8000/healthz',{signal:AbortSignal.timeout(4000)}).then(()=>process.exit(1),()=>process.exit(0))");
+      expect(r.code, svc).toBe(0);
+    }
+    expect(dc('exec', '-T', 'caddy', 'wget', '-q', '-T', '4', '-O', '/dev/null', 'http://marketiq:8000/healthz').code).not.toBe(0);
+  });
+  it('it can reach the internet (Dhan API, NSE)', () => {
+    const r = dc('exec', '-T', 'marketiq', 'python', '-c', "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('https://example.com', timeout=10).status == 200 else 1)");
+    expect(r.code).toBe(0);
+  });
+  it('runs as a non-root user with a read-only root filesystem', () => {
+    expect(dc('exec', '-T', 'marketiq', 'id', '-u').out.trim()).toBe('1000');
+    expect(dc('exec', '-T', 'marketiq', 'sh', '-c', 'touch /srv/x 2>/dev/null && echo writable || echo read-only').out.trim()).toBe('read-only');
+  });
+  it('is not routed through Caddy', async () => {
+    const r = await fetch(`${BASE}/internal/status`);
+    expect(r.status).not.toBe(200);
+    expect(await r.text()).not.toContain('instruments');
   });
 });
 

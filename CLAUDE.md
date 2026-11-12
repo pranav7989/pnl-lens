@@ -17,6 +17,9 @@ Progress, Discipline (see packages/shared/src/pricing.ts). "File" = one broker s
 - Payments are built but off (PAYMENTS_MODE=off|razorpay). See docs/PAYMENTS_RAZORPAY.md.
 - Production: infra/compose.prod.yml + infra/scripts (docs/DEPLOYMENT_VM.md, docs/RUNBOOK.md,
   docs/GO_LIVE_CHECKLIST.md).
+- Market IQ (live Market sheets, docs/MARKET_IQ.md): services/market-iq is a private Python data service, an approved
+  exception to the Node stack (owner, 12 Nov 2026), with its own CLAUDE.md. Only apps/api calls it (x-internal-key);
+  access is decided in the API (MARKET_IQ_ACCESS off|owner|paid). Keep "owner" until the data licence is cleared.
 
 ## Goal of this branch (backend-v2)
 Move parsing and analysis to the server and store raw files, normalised trades and

@@ -1,3 +1,6 @@
+# @file  services/market-iq/app/jobs/scheduler.py
+# @area  Market IQ
+# @what  Daily jobs in IST on trading days (holidays 08:20, token 08:30, instruments 08:45), each recorded in job_log.
 """Daily jobs (IST, trading days only; each run is written to job_log). Started with the web app.
   08:20  NSE holiday list
   08:30  Dhan token renewal (only once .env has the PIN and TOTP secret)

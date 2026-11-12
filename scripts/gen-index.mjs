@@ -7,9 +7,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DIRS = ['apps', 'packages', 'infra', 'scripts', 'tests'];
+const DIRS = ['apps', 'packages', 'services', 'infra', 'scripts', 'tests'];
 const EXT = /\.(ts|tsx|js|mjs|py|sql|css)$/;
-const SKIP = ['node_modules', '.next', 'dist', 'fixtures', 'golden', 'public'];
+const SKIP = ['node_modules', '.next', 'dist', 'fixtures', 'golden', 'public', '.venv', 'data', '__pycache__'];
 const CONFIG = /^(next\.config\.mjs|vitest\.config\.ts|eslint\.config\.mjs)$/; // tool configs, not source
 const files = [];
 const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) { if (!SKIP.includes(f.name)) walk(p); } else if (EXT.test(f.name) && !f.name.endsWith('.d.ts') && !CONFIG.test(f.name)) files.push(p); } };
@@ -19,7 +19,7 @@ const rows = files.map((p) => {
   const g = (k) => (head.match(new RegExp(`@${k}\\s+(.+)`)) || [])[1]?.replace(/\s*\*\/\s*$/, '').trim() || '';
   return { file: path.relative(ROOT, p).split(path.sep).join('/'), area: g('area') || 'Other', what: g('what') || '(no header)' };
 });
-const KNOWN = ['Pages', 'Landing', 'Brand', 'Auth', 'Reports', 'Engine', 'Report UI', 'Payments', 'Admin', 'API', 'Worker', 'Core', 'Styles', 'Database', 'Ops', 'Offline', 'Tests', 'Other'];
+const KNOWN = ['Pages', 'Landing', 'Brand', 'Auth', 'Reports', 'Engine', 'Report UI', 'Payments', 'Admin', 'API', 'Worker', 'Market IQ', 'Core', 'Styles', 'Database', 'Ops', 'Offline', 'Tests', 'Other'];
 // any other area is listed at the end instead of being dropped
 const ORDER = [...KNOWN.slice(0, -1), ...[...new Set(rows.map((x) => x.area))].filter((a) => !KNOWN.includes(a)).sort(), 'Other'];
 let out = '';

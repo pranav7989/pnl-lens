@@ -1,3 +1,6 @@
+# @file  services/market-iq/tests/test_token.py
+# @area  Tests
+# @what  Dhan token manager with mocked HTTP: login, reuse, renewal on expiry and rejection, clear errors, no secrets in logs.
 """Token manager with Dhan's HTTP mocked: login, reuse, renewal on expiry and on rejection, clear errors, no secrets in output."""
 import logging
 from datetime import datetime, timedelta

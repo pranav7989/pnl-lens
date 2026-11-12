@@ -1,8 +1,12 @@
-# Market IQ dashboard - project brief
+# Market IQ dashboard - project brief (service inside the PnL Lens repo)
 
 ## What we are building
-A personal live dashboard for Indian index options, 3 sheets, served as a web app.
-- Sheet 1 Nifty, Sheet 2 Bank Nifty (same template), Sheet 3 Market.
+Live Market sheets for PnL Lens users with a paid plan (India): Sheet 1 Nifty, Sheet 2 Bank Nifty (same template),
+Sheet 3 Market. This folder is the private Python DATA SERVICE only (approved exception to the repo's Node stack,
+owner 12 Nov 2026). It has no public port and no login of its own:
+  browser -> PnL Lens web (/market) -> PnL Lens API /api/v1/market-iq/* (sign-in, paid plan, India, flag
+  MARKET_IQ_ACCESS) -> this service /internal/* with header x-internal-key = MARKETIQ_INTERNAL_KEY.
+The sheets are PnL Lens React pages using the PnL Lens design system, NOT static HTML here. See docs/MARKET_IQ.md.
 - All formulas and display rules: docs/parameters.pdf (source of truth).
   Approved mockups: docs/mockups/sheet1-nifty.png, sheet2-banknifty.png, sheet3-market.png.
 - The owner does not code. Explain what you did in plain words after each phase,
@@ -18,9 +22,8 @@ A personal live dashboard for Indian index options, 3 sheets, served as a web ap
 ## Tech stack (do not change without asking)
 - Python 3.11, FastAPI + uvicorn, dhanhq (official SDK, latest 2.x), httpx,
   pandas, pyotp, APScheduler, SQLite (WAL mode) via sqlite3/SQLAlchemy core.
-- Frontend: static HTML + vanilla JS + CSS (no React), TradingView
-  lightweight-charts for candles; other charts are plain HTML/CSS bars.
-- Browser gets data from backend over one WebSocket (/ws) + a few REST calls.
+- Frontend: PnL Lens Next.js pages (apps/web/app/(app)/market), TradingView lightweight-charts
+  for candles; other charts are plain HTML/CSS bars. Browsers poll the PnL Lens API (3 s); never this service.
 - Tests: pytest. Lint: ruff.
 
 ## Rules
@@ -35,6 +38,11 @@ A personal live dashboard for Indian index options, 3 sheets, served as a web ap
 - All calculations live in app/calc/ as pure functions with unit tests.
 - Every widget shows a data-freshness state; never show stale data silently.
 - Not investment advice: footer on every sheet. No buy/sell language in UI text.
+- Wording overrides docs/parameters.pdf (owner: "no SEBI issues"): sentiment bands are
+  Strongly bearish / Bearish / Neutral / Bullish / Strongly bullish (positioning), never Buy/Sell;
+  the decoder never says "edge leans to sellers" (IV line: "Rich: priced above ATM IV" / "Cheap: priced below ATM IV").
+- Data licence: Dhan Data API and NSE website data are for personal use. Keep MARKET_IQ_ACCESS=owner
+  until the owner confirms a redistribution/vendor licence; only then switch to paid.
 - Work in phases (see docs/build_manual.pdf). Finish, test, and summarise each
   phase before starting the next. Commit to git after each phase.
 

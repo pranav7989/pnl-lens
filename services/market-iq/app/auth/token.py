@@ -1,3 +1,6 @@
+# @file  services/market-iq/app/auth/token.py
+# @area  Market IQ
+# @what  Dhan access token from client ID + PIN + TOTP (no browser), stored in SQLite, renewed before expiry and on rejection; --check CLI.
 """Dhan access-token manager: creates a token by itself from client ID + PIN + TOTP (no browser), keeps it in
 SQLite, renews it before it expires (24 h) and whenever Dhan rejects it.
 

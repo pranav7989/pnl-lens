@@ -1,3 +1,6 @@
+# @file  services/market-iq/app/store/db.py
+# @area  Market IQ
+# @what  SQLite (WAL) connection and schema: token, instruments, job_log.
 """SQLite (WAL mode): one file in data/, tables created on first use. Schema follows the build manual §5,
 with one correction: instruments are keyed by (exch_id, segment, security_id) because Dhan reuses a
 security id across segments."""

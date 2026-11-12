@@ -1,3 +1,6 @@
+# @file  services/market-iq/app/nse/holidays.py
+# @area  Market IQ
+# @what  NSE F&O trading holidays (stored in SQLite) and is_trading_day().
 """NSE trading holidays (F&O segment) and is_trading_day(). The list comes from
 https://www.nseindia.com/api/holiday-master?type=trading (key "FO": [{tradingDate: "26-Jan-2026", description, ...}]),
 is stored in SQLite and refreshed daily; if NSE can't be reached the stored list is used."""

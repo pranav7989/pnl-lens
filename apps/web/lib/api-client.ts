@@ -32,7 +32,7 @@ export async function apiServer<T = any>(path: string, init: { method?: string; 
   return { status: res.status, ok: res.ok, data };
 }
 
-export interface Me { user: { id: string; country: string | null }; credits: number; reportsLeft?: number; role: string; hasPassword?: boolean; needsPassword?: boolean }
+export interface Me { user: { id: string; country: string | null }; credits: number; reportsLeft?: number; role: string; hasPassword?: boolean; needsPassword?: boolean; foundingNo?: number | null; marketIq?: boolean }
 
 /** The signed-in user (reports left, role), or null when signed out. One API call per request (React cache). */
 export const getMe = cache(async (): Promise<Me | null> => {

@@ -1,18 +1,29 @@
-# Market IQ (FlowLens, working name)
+# Market IQ data service
 
-Personal live dashboard for Indian index options: Nifty, Bank Nifty and Market sheets.
-Read-only: it never places orders. Data and analytics only, not investment advice.
-The project brief for Claude Code is `CLAUDE.md`; the formulas are in `docs/parameters.pdf`.
+This is the private data service behind PnL Lens's live Market sheets (Nifty, Bank Nifty, Market; India only).
+- It is read-only: it never places orders.
+- It has no public port and no login of its own. Users reach the sheets through PnL Lens, which checks sign-in, plan and region.
+- The full design is in `docs/MARKET_IQ.md` at the repo root. The brief for Claude Code is `CLAUDE.md` in this folder.
 
-## Commands (run in this folder)
+## In the stack
+- `docker compose` runs it as the `marketiq` service, from `infra/docker/marketiq.Dockerfile`.
+- Its settings come from the repo's root `.env`:
+  - `DHAN_CLIENT_ID`, `DHAN_PIN` and `DHAN_TOTP_SECRET`, which you fill in yourself;
+  - `MARKETIQ_INTERNAL_KEY`, which `npm run stack:env` generates.
+
+## Local commands (run in this folder)
 | What | Command |
 |---|---|
-| Start the app | `.venv/bin/uvicorn app.main:app --port 8000`, then open http://127.0.0.1:8000 |
+| One-time setup | `python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt` |
 | Check the Dhan login | `.venv/bin/python -m app.auth.token --check` |
 | Instrument IDs | `.venv/bin/python -m app.dhan.instruments` (add `--download` to force a fresh list) |
 | Tests and lint | `.venv/bin/pytest -q` and `.venv/bin/ruff check .` |
 
 ## Status
-- Phase 0: skeleton, done.
-- Phase 1: Dhan login by client ID, PIN and TOTP (no browser), done. Needs `.env` filled in.
-- Phase 2: instrument list, index IDs, F&O stocks, NSE holidays and the daily jobs, done.
+| Phase | What | State |
+|---|---|---|
+| 0 | Skeleton | done |
+| 1 | Dhan login (client ID + PIN + TOTP, no browser) | done; needs `.env` filled in |
+| 2 | Instrument list, NSE holidays, daily jobs | done |
+| PnL Lens foundation | Internal API with key, Docker service, API access checks, `/market` page | done |
+| 3–7 | Live feed, option chain, NSE jobs, formulas, sheet data | next |

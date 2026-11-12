@@ -43,7 +43,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="app-header">
           <div className="bar">
             <Link href="/" className="brand" style={{ textDecoration: 'none' }} aria-label="PnL Lens home"><LogoMark size={28} /><span>PnL Lens</span></Link>
-            {user ? <NavLinks /> : <nav className="app-nav guest"><Link href="/manual">User manual</Link></nav>}
+            {user ? <NavLinks market={!!me?.marketIq} /> : <nav className="app-nav guest"><Link href="/manual">User manual</Link></nav>}
             {user ? (
               <>{/* credits spec: customers see "reports"; usable reports of plans still open */}
                 {left ? <span className="credits-pill"><b>{left}</b> report{left === 1 ? '' : 's'} left</span>

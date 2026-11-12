@@ -109,11 +109,32 @@ services:
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
       PRICING_DEFAULT_COUNTRY: ${PRICING_DEFAULT_COUNTRY:-US}
-    networks: [edge, internal]
+      MARKETIQ_URL: http://marketiq:8000
+      MARKETIQ_INTERNAL_KEY: ${MARKETIQ_INTERNAL_KEY:?set in .env}
+      MARKET_IQ_ACCESS: ${MARKET_IQ_ACCESS:-owner}   # off | owner | paid  (paid only once the data licence is cleared)
+    networks: [edge, internal, marketiq]
     depends_on:
       migrate: { condition: service_completed_successfully }
       storage-init: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  # Market IQ data service (docs/MARKET_IQ.md): no published port; only api can reach it (own network,
+  # which also gives it outbound HTTPS to the Dhan API and NSE).
+  marketiq:
+    <<: [*hardened, *logging]
+    tmpfs: ["/tmp:size=64m"]
+    mem_limit: 512m
+    build: { context: .., dockerfile: infra/docker/marketiq.Dockerfile }
+    image: ${IMAGE_REGISTRY:-pnl-lens}/marketiq:${IMAGE_TAG:-local}
+    environment:
+      <<: *tz
+      MARKETIQ_INTERNAL_KEY: ${MARKETIQ_INTERNAL_KEY:?set in .env}
+      DHAN_CLIENT_ID: ${DHAN_CLIENT_ID:-}
+      DHAN_PIN: ${DHAN_PIN:-}
+      DHAN_TOTP_SECRET: ${DHAN_TOTP_SECRET:-}
+    volumes: [marketiq_data:/data]
+    networks: [marketiq]
     restart: unless-stopped
 
   worker:
@@ -235,6 +256,7 @@ networks:
   edge: {}
   internal:
     internal: true
+  marketiq: {}
 
 volumes:
   pgdata:
@@ -243,3 +265,4 @@ volumes:
   garage_data:
   caddy_data:
   caddy_config:
+  marketiq_data:

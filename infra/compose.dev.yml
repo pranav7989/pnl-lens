@@ -90,7 +90,10 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       PAYMENTS_MODE: "off"
       EXPOSE_OPENAPI: "true"                  # dev only: GET /api/v1/openapi.json
-    networks: [edge, internal]             # edge = egress for email, Google, Razorpay
+      MARKETIQ_URL: http://marketiq:8000      # private Market IQ data service (docs/MARKET_IQ.md)
+      MARKETIQ_INTERNAL_KEY: ${MARKETIQ_INTERNAL_KEY:?run npm run stack:env}
+      MARKET_IQ_ACCESS: ${MARKET_IQ_ACCESS:-owner}   # off | owner | paid  (paid only once the data licence is cleared)
+    networks: [edge, internal, marketiq]   # edge = egress for email, Google, Razorpay; marketiq = the data service
     depends_on:
       migrate: { condition: service_completed_successfully }
       storage-init: { condition: service_completed_successfully }
@@ -101,6 +104,25 @@ services:
         - { action: rebuild, path: ../apps/api/src }
         - { action: rebuild, path: ../packages/db/src }
         - { action: rebuild, path: ../packages/shared/src }
+
+  # Market IQ data service (Python): reachable only from api over its own network, which also gives it
+  # the outbound HTTPS it needs (Dhan API, NSE). No published port; web and caddy cannot reach it.
+  marketiq:
+    <<: *hardened
+    tmpfs: ["/tmp:size=64m"]
+    mem_limit: 512m
+    build: { context: .., dockerfile: infra/docker/marketiq.Dockerfile }
+    image: pnl-lens/marketiq:dev
+    environment:
+      <<: *tz
+      MARKETIQ_INTERNAL_KEY: ${MARKETIQ_INTERNAL_KEY:?run npm run stack:env}
+      DHAN_CLIENT_ID: ${DHAN_CLIENT_ID:-}
+      DHAN_PIN: ${DHAN_PIN:-}
+      DHAN_TOTP_SECRET: ${DHAN_TOTP_SECRET:-}
+      MARKET_IQ_SCHEDULER: ${MARKET_IQ_SCHEDULER:-on}
+    volumes: [marketiq_data:/data]
+    networks: [marketiq]
+    restart: unless-stopped
 
   # ---------------------------------------------------------------- internal only (no internet)
   worker:
@@ -219,6 +241,7 @@ networks:
   edge: {}
   internal:
     internal: true          # no route to the internet
+  marketiq: {}              # api <-> marketiq only (+ egress for marketiq to Dhan and NSE)
 
 volumes:
   pgdata:
@@ -227,3 +250,4 @@ volumes:
   garage_data:
   caddy_data:
   caddy_config:
+  marketiq_data:

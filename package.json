@@ -35,7 +35,8 @@
     "stack:e2e": "docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.e2e.yml up -d --build --wait",
     "stack:signin": "docker compose --env-file .env -f infra/compose.dev.yml -f infra/compose.e2e.yml -f infra/compose.mail.yml up -d --build --wait",
     "audit:prod": "node infra/scripts/audit.mjs",
-    "check:secrets": "bash infra/scripts/check-secrets.sh"
+    "check:secrets": "bash infra/scripts/check-secrets.sh",
+    "test:market-iq": "cd services/market-iq && .venv/bin/ruff check . && .venv/bin/pytest -q"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

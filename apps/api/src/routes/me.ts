@@ -13,6 +13,7 @@ import { userPlans, currentConsents, recordConsent, requestData, deleteAccount }
 import { decryptFile } from '@pnl-lens/shared/file-crypto';
 import type { App, Deps } from '../app.js';
 import { fail, ok, requireUser, sessionUser, asFetchLike, ipHash, ipOf, UUID } from '../lib/http.js';
+import { marketIqAccessFor } from './market-iq.js';
 
 export async function meRoutes(app: App, deps: Deps) {
   /** Current user + credits; also records daily activity for DAU/MAU (same as GET /api/me). */
@@ -27,7 +28,8 @@ export async function meRoutes(app: App, deps: Deps) {
     // reportsLeft: usable reports of plans whose window is open (customer screens); credits: internal mirror (admin only)
     const { rows: left } = await deps.pool.query('select public.user_reports_left($1) as n', [user.id]);
     return ok(reply, { user: { id: user.id, country: user.country }, credits: r?.balance ?? 0, reportsLeft: left[0]?.n ?? 0, role: u?.role ?? 'user',
-      hasPassword, needsPassword: !hasPassword && !u?.google_sub && !dev, foundingNo: u?.founding_no ?? null });
+      hasPassword, needsPassword: !hasPassword && !u?.google_sub && !dev, foundingNo: u?.founding_no ?? null,
+      marketIq: (await marketIqAccessFor(deps, user.id)) === 'ok' });
   });
 
   /** Plans and prices for the visitor's country (server-side, never from the browser); plus the user's own plans when signed in. */

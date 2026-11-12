@@ -50,6 +50,9 @@ Everything lives in one `.env` file at the repo root (git-ignored). `npm run sta
 | `WEEKLY_DIGEST` | on | `off` stops the API's weekly summary sender |
 | `DIGEST_INTERVAL_MS` / `DIGEST_FROM_HOUR` | `900000` / `9` | How often the API looks for weekly summaries to send, and the IST hour on Monday from which they go out. The e2e overlay uses `2000` / `0` |
 | `MARKET_SYNC` / `MARKET_SYNC_INTERVAL_MS` | on / `3600000` | India market data (NIFTY 50, NIFTY BANK, India VIX daily closes) fetched by the API from Upstox's public history API (NSE fallback); `off` stops it (the e2e overlay does). The API container needs outbound HTTPS to api.upstox.com and www.nseindia.com |
+| `MARKET_IQ_ACCESS` | `owner` | Who sees the live Market sheets: `off`, `owner` (owner/admin only) or `paid` (India users with an open plan window). Keep `owner` until the data licence is cleared (docs/MARKET_IQ.md) |
+| `MARKETIQ_URL` / `MARKETIQ_INTERNAL_KEY` | `http://marketiq:8000` / generated | The private Market IQ data service and the shared key the API sends (`npm run stack:env` generates the key) |
+| `DHAN_CLIENT_ID` / `DHAN_PIN` / `DHAN_TOTP_SECRET` | empty | Market IQ service only: daily automatic Dhan login. The owner types the PIN and TOTP secret into `.env` |
 | `PLAN_FONTS_DIR` | `apps/api/assets/fonts` | Fonts embedded in the 30-day plan PDF (found automatically) |
 | `RETENTION_USAGE_MONTHS` / `RETENTION_AUDIT_MONTHS` | `12` / `24` | Log retention (`purge_logs`, LAWYER CHECK) |
 | `EXTRA_ALLOWED_ORIGINS` | — | More origins allowed to send state-changing requests |

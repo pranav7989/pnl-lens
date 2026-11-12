@@ -2705,6 +2705,42 @@
           }
         }
       }
+    },
+    "/api/v1/market-iq/access": {
+      "get": {
+        "summary": "May the signed-in user see the live Market sheets?",
+        "tags": [
+          "market-iq"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/market-iq/status": {
+      "get": {
+        "summary": "Market IQ data service status (users with access only)",
+        "tags": [
+          "market-iq"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
     }
   },
   "servers": [

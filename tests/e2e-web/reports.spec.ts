@@ -60,7 +60,7 @@ test('dashboard: search, sort and rename; report page: rename', async ({ page })
   await expect(list.locator('.rl-card')).toHaveCount(1);
   await expect(list.locator('.rl-count')).toHaveText('1 of 3 reports');
   await expect(list.locator('.rl-card .rl-name')).toHaveText(/^Report · /);                 // untitled default name
-  await page.getByRole('searchbox', { name: 'Search reports' }).fill('october');
+  await page.getByRole('searchbox', { name: 'Search reports' }).fill('review');          // title only (a month name would also match report dates)
   await expect(list.locator('.rl-card')).toHaveCount(1);
   await page.getByRole('searchbox', { name: 'Search reports' }).fill('');
   await page.getByRole('combobox', { name: 'Sort reports' }).selectOption('name');

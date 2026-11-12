@@ -1,3 +1,6 @@
+# @file  services/market-iq/app/dhan/instruments.py
+# @area  Market IQ
+# @what  Dhan instrument list: daily download into SQLite (segment-safe keys) and lookups for index IDs, index futures, F&O stocks and option strikes.
 """Dhan instrument list (scrip master): downloaded every trading day at 08:45 into SQLite, with lookups for the
 index IDs, index futures, the F&O stock list and option strikes.
 

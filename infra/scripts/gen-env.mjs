@@ -38,6 +38,7 @@ const SPEC = [
   ['IP_HASH_SECRET', () => hex(32)],                  // HMAC key for IPs in consent rows
   ['FILE_KEK_ID', () => 'k1'],                        // which key encrypts new uploads
   ['FILE_KEK_K1', () => hex(32)],                     // key-encryption key for raw files (rotate: add FILE_KEK_K2, switch FILE_KEK_ID)
+  ['MARKETIQ_INTERNAL_KEY', () => hex(32)],           // api -> Market IQ data service (x-internal-key)
 ];
 
 const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '') : '';

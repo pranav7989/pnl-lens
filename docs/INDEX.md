@@ -86,14 +86,16 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 330 files._
+_Generated from file headers by `npm run docs:index` — 358 files._
 
 ### Pages
 
 | File | What it does |
 |---|---|
+| `apps/web/app/(app)/market/page.tsx` | Live Market sheets (Nifty, Bank Nifty, Market; India): access decided by the API (sign-in, plan, region, flag); upgrade card without a plan, not found otherwise. |
 | `apps/web/app/layout.tsx` | Root layout: fonts (Manrope + ₹ glyph), html lang (en-IN / en by site), header with logo and reports left (from the API), browser error reporter. |
 | `apps/web/app/not-found.tsx` | 404 page. |
+| `apps/web/components/market/MarketShell.tsx` | The Market page frame: Nifty / Bank Nifty / Market tabs, the data service status (login, instrument list, session, daily jobs) refreshed every 30 s, and the disclaimer; the live sheets fill these tabs in later phases. |
 | `apps/web/components/nav/NavLinks.tsx` | Header navigation links (active-state aware). |
 
 ### Landing
@@ -249,12 +251,14 @@ _Generated from file headers by `npm run docs:index` — 330 files._
 | `apps/api/src/config.ts` | API configuration from env, checked once at startup (fails fast on missing secrets). |
 | `apps/api/src/lib/http.ts` | Response helpers with the same JSON shapes as the old Next routes ({ error, message }), session lookup, request adapters. |
 | `apps/api/src/lib/markdown.ts` | REQ-7 blog: Markdown → safe HTML on the server (no raw HTML, no scripts/iframes, safe links), reading time and slugs. |
+| `apps/api/src/lib/market-iq.ts` | Market IQ access rule (flag off/owner/paid, staff, India, active plan) and the client for the private data service (x-internal-key, short timeout). |
 | `apps/api/src/lib/queue.ts` | Enqueues analysis jobs on BullMQ (Redis) for apps/worker; job id = analysis id, so a repeat is a no-op. |
 | `apps/api/src/lib/sniff.ts` | Upload type check: the real file type from its bytes (the engine's own detectKind) plus a reject list for non-statements. |
 | `apps/api/src/lib/storage.ts` | Object storage (S3 API on Garage): encrypted statements (api key write-only), export archives (read-only), blog media (read/write, public via the API). |
 | `apps/api/src/main.ts` | API process entry: config, Postgres (lens_app only), Redis, storage, queue, check-up reminder, weekly summary and market data timers; listens on PORT; graceful shutdown. |
 | `apps/api/src/routes/blog.ts` | REQ-7 blog API: public posts/feed/media (cacheable) and owner/admin-only writing, publishing, live preview and image upload (WebP via sharp). |
 | `apps/api/src/routes/health.ts` | GET /health (liveness) and GET /ready (Postgres as lens_app, Redis, storage). |
+| `apps/api/src/routes/market-iq.ts` | Market IQ live sheets: GET /market-iq/access (may this user see them?) and GET /market-iq/status (service status, for users with access); the private data service is called only from here. |
 
 ### Worker
 
@@ -273,6 +277,26 @@ _Generated from file headers by `npm run docs:index` — 330 files._
 | `apps/worker/src/research.ts` | Research dataset (every 1st and 16th, or "Build now"): CSVs from the pseudonymised research views (opted-in users only), zipped, encrypted, kept 90 days; report links kept for the owner's lookup; expiry sweep. |
 | `apps/worker/src/storage.ts` | Object storage for the worker (S3 API on Garage): read encrypted files, delete shredded ones. In-memory version for tests. |
 | `apps/worker/src/zip.ts` | Minimal ZIP writer (deflate, CRC-32 from node:zlib) for the data-export archive; no third-party dependency. |
+
+### Market IQ
+
+| File | What it does |
+|---|---|
+| `services/market-iq/app/__init__.py` | Package marker for the Market IQ data service. |
+| `services/market-iq/app/auth/__init__.py` | Package: Dhan login. |
+| `services/market-iq/app/auth/token.py` | Dhan access token from client ID + PIN + TOTP (no browser), stored in SQLite, renewed before expiry and on rejection; --check CLI. |
+| `services/market-iq/app/calc/__init__.py` | Package: pure calculation functions (Phase 6). |
+| `services/market-iq/app/config.py` | Settings: Dhan secrets and the internal key from the environment (.env), fixed constants (times, URLs), and log redaction of PIN/TOTP/tokens. |
+| `services/market-iq/app/dhan/__init__.py` | Package: Dhan data (instruments; later the live feed, option chain, history). |
+| `services/market-iq/app/dhan/instruments.py` | Dhan instrument list: daily download into SQLite (segment-safe keys) and lookups for index IDs, index futures, F&O stocks and option strikes. |
+| `services/market-iq/app/jobs/__init__.py` | Package: scheduled daily jobs. |
+| `services/market-iq/app/jobs/scheduler.py` | Daily jobs in IST on trading days (holidays 08:20, token 08:30, instruments 08:45), each recorded in job_log. |
+| `services/market-iq/app/main.py` | Internal FastAPI app (no public port): /healthz for Docker, /internal/* data for the PnL Lens API only (x-internal-key), and the daily jobs while it runs. |
+| `services/market-iq/app/nse/__init__.py` | Package: NSE public data (session, holidays; later FII/DII and index weights). |
+| `services/market-iq/app/nse/holidays.py` | NSE F&O trading holidays (stored in SQLite) and is_trading_day(). |
+| `services/market-iq/app/nse/session.py` | Polite NSE HTTP client: browser headers, home-page cookies, max 1 request per 2 s, one retry on 401/403. |
+| `services/market-iq/app/store/__init__.py` | Package: SQLite storage. |
+| `services/market-iq/app/store/db.py` | SQLite (WAL) connection and schema: token, instruments, job_log. |
 
 ### Core
 
@@ -297,6 +321,7 @@ _Generated from file headers by `npm run docs:index` — 330 files._
 | `apps/web/app/blog.css` | REQ-7 blog: list, cards (also the landing preview), article typography, CTA card, editor preview. Uses the design tokens in globals.css. |
 | `apps/web/app/globals.css` | Base app styles: colours, header, panels, buttons, forms, print rules. |
 | `apps/web/app/landing.css` | Landing page styles: one system of centred titles, equal cards, sample dashboard, plans. |
+| `apps/web/app/market.css` | Market page (live sheets): header with the data-freshness dot, sheet tabs, status list and disclaimer, on the site tokens. |
 | `apps/web/app/motion.css` | Motion system (19 Oct 2026): easing/duration tokens, a CSS spring, page and view transitions, entrances, reveal-on-scroll, press/lift, sliding tab ink, shimmer, sheets. Reduced motion turns it all off. |
 | `apps/web/app/report.css` | Report, Progress tab, analysing loader and admin console styles (shared by website and offline tool). |
 | `apps/web/app/template.tsx` | Route transition: every navigation fades in and rises 10px (motion.css .mo-page); static with reduced motion. |
@@ -395,6 +420,7 @@ _Generated from file headers by `npm run docs:index` — 330 files._
 | `apps/api/test/events.test.ts` | POST /events: allow-listed names only; visitors may send only the landing events (REQ-4); journey events from signed-in users (REQ-2). |
 | `apps/api/test/helpers.ts` | API test helpers: app on a fresh migrated database (lens_app connection), session cookies, multipart bodies, captured mail. |
 | `apps/api/test/journal.test.ts` | Journal API: save, list, update, empty removes, delete; validation (emotion, tags, sizes); private to each user; signed-out 401. |
+| `apps/api/test/market-iq.test.ts` | Market IQ access on the server: the flag (off/owner/paid), staff, India only, an open plan window; the status call sends the internal key and reports an unreachable service as 503. |
 | `apps/api/test/market.test.ts` | Market data: automatic sync (Upstox, only the missing days, retries, NSE fallback, status and stale flag when both fail) with a fake network; the report route (India only, masked for other markets, owner only). |
 | `apps/api/test/openapi-doc.ts` | Builds the app with placeholder dependencies (no database connection is opened) to read its OpenAPI document. |
 | `apps/api/test/openapi.test.ts` | apps/api/openapi.json matches the routes (regenerate: npm run openapi -w @pnl-lens/api); global and sign-in rate limits. |
@@ -456,6 +482,12 @@ _Generated from file headers by `npm run docs:index` — 330 files._
 | `packages/shared/test/rbac.test.ts` | Role permissions and error fingerprinting. |
 | `packages/shared/test/rewind.test.ts` | Rewind (what-if replay) on the golden reports: no rules = the real result; each rule does exactly what it says; stops never make a trade worse; date rules need dates; the 30-day plan becomes Rewind settings. |
 | `packages/shared/test/share.test.ts` | Share card ("My Trading Discipline") on every golden report: no results, returns, percentages, money, names, securities or underlyings (legal safety rule); the disclaimer always present (SEBI named for India); deterministic slot filling; formats; layout fits; the committed QR reads back as SHARE_URL. |
+| `services/market-iq/tests/__init__.py` | Package marker for the Market IQ tests. |
+| `services/market-iq/tests/conftest.py` | Test setup: the daily jobs never start during tests. |
+| `services/market-iq/tests/test_app.py` | Internal API: /healthz open, every /internal/* call needs the shared key (missing key = 503, wrong key = 401), status carries no secrets. |
+| `services/market-iq/tests/test_instruments.py` | Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays. |
+| `services/market-iq/tests/test_scheduler.py` | Daily jobs: IST times, skipped on holidays, failures recorded without crashing, token job waits for .env. |
+| `services/market-iq/tests/test_token.py` | Dhan token manager with mocked HTTP: login, reuse, renewal on expiry and rejection, clear errors, no secrets in logs. |
 | `tests/e2e-web/blog.spec.ts` | REQ-7 blog end to end: owner drafts, previews, publishes, unpublishes, schedules; /blog, article, landing preview, sitemap; raw-HTML SEO; sanitising; support sees no Blog tab; events. |
 | `tests/e2e-web/credits.spec.ts` | Credits spec (19 Oct 2026) in the browser: "N reports left" pill and "Plans" menu, plan card wording, free preview (3 numbers, 2 insights, blurred, from ₹99/$9), plan window end, no "credit" on customer screens. |
 | `tests/e2e-web/digest.spec.ts` | Weekly summary email: off by default, turned on in Your data, the email arrives once with focus rules and the report link, and its "Stop these emails" link turns it off (button, no sign-in). |
@@ -468,6 +500,7 @@ _Generated from file headers by `npm run docs:index` — 330 files._
 | `tests/e2e-web/lifetime.spec.ts` | Lifetime view: the dashboard link appears with 2+ reports; the same statement uploaded twice counts once; Summary, Edge and Rewind work on all trades; one report shows the "needs two" message. |
 | `tests/e2e-web/login.spec.ts` | Sign-in card: new email → code → required password → dashboard; password sign-in sends no code; wrong password; forgot → code → new password; the set step can't be skipped; layout at 320/390/1440. |
 | `tests/e2e-web/manual.spec.ts` | User manual: India and Global editions at /manual (Market context only in India), the edition switch, the contents links, and a "User manual" link on the landing page, for visitors and in the signed-in header; pricing cards promise only built features. |
+| `tests/e2e-web/market-iq.spec.ts` | Market page (flag "owner", the stack default): the owner sees the Market link and the page with sheet tabs, data service status and the disclaimer, without sideways scroll on a phone; a paying user sees neither. |
 | `tests/e2e-web/market.spec.ts` | Market context (India only): an Indian report shows NIFTY over the period and results by VIX level and index move; a non-Indian (crypto) report shows no market section at all. |
 | `tests/e2e-web/motion.spec.ts` | Motion system (19 Oct 2026): reduced motion = no animation and everything visible; reveal-on-scroll ends visible; sliding tab ink follows the selected tab; sign-in steps work with View Transitions. |
 | `tests/e2e-web/plan.spec.ts` | 30-day plan: "30-day plan" button at the top right of a report downloads the PDF; "Remind me" turns on a check-up email, shown in Your data, sent once when due; the next report's Progress tab scores the plan. |

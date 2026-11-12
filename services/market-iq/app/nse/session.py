@@ -1,3 +1,6 @@
+# @file  services/market-iq/app/nse/session.py
+# @area  Market IQ
+# @what  Polite NSE HTTP client: browser headers, home-page cookies, max 1 request per 2 s, one retry on 401/403.
 """A polite NSE client: browser-like headers, cookies from the home page, at most 1 request every 2 s, and one retry
 with a fresh session on 401/403. NSE blocks fast or bot-like traffic, so every NSE call goes through here."""
 from __future__ import annotations

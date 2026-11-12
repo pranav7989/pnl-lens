@@ -1,3 +1,6 @@
+# @file  services/market-iq/tests/test_instruments.py
+# @area  Tests
+# @what  Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays.
 """Instrument list on a sample of the real Dhan file: what is kept, the segment-safe key, and every lookup."""
 import json
 from datetime import date

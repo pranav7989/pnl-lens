@@ -1,4 +1,8 @@
-"""Settings: secrets from .env, plus the fixed constants (times, steps, windows) used everywhere."""
+# @file  services/market-iq/app/config.py
+# @area  Market IQ
+# @what  Settings: Dhan secrets and the internal key from the environment (.env), fixed constants (times, URLs), and log redaction of PIN/TOTP/tokens.
+"""Settings: secrets from the environment, plus the fixed constants (times, steps, windows) used everywhere.
+In the stack, docker compose passes them from the repo's root .env; for local runs the root .env is read too."""
 from __future__ import annotations
 
 import logging
@@ -11,8 +15,9 @@ from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(ROOT / ".env")
+ROOT = Path(__file__).resolve().parent.parent           # services/market-iq
+load_dotenv(ROOT / ".env")                                # optional local override
+load_dotenv(ROOT.parent.parent / ".env")                  # the repo's root .env (never overrides what is set)
 
 IST = ZoneInfo("Asia/Kolkata")
 SESSION_OPEN = time(9, 15)
@@ -25,6 +30,11 @@ DB_PATH = Path(os.getenv("MARKET_IQ_DB", ROOT / "data" / "market_iq.db"))
 DHAN_AUTH_BASE = "https://auth.dhan.co"
 DHAN_API_BASE = "https://api.dhan.co/v2"
 SCRIP_MASTER_URL = "https://images.dhan.co/api-data/api-scrip-master-detailed.csv"
+
+
+def internal_key() -> str:
+    """Shared secret the PnL Lens API sends in x-internal-key; the service refuses every data call without it."""
+    return (os.getenv("MARKETIQ_INTERNAL_KEY") or "").strip()
 
 
 @dataclass(frozen=True)
