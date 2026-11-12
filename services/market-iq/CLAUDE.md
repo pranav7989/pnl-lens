@@ -59,3 +59,11 @@ The sheets are PnL Lens React pages using the PnL Lens design system, NOT static
 - Equity rows: ticker is UNDERLYING_SYMBOL (SYMBOL_NAME is the company name).
   FUTSTK UNDERLYING_SECURITY_ID = the NSE cash security id. Ignore *NSETEST symbols.
 - API segment codes: IDX_I, NSE_EQ, NSE_FNO, NSE_CURRENCY, BSE_EQ, MCX_COMM, BSE_CURRENCY, BSE_FNO.
+- Live feed (verified live 12 Nov 2026): wss://api-feed.dhan.co?version=2&token=&clientId=&authType=2. Subscribe
+  RequestCode 15 (Ticker) AND 17 (Quote) - previous close (packet 6) comes ONLY with Ticker. One frame holds several
+  packets; each packet's int16 length includes its 8-byte header. Packet 6's previous OI is float32 (docs: int32).
+  Last trade time = IST wall clock written as UTC epoch; /charts/intraday timestamps are true UTC epoch.
+  Live index volume is 0 (use the index future's volume). 444 instruments on one connection, all updating.
+- generateAccessToken may replace the previous token: run the service in ONE place (the stack); the local
+  --check CLI is for checks only.
+

@@ -86,7 +86,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 358 files._
+_Generated from file headers by `npm run docs:index` — 362 files._
 
 ### Pages
 
@@ -288,6 +288,8 @@ _Generated from file headers by `npm run docs:index` — 358 files._
 | `services/market-iq/app/calc/__init__.py` | Package: pure calculation functions (Phase 6). |
 | `services/market-iq/app/config.py` | Settings: Dhan secrets and the internal key from the environment (.env), fixed constants (times, URLs), and log redaction of PIN/TOTP/tokens. |
 | `services/market-iq/app/dhan/__init__.py` | Package: Dhan data (instruments; later the live feed, option chain, history). |
+| `services/market-iq/app/dhan/feed_proto.py` | Dhan live feed v2 wire format: subscription messages (max 100 instruments each) and the little-endian binary packet parser (several packets per frame). |
+| `services/market-iq/app/dhan/feed.py` | Live feed collector: one Dhan WebSocket (Ticker + Quote for ~440 instruments), auto-reconnect with backoff, live state, 1-minute bars saved to SQLite, today's backfill from history; runs 09:00-15:35 on trading days. |
 | `services/market-iq/app/dhan/instruments.py` | Dhan instrument list: daily download into SQLite (segment-safe keys) and lookups for index IDs, index futures, F&O stocks and option strikes. |
 | `services/market-iq/app/jobs/__init__.py` | Package: scheduled daily jobs. |
 | `services/market-iq/app/jobs/scheduler.py` | Daily jobs in IST on trading days (holidays 08:20, token 08:30, instruments 08:45), each recorded in job_log. |
@@ -295,8 +297,9 @@ _Generated from file headers by `npm run docs:index` — 358 files._
 | `services/market-iq/app/nse/__init__.py` | Package: NSE public data (session, holidays; later FII/DII and index weights). |
 | `services/market-iq/app/nse/holidays.py` | NSE F&O trading holidays (stored in SQLite) and is_trading_day(). |
 | `services/market-iq/app/nse/session.py` | Polite NSE HTTP client: browser headers, home-page cookies, max 1 request per 2 s, one retry on 401/403. |
+| `services/market-iq/app/state.py` | In-memory live state per instrument (LTP, OHLC, volume, OI, previous close/OI, last update) and the 1-minute bar builder; thread-safe. |
 | `services/market-iq/app/store/__init__.py` | Package: SQLite storage. |
-| `services/market-iq/app/store/db.py` | SQLite (WAL) connection and schema: token, instruments, job_log. |
+| `services/market-iq/app/store/db.py` | SQLite (WAL) connection and schema: token, instruments, 1-minute bars, job_log. |
 
 ### Core
 
@@ -485,6 +488,7 @@ _Generated from file headers by `npm run docs:index` — 358 files._
 | `services/market-iq/tests/__init__.py` | Package marker for the Market IQ tests. |
 | `services/market-iq/tests/conftest.py` | Test setup: the daily jobs never start during tests. |
 | `services/market-iq/tests/test_app.py` | Internal API: /healthz open, every /internal/* call needs the shared key (missing key = 503, wrong key = 401), status carries no secrets. |
+| `services/market-iq/tests/test_feed.py` | Live feed: packet parsing (several per frame, IST trade time, float prev OI), subscription batches, 1-minute bars, a full run against a fake Dhan WebSocket (subscribe, reconnect, saved bars) and today's backfill. |
 | `services/market-iq/tests/test_instruments.py` | Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays. |
 | `services/market-iq/tests/test_scheduler.py` | Daily jobs: IST times, skipped on holidays, failures recorded without crashing, token job waits for .env. |
 | `services/market-iq/tests/test_token.py` | Dhan token manager with mocked HTTP: login, reuse, renewal on expiry and rejection, clear errors, no secrets in logs. |

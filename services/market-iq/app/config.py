@@ -61,7 +61,7 @@ def mask(value: str) -> str:
     return "***" + value[-3:] if len(value) > 6 else "***"
 
 
-_REDACT = re.compile(r"((?:pin|totp|access[-_]token|app_secret)=)[^&\s\"']+", re.IGNORECASE)
+_REDACT = re.compile(r"((?:pin|totp|token|access[-_]token|app_secret)=)[^&\s\"']+", re.IGNORECASE)
 
 
 class RedactSecrets(logging.Filter):

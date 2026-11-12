@@ -26,4 +26,5 @@ This is the private data service behind PnL Lens's live Market sheets (Nifty, Ba
 | 1 | Dhan login (client ID + PIN + TOTP, no browser) | done; needs `.env` filled in |
 | 2 | Instrument list, NSE holidays, daily jobs | done |
 | PnL Lens foundation | Internal API with key, Docker service, API access checks, `/market` page | done |
-| 3–7 | Live feed, option chain, NSE jobs, formulas, sheet data | next |
+| 3 | Live feed: 444 instruments (indices, index futures, F&O cash + futures), 1-minute bars, backfill, auto-reconnect | done |
+| 4–7 | Option chain + snapshots, NSE jobs, formulas, sheet data | next |

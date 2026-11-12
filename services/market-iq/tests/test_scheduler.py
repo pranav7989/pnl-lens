@@ -28,7 +28,7 @@ def con(tmp_path, monkeypatch):
 def test_jobs_and_times():
     s = scheduler.build()
     got = {j.id: (str(j.trigger.fields[5]), str(j.trigger.fields[6])) for j in s.get_jobs()}
-    assert got == {"holidays": ("8", "20"), "token": ("8", "30"), "instruments": ("8", "45")}
+    assert got == {"holidays": ("8", "20"), "token": ("8", "30"), "instruments": ("8", "45"), "feed_start": ("9", "0"), "feed_stop": ("15", "35")}
     assert all(str(j.trigger.timezone) == "Asia/Kolkata" for j in s.get_jobs())
 
 

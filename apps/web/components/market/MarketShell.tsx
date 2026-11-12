@@ -12,6 +12,8 @@ interface Status {
   instruments: { count: number; as_of: string | null };
   market: { trading_day: boolean; session: 'pre_open' | 'open' | 'closed' };
   jobs: Record<string, Job>;
+  feed?: { running: boolean; connected: boolean; subscribed: number; receiving: number; updated_last_minute: number; reconnects: number; last_error: string | null; last_message: string | null };
+  bars_today?: number;
 }
 const TABS = [['nifty', 'Nifty'], ['banknifty', 'Bank Nifty'], ['market', 'Market']] as const;
 const SESSION = { pre_open: 'Before the open', open: 'Market open', closed: 'Market closed' } as const;
@@ -59,6 +61,10 @@ export default function MarketShell() {
             <dt>Dhan login</dt><dd>{login}</dd>
             <dt>Instrument list</dt><dd>{s.instruments.count ? `${s.instruments.count.toLocaleString('en-IN')} instruments · ${s.instruments.as_of}` : 'Not downloaded yet (08:45 on trading days)'}</dd>
             <dt>Today</dt><dd>{s.market.trading_day ? 'Trading day' : 'Market holiday or weekend'}</dd>
+            <dt>Live feed</dt><dd data-market-feed>{!s.feed?.running ? 'Off (runs 09:00–15:35 on trading days)'
+              : s.feed.connected ? `Live · ${s.feed.updated_last_minute} of ${s.feed.subscribed} instruments updated in the last minute`
+              : `Reconnecting${s.feed.last_error ? ` (${s.feed.last_error})` : ''}…`}</dd>
+            <dt>Minute bars today</dt><dd>{(s.bars_today ?? 0).toLocaleString('en-IN')}</dd>
             {Object.entries(s.jobs).map(([name, j]) => (<Fragment key={name}><dt>Job · {name}</dt><dd>{j.status} · {fmt(j.at)}{j.message ? ` · ${j.message}` : ''}</dd></Fragment>))}
           </dl>
         )}

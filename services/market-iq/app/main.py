@@ -15,7 +15,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 
 from app import config
 from app.auth import token
-from app.dhan import instruments
+from app.dhan import feed, instruments
 from app.nse import holidays
 from app.store import db
 
@@ -29,9 +29,13 @@ async def lifespan(_: FastAPI):
         from app.jobs import scheduler
         sched = scheduler.build()
         sched.start()
+        if feed.in_window() and not config.secrets().missing():   # restarted during market hours: resume now
+            import threading
+            threading.Thread(target=scheduler.run_job, args=("feed_start", feed.start_job), daemon=True).start()
     yield
     if sched:
         sched.shutdown(wait=False)
+    feed.FEED.stop()
 
 
 app = FastAPI(title="Market IQ (internal)", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
@@ -77,4 +81,12 @@ def status() -> dict:
         "select job, status, started_at, message from job_log where id in (select max(id) from job_log group by job)")}
     return {"as_of": now.isoformat(), "token": tok, "instruments": {"count": n, "as_of": instruments.as_of(con)},
             "market": {"trading_day": trading, "session": _session_state(now, trading)}, "jobs": jobs,
-            "phase": "foundation: live sheets arrive with Phases 3-7"}
+            "feed": {k: v for k, v in feed.FEED.summary(now).items() if k != "recent"},
+            "bars_today": con.execute("select count(*) as n from bars_1m where ts >= ?", (now.strftime("%Y-%m-%dT00:00"),)).fetchone()["n"],
+            "phase": "Phase 3: live feed; the sheets arrive with Phases 4-7"}
+
+
+@app.get("/internal/feed", dependencies=[Depends(require_key)])
+def feed_debug() -> dict:
+    """The build manual's /debug/feed: instrument counts and the 10 most recently updated symbols."""
+    return feed.FEED.summary()

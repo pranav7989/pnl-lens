@@ -117,6 +117,12 @@ def refresh(con: sqlite3.Connection | None = None, client: httpx.Client | None =
             client.close()
 
 
+def ensure_today(con: sqlite3.Connection | None = None) -> int:
+    """Download today's list if it isn't stored yet (e.g. a fresh install started after 08:45). Returns rows stored now."""
+    con = con or db.connect()
+    return 0 if as_of(con) == date.today().isoformat() else refresh(con)
+
+
 def as_of(con: sqlite3.Connection) -> str | None:
     row = con.execute("select max(as_of) as d from instruments").fetchone()
     return row["d"] if row else None

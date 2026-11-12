@@ -5,7 +5,8 @@
   08:20  NSE holiday list
   08:30  Dhan token renewal (only once .env has the PIN and TOTP secret)
   08:45  Dhan instrument list (Dhan publishes the new file at about 08:20)
-Later phases add the live feed, option chain, NSE flows and nightly baselines here."""
+  09:00  live feed start (+ today's backfill)      15:35  live feed stop
+Later phases add the option chain, NSE flows and nightly baselines here."""
 from __future__ import annotations
 
 import logging
@@ -17,7 +18,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app import config
 from app.auth import token
-from app.dhan import instruments
+from app.dhan import feed, instruments
 from app.nse import holidays
 from app.store import db
 
@@ -55,6 +56,8 @@ JOBS: list[tuple[str, int, int, Callable[[], object], bool]] = [
     ("holidays", 8, 20, holidays.refresh, False),
     ("token", 8, 30, _renew_token, True),
     ("instruments", 8, 45, instruments.refresh, True),
+    ("feed_start", 9, 0, feed.start_job, True),
+    ("feed_stop", 15, 35, feed.stop_job, False),
 ]
 
 
