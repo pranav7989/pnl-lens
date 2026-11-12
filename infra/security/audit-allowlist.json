@@ -1,0 +1,4 @@
+{
+  "_what": "Dependency advisories accepted for a limited time, each with a reason and an end date. infra/scripts/audit.mjs fails on any other high/critical production advisory, and on any entry past its date.",
+  "entries": []
+}
