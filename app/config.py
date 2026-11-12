@@ -1,7 +1,9 @@
 """Settings: secrets from .env, plus the fixed constants (times, steps, windows) used everywhere."""
 from __future__ import annotations
 
+import logging
 import os
+import re
 from dataclasses import dataclass
 from datetime import time
 from pathlib import Path
@@ -47,3 +49,29 @@ def secrets() -> Secrets:
 def mask(value: str) -> str:
     """For logs: never more than the last 3 characters of anything secret."""
     return "***" + value[-3:] if len(value) > 6 else "***"
+
+
+_REDACT = re.compile(r"((?:pin|totp|access[-_]token|app_secret)=)[^&\s\"']+", re.IGNORECASE)
+
+
+class RedactSecrets(logging.Filter):
+    """Blanks PIN, TOTP and token values in any log line (httpx logs full request URLs, and Dhan puts the PIN in the URL)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        clean = _REDACT.sub(r"\1***", msg)
+        if clean != msg:
+            record.msg, record.args = clean, None
+        return True
+
+
+def quiet_http_logs() -> None:
+    """httpx/httpcore request lines are off by default (WARNING) and always redacted."""
+    for name in ("httpx", "httpcore"):
+        lg = logging.getLogger(name)
+        lg.setLevel(logging.WARNING)
+        if not any(isinstance(f, RedactSecrets) for f in lg.filters):
+            lg.addFilter(RedactSecrets())
+
+
+quiet_http_logs()
