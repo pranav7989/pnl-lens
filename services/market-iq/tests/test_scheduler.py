@@ -30,7 +30,7 @@ def test_jobs_and_times():
     got = {j.id: (str(j.trigger.fields[5]), str(j.trigger.fields[6])) for j in s.get_jobs()}
     assert got == {"holidays": ("8", "20"), "token": ("8", "30"), "instruments": ("8", "45"), "feed_start": ("9", "0"), "feed_stop": ("15", "35"),
                    "chain_start": ("9", "15"), "chain_stop": ("15", "31"), "cleanup": ("23", "0"),
-                   "constituents": ("8", "50"), "weights": ("15", "40"), "fiidii": ("18", "30"), "fiidii_retry": ("19", "30")}
+                   "constituents": ("8", "50"), "weights": ("15", "40"), "fiidii": ("18", "30"), "fiidii_retry": ("19", "30"), "baselines": ("20", "0")}
     assert all(str(j.trigger.timezone) == "Asia/Kolkata" for j in s.get_jobs())
 
 

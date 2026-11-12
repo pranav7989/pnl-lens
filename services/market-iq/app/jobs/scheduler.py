@@ -9,6 +9,7 @@
   09:15  option chain poller start (3 s, snapshot every 60 s)   15:30  stop
   08:50  index constituents (niftyindices.com)   15:40  index weights estimated from today's minute bars
   18:30  FII/DII cash + FII index futures (retried 19:30)
+  20:00  volume baselines from Dhan history (one request per stock, paced)
   23:00  clean-up (chain snapshots 30 days, bars 90 days) and vacuum
 Later phases add the option chain, NSE flows and nightly baselines here."""
 from __future__ import annotations
@@ -22,7 +23,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app import config
 from app.auth import token
-from app.dhan import chain, feed, instruments
+from app.dhan import chain, feed, history, instruments
 from app.nse import fiidii, holidays, weights
 from app.store import db
 
@@ -68,6 +69,7 @@ JOBS: list[tuple[str, int, int, Callable[[], object], bool]] = [
     ("weights", 15, 40, weights.estimate_job, True),
     ("fiidii", 18, 30, fiidii.refresh, True),
     ("fiidii_retry", 19, 30, fiidii.refresh, True),
+    ("baselines", 20, 0, history.refresh, True),
     ("cleanup", 23, 0, chain.cleanup, False),
 ]
 

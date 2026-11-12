@@ -77,4 +77,6 @@ The sheets are PnL Lens React pages using the PnL Lens design system, NOT static
   daily by least squares on our minute bars (index return = sum w_i * stock return; app/nse/weights.py).
 - SQLite schema changes: tables are created with "if not exists", so a changed key needs the table dropped on
   existing installs (no migration tool here yet).
+- History (verified live 12 Nov 2026): one /charts/intraday request returns up to 90 days of 1-minute bars; more
+  than ~4 quick requests get HTTP 429, so nightly jobs pace at one request per second.
 

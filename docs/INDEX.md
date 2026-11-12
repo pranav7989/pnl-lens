@@ -86,7 +86,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 367 files._
+_Generated from file headers by `npm run docs:index` — 375 files._
 
 ### Pages
 
@@ -286,11 +286,17 @@ _Generated from file headers by `npm run docs:index` — 367 files._
 | `services/market-iq/app/auth/__init__.py` | Package: Dhan login. |
 | `services/market-iq/app/auth/token.py` | Dhan access token from client ID + PIN + TOTP (no browser), stored in SQLite, renewed before expiry and on rejection; --check CLI. |
 | `services/market-iq/app/calc/__init__.py` | Package: pure calculation functions (Phase 6). |
+| `services/market-iq/app/calc/contrib.py` | Who moved the index (parameters PDF 4.3): points per constituent = index previous close x weight x stock return; Nifty top 5 adders + top 5 draggers + others, Bank Nifty all; the check line against the actual move. |
+| `services/market-iq/app/calc/decoder.py` | Strike decoder (parameters PDF 4.8): plain-English lines for one option (delta, theta, gamma, vega, IV vs ATM, OI buildup) and a one-line summary, each printing the rule it used; bands are an editable table; data wording only. |
+| `services/market-iq/app/calc/kpis.py` | Sheet 1/2 KPI tiles (parameters PDF 4.1): ATM strike, % change, basis, PCR (OI), max pain, ATM IV, support/resistance; pure functions on a chain. |
+| `services/market-iq/app/calc/oiflow.py` | Change in OI (parameters PDF 4.6): CE vs PE totals over ATM +-20, the donut shares and ΔOI PCR, and the OI compass rows (ATM +-8); plus the option buildup tag (4.7) and the sentiment score (4.2) with positioning wording. |
+| `services/market-iq/app/calc/scanners.py` | Sheet 3 (parameters PDF 5.1, 5.3-5.6): breadth, 10-minute momentum spike, R-factor, stock futures OI buildup quadrants, movers (gainers, losers, near day high/low). |
 | `services/market-iq/app/config.py` | Settings: Dhan secrets and the internal key from the environment (.env), fixed constants (times, URLs), and log redaction of PIN/TOTP/tokens. |
 | `services/market-iq/app/dhan/__init__.py` | Package: Dhan data (instruments; later the live feed, option chain, history). |
 | `services/market-iq/app/dhan/chain.py` | Option chain poller (Nifty, Bank Nifty; every 3 s, 09:15-15:30) with the latest chain in memory, a full snapshot to SQLite every 60 s for the time bar, expiry lists, and get_chain(live or at a time). |
 | `services/market-iq/app/dhan/feed_proto.py` | Dhan live feed v2 wire format: subscription messages (max 100 instruments each) and the little-endian binary packet parser (several packets per frame). |
 | `services/market-iq/app/dhan/feed.py` | Live feed collector: one Dhan WebSocket (Ticker + Quote for ~440 instruments), auto-reconnect with backoff, live state, 1-minute bars saved to SQLite, today's backfill from history; runs 09:00-15:35 on trading days. |
+| `services/market-iq/app/dhan/history.py` | Nightly volume baselines for the scanners: the last 10 sessions of 1-minute bars per F&O stock from Dhan history (one request per stock, paced), averaged by minute of day into cumulative and 10-minute volume curves. |
 | `services/market-iq/app/dhan/instruments.py` | Dhan instrument list: daily download into SQLite (segment-safe keys) and lookups for index IDs, index futures, F&O stocks and option strikes. |
 | `services/market-iq/app/jobs/__init__.py` | Package: scheduled daily jobs. |
 | `services/market-iq/app/jobs/scheduler.py` | Daily jobs in IST on trading days (holidays 08:20, token 08:30, instruments 08:45), each recorded in job_log. |
@@ -491,8 +497,10 @@ _Generated from file headers by `npm run docs:index` — 367 files._
 | `services/market-iq/tests/__init__.py` | Package marker for the Market IQ tests. |
 | `services/market-iq/tests/conftest.py` | Test setup: the daily jobs never start during tests. |
 | `services/market-iq/tests/test_app.py` | Internal API: /healthz open, every /internal/* call needs the shared key (missing key = 503, wrong key = 401), status carries no secrets. |
+| `services/market-iq/tests/test_calc.py` | Phase 6 formulas on small hand-made inputs with known answers: ATM/step/window, PCR, max pain (5-strike chain), ATM IV, S/R, ΔOI totals, donut, compass, buildup tags, sentiment bands (positioning wording only), decoder lines, contributions check line, scanners. |
 | `services/market-iq/tests/test_chain.py` | Option chain on a real (trimmed) Dhan response: parsing, 3 s rate limit per underlying + expiry, 60 s snapshots without all-zero strikes, reading the chain back at a time, stale marking, expiry fallback, clean-up. |
 | `services/market-iq/tests/test_feed.py` | Live feed: packet parsing (several per frame, IST trade time, float prev OI), subscription batches, 1-minute bars, a full run against a fake Dhan WebSocket (subscribe, reconnect, saved bars) and today's backfill. |
+| `services/market-iq/tests/test_history.py` | Volume baselines: cumulative and 10-minute curves averaged over sessions, the last 10 sessions kept, the nightly job paced and tolerant of a failing stock, lookup at a minute of day. |
 | `services/market-iq/tests/test_instruments.py` | Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays. |
 | `services/market-iq/tests/test_nse_flows.py` | Phase 5 on real NSE files: FII/DII cash parsing, the FII index futures row of the derivatives .xls, the evening job (cash + missing futures days), CSV backfill, constituents, and index weights recovered from minute bars. |
 | `services/market-iq/tests/test_scheduler.py` | Daily jobs: IST times, skipped on holidays, failures recorded without crashing, token job waits for .env. |
