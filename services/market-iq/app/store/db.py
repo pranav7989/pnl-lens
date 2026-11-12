@@ -1,6 +1,6 @@
 # @file  services/market-iq/app/store/db.py
 # @area  Market IQ
-# @what  SQLite (WAL) connection and schema: token, instruments, 1-minute bars, option chain snapshots, spot snapshots, expiries, job_log.
+# @what  SQLite (WAL) connection and schema: token, instruments, 1-minute bars, option chain snapshots, spot snapshots, expiries, previous closes, FII/DII, FII index futures, index constituents and weights, job_log.
 """SQLite (WAL mode): one file in data/, tables created on first use. Schema follows the build manual §5,
 with one correction: instruments are keyed by (exch_id, segment, security_id) because Dhan reuses a
 security id across segments."""
@@ -59,6 +59,23 @@ create table if not exists spot_snap (
 );
 create table if not exists expiries (
   underlying text not null, expiry text not null, as_of text not null, primary key (underlying, expiry)
+);
+create table if not exists prev_close_daily (
+  exch_segment text not null, security_id text not null, day text not null,   -- the trading day the previous close belongs to
+  prev_close real, prev_oi integer, primary key (exch_segment, security_id, day)
+);
+create table if not exists fii_dii (
+  date text primary key, fii_buy real, fii_sell real, fii_net real, dii_buy real, dii_sell real, dii_net real, source text
+);
+create table if not exists fii_fut (
+  date text primary key, idx_fut_buy real, idx_fut_sell real, idx_fut_net real
+);
+create table if not exists index_constituents (
+  index_name text not null, symbol text not null, company text, industry text, as_of text not null, primary key (index_name, symbol)
+);
+create table if not exists index_weights (
+  index_name text not null, symbol text not null, weight real not null, as_of text not null, method text not null, r2 real,
+  primary key (index_name, symbol, as_of, method)
 );
 create table if not exists job_log (
   id integer primary key autoincrement,

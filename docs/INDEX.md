@@ -86,7 +86,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 364 files._
+_Generated from file headers by `npm run docs:index` — 367 files._
 
 ### Pages
 
@@ -296,11 +296,13 @@ _Generated from file headers by `npm run docs:index` — 364 files._
 | `services/market-iq/app/jobs/scheduler.py` | Daily jobs in IST on trading days (holidays 08:20, token 08:30, instruments 08:45), each recorded in job_log. |
 | `services/market-iq/app/main.py` | Internal FastAPI app (no public port): /healthz for Docker, /internal/* data for the PnL Lens API only (x-internal-key), and the daily jobs while it runs. |
 | `services/market-iq/app/nse/__init__.py` | Package: NSE public data (session, holidays; later FII/DII and index weights). |
+| `services/market-iq/app/nse/fiidii.py` | FII/DII cash flows (NSE, latest day only, saved every evening) and FII index futures from NSE's daily derivatives file (any past day, so 30 days are filled at once); CSV backfill for cash. |
 | `services/market-iq/app/nse/holidays.py` | NSE F&O trading holidays (stored in SQLite) and is_trading_day(). |
 | `services/market-iq/app/nse/session.py` | Polite NSE HTTP client: browser headers, home-page cookies, max 1 request per 2 s, one retry on 401/403. |
+| `services/market-iq/app/nse/weights.py` | Nifty 50 and Nifty Bank constituents (niftyindices.com lists) and their index weights, estimated each day from our own 1-minute bars (the index moves as the weighted sum of its stocks' moves). |
 | `services/market-iq/app/state.py` | In-memory live state per instrument (LTP, OHLC, volume, OI, previous close/OI, last update) and the 1-minute bar builder; thread-safe. |
 | `services/market-iq/app/store/__init__.py` | Package: SQLite storage. |
-| `services/market-iq/app/store/db.py` | SQLite (WAL) connection and schema: token, instruments, 1-minute bars, option chain snapshots, spot snapshots, expiries, job_log. |
+| `services/market-iq/app/store/db.py` | SQLite (WAL) connection and schema: token, instruments, 1-minute bars, option chain snapshots, spot snapshots, expiries, previous closes, FII/DII, FII index futures, index constituents and weights, job_log. |
 
 ### Core
 
@@ -492,6 +494,7 @@ _Generated from file headers by `npm run docs:index` — 364 files._
 | `services/market-iq/tests/test_chain.py` | Option chain on a real (trimmed) Dhan response: parsing, 3 s rate limit per underlying + expiry, 60 s snapshots without all-zero strikes, reading the chain back at a time, stale marking, expiry fallback, clean-up. |
 | `services/market-iq/tests/test_feed.py` | Live feed: packet parsing (several per frame, IST trade time, float prev OI), subscription batches, 1-minute bars, a full run against a fake Dhan WebSocket (subscribe, reconnect, saved bars) and today's backfill. |
 | `services/market-iq/tests/test_instruments.py` | Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays. |
+| `services/market-iq/tests/test_nse_flows.py` | Phase 5 on real NSE files: FII/DII cash parsing, the FII index futures row of the derivatives .xls, the evening job (cash + missing futures days), CSV backfill, constituents, and index weights recovered from minute bars. |
 | `services/market-iq/tests/test_scheduler.py` | Daily jobs: IST times, skipped on holidays, failures recorded without crashing, token job waits for .env. |
 | `services/market-iq/tests/test_token.py` | Dhan token manager with mocked HTTP: login, reuse, renewal on expiry and rejection, clear errors, no secrets in logs. |
 | `tests/e2e-web/blog.spec.ts` | REQ-7 blog end to end: owner drafts, previews, publishes, unpublishes, schedules; /blog, article, landing preview, sitemap; raw-HTML SEO; sanitising; support sees no Blog tab; events. |

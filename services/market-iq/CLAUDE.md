@@ -70,4 +70,11 @@ The sheets are PnL Lens React pages using the PnL Lens design system, NOT static
   -> data.last_price, data.oc{"25250.000000": {ce, pe}} with last_price, previous_close_price, oi, previous_oi, volume,
   implied_volatility, greeks{delta,gamma,theta,vega}, top_bid/ask. OI is in units. The real limit is ONE chain request
   per 3 s per account (a second underlying in the same 3 s gets HTTP 429), so Nifty and Bank Nifty alternate (~6 s each).
+- NSE (verified live 12 Nov 2026): /api/fiidiiTradeReact works (latest day only, strings in Rs crore).
+  FII index futures: nsearchives.nseindia.com/content/fo/fii_stats_DD-Mon-YYYY.xls (old Excel, row "INDEX FUTURES";
+  any past day; 404 on holidays). /api/equity-stockIndices is GONE (404) and /api/quote-equity refuses scripts (403),
+  so free-float weights are not available: constituents come from niftyindices.com CSVs and weights are ESTIMATED
+  daily by least squares on our minute bars (index return = sum w_i * stock return; app/nse/weights.py).
+- SQLite schema changes: tables are created with "if not exists", so a changed key needs the table dropped on
+  existing installs (no migration tool here yet).
 

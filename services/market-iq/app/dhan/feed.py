@@ -63,6 +63,15 @@ def feed_instruments(con, today=None) -> tuple[list[tuple[str, str]], dict[tuple
     return subs, names
 
 
+def save_prev_closes(con, state: MarketState, day: str) -> int:
+    """Today's previous close (and previous OI) per instrument, as the feed's Ticker packet gave it."""
+    rows = [(k[0], k[1], day, v.prev_close, v.prev_oi) for k, v in state.snapshot().items() if v.prev_close]
+    if rows:
+        with con:
+            con.executemany("insert or replace into prev_close_daily values (?,?,?,?,?)", rows)
+    return len(rows)
+
+
 def save_bars(con, state: MarketState) -> int:
     rows = [(k[0], k[1], b.minute, b.open, b.high, b.low, b.close, b.volume, b.oi, "feed") for k, b in state.take_done()]
     if rows:
@@ -233,6 +242,7 @@ class Feed:
             self.state.close_minutes()
             try:
                 save_bars(con, self.state)
+                save_prev_closes(con, self.state, datetime.now(config.IST).date().isoformat())
             except Exception as e:  # noqa: BLE001 - a failed write is retried next round
                 log.warning("saving bars failed: %s", type(e).__name__)
 

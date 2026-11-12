@@ -12,7 +12,7 @@ PnL Lens users with a plan (India) get three live sheets: **Nifty**, **Bank Nift
 Browser ──> Caddy ──> web (Next): /market
                 └──> api (Fastify): /api/v1/market-iq/*  ── sign-in, plan, India, flag ──>
                                                             marketiq (Python, private) :8000/internal/*
-marketiq ──> Dhan API (login, instruments, live feed, history, option chain) · NSE (holidays; later FII/DII, weights)
+marketiq ──> Dhan API (login, instruments, live feed, history, option chain) · NSE (holidays, FII/DII, FII index futures; niftyindices.com constituents)
 ```
 - **`services/market-iq/`** is the data service, an approved exception to the repo's Node stack (owner, 12 Nov 2026). It's Python 3.11, FastAPI and SQLite in the volume `marketiq_data`.
   - It has no published port and no login of its own.
@@ -62,7 +62,7 @@ An "open plan window" means a subscription with `starts_at ≤ now < ends_at`.
 | PnL Lens foundation (PR #31) | Internal API with key, Docker service in dev and prod, API access rules, `/market` page, stack/API/e2e tests, CI | done |
 | 3 (PR #32) | Live feed: one Dhan WebSocket, Ticker + Quote for 444 instruments (6 indices, Nifty/Bank Nifty futures, 218 F&O stocks cash + near-month futures), 1-minute bars in SQLite, today's backfill, auto-reconnect, 09:00–15:35; status on the Market page | done (live check 12 Nov: 444/444 updating) |
 | 4 (PR #33) | Option chain for Nifty and Bank Nifty (all strikes, both sides: LTP, OI, previous OI, volume, IV, Greeks, bid/ask), one request every 3 s in turns (Dhan answers 429 otherwise), snapshot every minute for the time bar, read back at any minute, expiries, 23:00 clean-up (chains 30 days, bars 90) | done (live: 0 errors, 264 + 400 strikes fresh) |
-| 5 | NSE jobs: FII/DII, index weights | |
+| 5 (PR #34) | FII/DII cash every evening (NSE gives the latest day only; CSV backfill), FII index futures from NSE's daily file (19 days filled at once), Nifty 50 / Nifty Bank constituents (niftyindices.com), index weights **estimated** from our minute bars because NSE's weights endpoint is gone (404); previous closes saved daily | done |
 | 6 | Formulas (`app/calc`) with tests, with the wording above | |
 | 7 | Sheet data through the API (`/market-iq/sheet/*`) | |
 | 8–9 | The sheets as PnL Lens pages | |

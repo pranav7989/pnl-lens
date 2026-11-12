@@ -28,4 +28,5 @@ This is the private data service behind PnL Lens's live Market sheets (Nifty, Ba
 | PnL Lens foundation | Internal API with key, Docker service, API access checks, `/market` page | done |
 | 3 | Live feed: 444 instruments (indices, index futures, F&O cash + futures), 1-minute bars, backfill, auto-reconnect | done |
 | 4 | Option chain poller (Nifty/Bank Nifty in turns, one request per 3 s), snapshots every minute, time-bar read-back, expiries, nightly clean-up | done |
-| 5–7 | NSE jobs, formulas, sheet data | next |
+| 5 | FII/DII cash (daily), FII index futures (30 days at once), index constituents, index weights estimated from minute bars, previous closes | done |
+| 6–7 | Formulas, sheet data | next |
