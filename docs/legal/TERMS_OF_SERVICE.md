@@ -50,9 +50,9 @@ A **file** is one P&L statement or tradebook downloaded from your broker (Excel,
 
 | Plan | Reports | Files per report | Create reports within | Price (India / elsewhere) |
 |---|---|---|---|---|
-| Single | 1 | 2 | 7 days | ₹99 / US$4.99 |
-| Snapshot | 5 | 3 | 6 months (183 days) | ₹499 / US$19 |
-| Progress | 25 | 3 | 3 months (92 days) | ₹1,499 / US$49 |
+| Single | 1 | 2 | 7 days | ₹99 / US$9 |
+| Snapshot | 5 | 3 | 3 months (92 days) | ₹499 / US$19 |
+| Progress | 25 | 3 | 6 months (183 days) | ₹1,499 / US$49 |
 | Discipline | 90 | 3 | 12 months (365 days) | ₹3,999 / US$129 |
 
 - The **validity period** is how long you can **create new reports**. It starts when payment is confirmed. Unused reports **expire** at the end of it and are not refunded or carried over. **LAWYER CHECK**
@@ -63,8 +63,8 @@ A **file** is one P&L statement or tradebook downloaded from your broker (Excel,
   - **LAWYER CHECK:** state whether prices include GST, and how GST and foreign taxes are handled for overseas buyers (export of services / OIDAR).
   - **LAWYER CHECK:** confirm we may charge by detected location.
 - Payments are processed by **Razorpay**. Your plan is activated only after Razorpay confirms the payment to us. This normally takes seconds, but can take longer.
-- Plan features shown on the pricing page ("Progress tab", "Share reports with your coach", "Early access") describe the plan as of the purchase date.
-  - **LAWYER CHECK:** confirm the "monthly check-up reminders" and "share with coach" features exist at launch, or remove them from plan descriptions. **BUILD CHECK**
+- Plan features shown on the pricing page ("Progress tab", "Monthly check-up reminders", "Lifetime view", "Early access") describe the plan as of the purchase date.
+  - **LAWYER CHECK:** "Early access to new features" has no defined process yet; keep or remove it. (BUILD CHECK, 28 Oct 2026: "monthly check-up reminders" exist as the 30-day plan reminder emails; "share with coach" was removed from the plans; "PDF/CSV export" was removed when reports became view-only.)
 
 ## 6. No refunds
 
@@ -78,7 +78,7 @@ A **file** is one P&L statement or tradebook downloaded from your broker (Excel,
 
 To keep PnL Lens fast and safe for everyone, you agree not to:
 
-- run more than **20 analyses per day** or **3 at the same time** (limits may change, see below) **BUILD CHECK**
+- run more than **20 analyses per day** or **3 at the same time** (limits may change, see below) **BUILT ✓**
 - upload malware, files designed to harm our systems, or files that are not genuine broker statements
 - scrape, overload, probe or attack the Service, or bypass its limits or security
 - copy, resell or re-publish the Service or its reports as your own product, or use them to build a competing product
@@ -94,7 +94,7 @@ We may change usage limits to protect the Service. If a change reduces what a pa
 
 ## 9. Suspending or closing accounts
 
-- You can close your account at any time: **[Settings → Delete account]** **BUILD CHECK**. Closing an account does not refund unused plan fees (section 6).
+- You can close your account at any time: **Dashboard → Your data → Delete my account** **BUILT ✓**. Closing an account does not refund unused plan fees (section 6).
 - We may suspend or close an account that breaks these terms, or where the law requires it. Where reasonable, we will tell you first and give you the chance to download your reports. If we close the Service entirely, we will give at least **[30 days']** notice and refund the unused part of active plans. **LAWYER CHECK**
 
 ## 10. Availability and changes to the Service
