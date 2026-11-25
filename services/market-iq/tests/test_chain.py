@@ -1,6 +1,6 @@
 # @file  services/market-iq/tests/test_chain.py
 # @area  Tests
-# @what  Option chain on a real (trimmed) Dhan response: parsing, 3 s rate limit per underlying + expiry, 60 s snapshots without all-zero strikes, reading the chain back at a time, stale marking, expiry fallback, clean-up.
+# @what  Option chain on a real (trimmed) Dhan response: parsing, 3 s rate limit per underlying + expiry, 60 s snapshots without all-zero strikes, reading the chain back at a time, stale marking, expiry fallback, clean-up, the future rolling to the next contract after expiry.
 import itertools
 import json
 import time
@@ -119,3 +119,12 @@ def test_cleanup_keeps_30_days_of_chain_and_90_of_bars(con):
     con.commit()
     assert chain.cleanup(con, now) == "removed 1 chain rows, 1 spot rows, 1 bars"
     assert [r[0] for r in con.execute("select ts from chain_snap")] == [recent]
+
+
+def test_the_future_rolls_to_the_next_contract_after_expiry_without_a_restart(con, monkeypatch):
+    chain._FUT.clear()
+    assert chain._fut_key(con, "NIFTY") == ("NSE_FNO", "61471")                  # Nov contract, expires 23 Nov
+    assert chain._fut_key(con, "BANKNIFTY") == ("NSE_FNO", "61466")
+    monkeypatch.setattr(config, "today", lambda: datetime(2026, 11, 24).date())
+    assert chain._fut_key(con, "NIFTY") == ("NSE_FNO", "58875")                  # Dec contract the next day
+    assert ("NIFTY", "2026-11-12") not in chain._FUT and len(chain._FUT) == 1

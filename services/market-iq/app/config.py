@@ -9,7 +9,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from datetime import time
+from datetime import date, datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -20,6 +20,13 @@ load_dotenv(ROOT / ".env")                                # optional local overr
 load_dotenv(ROOT.parent.parent / ".env")                  # the repo's root .env (never overrides what is set)
 
 IST = ZoneInfo("Asia/Kolkata")
+
+
+def today() -> date:
+    """The trading day in IST (never the container's own time zone); tests pin it."""
+    return datetime.now(IST).date()
+
+
 SESSION_OPEN = time(9, 15)
 SESSION_CLOSE = time(15, 30)
 TOKEN_RENEW_AT = time(8, 30)

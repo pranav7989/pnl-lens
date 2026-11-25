@@ -107,7 +107,7 @@ def refresh(con: sqlite3.Connection | None = None, client: httpx.Client | None =
     client = client or httpx.Client(timeout=httpx.Timeout(120.0))
     try:
         started = datetime.now(config.IST).isoformat()
-        n = store(con, parse(download(client), date.today().isoformat()))
+        n = store(con, parse(download(client), config.today().isoformat()))
         con.execute("insert into job_log (job, started_at, ended_at, status, message) values ('instruments', ?, ?, 'ok', ?)",
                     (started, datetime.now(config.IST).isoformat(), f"{n} rows"))
         con.commit()
@@ -120,7 +120,7 @@ def refresh(con: sqlite3.Connection | None = None, client: httpx.Client | None =
 def ensure_today(con: sqlite3.Connection | None = None) -> int:
     """Download today's list if it isn't stored yet (e.g. a fresh install started after 08:45). Returns rows stored now."""
     con = con or db.connect()
-    return 0 if as_of(con) == date.today().isoformat() else refresh(con)
+    return 0 if as_of(con) == config.today().isoformat() else refresh(con)
 
 
 def as_of(con: sqlite3.Connection) -> str | None:
@@ -144,7 +144,7 @@ def _row(r: sqlite3.Row) -> Instrument:
 
 def index_future(con: sqlite3.Connection, underlying: str, today: date | None = None) -> Instrument:
     """Current-month index future: the nearest expiry on or after today."""
-    d = (today or date.today()).isoformat()
+    d = (today or config.today()).isoformat()
     r = con.execute("select * from instruments where exch_id = 'NSE' and instrument = 'FUTIDX' and symbol = ? and expiry >= ? "
                     "order by expiry limit 1", (underlying.upper(), d)).fetchone()
     if not r:
@@ -161,7 +161,7 @@ class FnoStock:
 
 def fno_stocks(con: sqlite3.Connection, today: date | None = None) -> list[FnoStock]:
     """Every stock with NSE futures: its cash (NSE_EQ) ID and its near-month future ID."""
-    d = (today or date.today()).isoformat()
+    d = (today or config.today()).isoformat()
     futs = con.execute("""
         select f.* from instruments f
         join (select symbol, min(expiry) as e from instruments where exch_id = 'NSE' and instrument = 'FUTSTK' and expiry >= ? group by symbol) n
@@ -176,7 +176,7 @@ def fno_stocks(con: sqlite3.Connection, today: date | None = None) -> list[FnoSt
 
 
 def option_expiries(con: sqlite3.Connection, underlying: str, today: date | None = None) -> list[str]:
-    d = (today or date.today()).isoformat()
+    d = (today or config.today()).isoformat()
     rows = con.execute("select distinct expiry from instruments where instrument = 'OPTIDX' and symbol = ? and expiry >= ? order by expiry",
                        (underlying.upper(), d)).fetchall()
     return [r["expiry"] for r in rows]
@@ -195,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--download", action="store_true", help="download a fresh list now")
     a = p.parse_args(argv)
     con = db.connect()
-    today = date.today()
+    today = config.today()
     if a.download or as_of(con) != today.isoformat():
         print("downloading the instrument list from Dhan (about 38 MB)…")
         print(f"stored {refresh(con):,} instruments")

@@ -237,14 +237,19 @@ class ChainPoller:
                            for (u, e), c in latest.items()}}
 
 
-_FUT: dict[str, tuple[str, str]] = {}
+_FUT: dict[tuple[str, str], tuple[str, str]] = {}
 
 
 def _fut_key(con, underlying: str) -> tuple[str, str]:
-    if underlying not in _FUT:
-        f = ins.index_future(con, underlying)
-        _FUT[underlying] = (f.exch_segment, f.security_id)
-    return _FUT[underlying]
+    """The current-month future, cached per IST day so it rolls to the next contract after expiry without a restart."""
+    day = config.today()
+    k = (underlying, day.isoformat())
+    if k not in _FUT:
+        f = ins.index_future(con, underlying, day)
+        for old in [o for o in _FUT if o[1] != k[1]]:
+            del _FUT[old]                                          # yesterday's contracts
+        _FUT[k] = (f.exch_segment, f.security_id)
+    return _FUT[k]
 
 
 POLLER = ChainPoller()
