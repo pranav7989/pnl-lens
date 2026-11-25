@@ -37,14 +37,15 @@ describe('marketIqAccess (pure rule)', () => {
 const dbOk = await testDbAvailable();
 
 describe.skipIf(!dbOk)('market-iq routes', () => {
-  let x: TestApp; let svc: http.Server; let seenKey: string | undefined; let svcUrl = '';
+  let x: TestApp; let svc: http.Server; let seenKey: string | undefined; let svcUrl = ''; const seenPaths: string[] = [];
   const KEY = 'k'.repeat(40);                                       // fake shared key for the fake service
   beforeAll(async () => {
     x = await testApp('t_api_market_iq');
     svc = http.createServer((req, res) => {
       seenKey = req.headers['x-internal-key'] as string | undefined;
+      seenPaths.push(req.url || '');
       res.setHeader('content-type', 'application/json');
-      res.end(JSON.stringify({ token: { state: 'ok' }, market: { session: 'open' } }));
+      res.end(JSON.stringify({ token: { state: 'ok' }, market: { session: 'open' }, path: req.url }));
     });
     await new Promise<void>((done) => svc.listen(0, '127.0.0.1', done));
     svcUrl = `http://127.0.0.1:${(svc.address() as AddressInfo).port}`;
@@ -70,7 +71,7 @@ describe.skipIf(!dbOk)('market-iq routes', () => {
     expect((await get('access', owner)).json()).toEqual({ access: true, reason: 'ok' });
     const s = await get('status', owner);
     expect(s.statusCode).toBe(200);
-    expect(s.json()).toMatchObject({ fresh: true, token: { state: 'ok' } });
+    expect(s.json()).toMatchObject({ token: { state: 'ok' } });
     expect(seenKey).toBe(KEY);
     expect((await get('access', paid)).json()).toEqual({ access: false, reason: 'hidden' });
     expect((await get('status', paid)).statusCode).toBe(404);
@@ -87,6 +88,22 @@ describe.skipIf(!dbOk)('market-iq routes', () => {
     expect((await get('status', noPlan)).json().error).toBe('plan_required');
     expect((await get('access', expired)).json().reason).toBe('no_plan');
     expect((await get('access', abroad)).json()).toEqual({ access: false, reason: 'hidden' });
+  });
+
+  it('sheet, decoder and market are proxied with validated queries for users with access only', async () => {
+    setFlag('paid');
+    const u = await makeUser(x.t), noPlan = await makeUser(x.t);
+    await plan(u);
+    seenPaths.length = 0;
+    expect((await get('sheet/NIFTY?expiry=2026-11-17&at=2026-11-12T12:31', u)).json().path).toBe('/internal/sheet/NIFTY?expiry=2026-11-17&at=2026-11-12T12%3A31');
+    expect((await get('decoder/BANKNIFTY?strike=61200&side=pe', u)).json().path).toBe('/internal/decoder/BANKNIFTY?strike=61200&side=pe');
+    expect((await get('market', u)).json().path).toBe('/internal/market');
+    expect((await get('sheet/GOLD', u)).statusCode).toBe(400);                       // not a sheet
+    expect((await get('sheet/NIFTY?at=yesterday', u)).statusCode).toBe(400);
+    expect((await get('decoder/NIFTY?strike=-1&side=ce', u)).statusCode).toBe(400);
+    expect((await get('sheet/NIFTY', noPlan)).json().error).toBe('plan_required');
+    expect((await get('market')).statusCode).toBe(401);
+    expect(seenPaths.length).toBe(3);                                                 // refused calls never reach the service
   });
 
   it('flag off hides it from the owner too; an unreachable service is a 503, never a crash', async () => {

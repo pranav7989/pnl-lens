@@ -258,7 +258,7 @@ _Generated from file headers by `npm run docs:index` — 377 files._
 | `apps/api/src/main.ts` | API process entry: config, Postgres (lens_app only), Redis, storage, queue, check-up reminder, weekly summary and market data timers; listens on PORT; graceful shutdown. |
 | `apps/api/src/routes/blog.ts` | REQ-7 blog API: public posts/feed/media (cacheable) and owner/admin-only writing, publishing, live preview and image upload (WebP via sharp). |
 | `apps/api/src/routes/health.ts` | GET /health (liveness) and GET /ready (Postgres as lens_app, Redis, storage). |
-| `apps/api/src/routes/market-iq.ts` | Market IQ live sheets: GET /market-iq/access (may this user see them?) and GET /market-iq/status (service status, for users with access); the private data service is called only from here. |
+| `apps/api/src/routes/market-iq.ts` | Market IQ live sheets: GET /market-iq/access (may this user see them?), and for users with access /market-iq/status, /sheet/:underlying, /decoder/:underlying and /market, all proxied to the private data service (the only caller). |
 
 ### Worker
 
