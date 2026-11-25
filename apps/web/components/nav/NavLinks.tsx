@@ -7,11 +7,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const LINKS = [['/dashboard', 'Dashboard'], ['/upload', 'New report'], ['/pricing', 'Plans'], ['/manual', 'User manual']] as const;
+const LINKS = [['/desk', 'Desk'], ['/dashboard', 'Dashboard'], ['/upload', 'New report'], ['/pricing', 'Plans'], ['/manual', 'User manual']] as const;
 /** market: the API says this user may see the live Market sheets (GET /me → marketIq; decided on the server) */
 export default function NavLinks({ market = false }: { market?: boolean }) {
   const path = usePathname();
-  const links: (readonly [string, string])[] = market ? [LINKS[0], ['/market', 'Market'], ...LINKS.slice(1)] : [...LINKS];
+  const links: (readonly [string, string])[] = market ? [...LINKS.slice(0, 2), ['/market', 'Market'], ...LINKS.slice(2)] : [...LINKS];
   return (
     <nav className="app-nav">
       {links.map(([href, label]) => (

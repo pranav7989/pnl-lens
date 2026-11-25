@@ -2881,6 +2881,570 @@
           }
         }
       }
+    },
+    "/api/v1/desk/config": {
+      "get": {
+        "summary": "Rates in force, brokerage plans, today's calendar and session (public)",
+        "tags": [
+          "desk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "query",
+            "name": "date",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/calc": {
+      "post": {
+        "summary": "Charges, breakeven, net and position size (public)",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "segment": {
+                    "type": "string",
+                    "enum": [
+                      "eq_intraday",
+                      "eq_delivery",
+                      "futures",
+                      "options",
+                      "currency_fut",
+                      "currency_opt",
+                      "commodity_fut",
+                      "commodity_opt"
+                    ]
+                  },
+                  "exchange": {
+                    "type": "string",
+                    "enum": [
+                      "NSE",
+                      "BSE",
+                      "MCX"
+                    ]
+                  },
+                  "buy": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "sell": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "qty": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 100000000
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "brokerage": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "slippagePerUnit": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "side": {
+                        "type": "string",
+                        "enum": [
+                          "buy",
+                          "sell"
+                        ]
+                      },
+                      "entry": {
+                        "type": "number",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      },
+                      "stopLoss": {
+                        "type": "number",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      },
+                      "riskBudget": {
+                        "type": "number",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      },
+                      "lotSize": {
+                        "nullable": true,
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "side",
+                      "entry",
+                      "stopLoss",
+                      "riskBudget"
+                    ]
+                  }
+                },
+                "required": [
+                  "segment",
+                  "exchange",
+                  "buy",
+                  "sell",
+                  "qty"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/settings": {
+      "get": {
+        "summary": "My desk settings",
+        "tags": [
+          "desk"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "put": {
+        "summary": "Save my desk settings",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "risk_per_trade": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 1000000000
+                  },
+                  "max_daily_loss": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 1000000000
+                  },
+                  "max_trades_day": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "brokerage_plan": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "default_exchange": {
+                    "type": "string",
+                    "enum": [
+                      "NSE",
+                      "BSE",
+                      "MCX"
+                    ]
+                  },
+                  "avg_slippage_override": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000000
+                  },
+                  "adherence_target": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "risk_per_trade",
+                  "max_daily_loss",
+                  "max_trades_day",
+                  "brokerage_plan",
+                  "default_exchange",
+                  "avg_slippage_override",
+                  "adherence_target"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/charge-rates": {
+      "get": {
+        "summary": "All charge rate sets (owner/admin)",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a charge rate set from a date (owner/admin, audited)",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "segment": {
+                    "type": "string",
+                    "enum": [
+                      "eq_intraday",
+                      "eq_delivery",
+                      "futures",
+                      "options",
+                      "currency_fut",
+                      "currency_opt",
+                      "commodity_fut",
+                      "commodity_opt"
+                    ]
+                  },
+                  "exchange": {
+                    "type": "string",
+                    "enum": [
+                      "NSE",
+                      "BSE",
+                      "MCX"
+                    ]
+                  },
+                  "effective_from": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "stt_buy": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.05
+                  },
+                  "stt_sell": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.05
+                  },
+                  "stt_exercise": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.05
+                  },
+                  "exch_txn": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.01
+                  },
+                  "sebi_per_crore": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "stamp_buy": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.01
+                  },
+                  "gst": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.5
+                  },
+                  "ipft_per_crore": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "stt_round_rupee": {
+                    "type": "boolean"
+                  },
+                  "source_note": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "segment",
+                  "exchange",
+                  "effective_from",
+                  "stt_buy",
+                  "stt_sell",
+                  "stt_exercise",
+                  "exch_txn",
+                  "sebi_per_crore",
+                  "stamp_buy",
+                  "gst",
+                  "ipft_per_crore",
+                  "stt_round_rupee",
+                  "source_note"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/brokerage-plans": {
+      "post": {
+        "summary": "Add or update a brokerage plan row (owner/admin, audited)",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
+                  },
+                  "segment": {
+                    "type": "string",
+                    "enum": [
+                      "eq_intraday",
+                      "eq_delivery",
+                      "futures",
+                      "options",
+                      "currency_fut",
+                      "currency_opt",
+                      "commodity_fut",
+                      "commodity_opt"
+                    ]
+                  },
+                  "flat_per_order": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "pct": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.05
+                  },
+                  "cap_per_order": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "is_default": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "segment",
+                  "flat_per_order",
+                  "pct",
+                  "cap_per_order",
+                  "is_default"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/market-calendar": {
+      "get": {
+        "summary": "Market calendar for a month (owner/admin)",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$"
+            },
+            "in": "query",
+            "name": "month",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Set one calendar day for a segment (owner/admin, audited)",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "segment": {
+                    "type": "string",
+                    "enum": [
+                      "equity",
+                      "currency",
+                      "commodity"
+                    ]
+                  },
+                  "exchange": {
+                    "type": "string",
+                    "enum": [
+                      "NSE",
+                      "BSE",
+                      "MCX"
+                    ]
+                  },
+                  "is_holiday": {
+                    "type": "boolean"
+                  },
+                  "pre_open": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "open": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "close": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "note": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "day",
+                  "segment",
+                  "exchange",
+                  "is_holiday",
+                  "pre_open",
+                  "open",
+                  "close",
+                  "note"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
     }
   },
   "servers": [

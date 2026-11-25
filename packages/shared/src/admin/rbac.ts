@@ -10,15 +10,16 @@
  */
 export type Role = 'user' | 'owner' | 'admin' | 'support' | 'finance' | 'analyst';
 export type Perm = 'tab:users' | 'tab:finance' | 'tab:errors' | 'tab:support' | 'tab:product' | 'user:lookup' | 'user:pii' | 'roles:manage' | 'plans:grant' | 'tab:blog' | 'blog:publish' | 'tab:research' | 'research:export'
-  | 'tab:usermgmt' | 'users:restrict' | 'users:delete' | 'research:invite';
+  | 'tab:usermgmt' | 'users:restrict' | 'users:delete' | 'research:invite' | 'desk:admin';
 
 export const PERMS: Record<Role, Perm[]> = {
   // research datasets (19 Oct 2026): owner only — the files hold every opted-in trader's trades
   owner: ['tab:users', 'tab:finance', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage', 'plans:grant', 'tab:blog', 'blog:publish', 'tab:research', 'research:export',
-    'tab:usermgmt', 'users:restrict', 'users:delete', 'research:invite'],
+    'tab:usermgmt', 'users:restrict', 'users:delete', 'research:invite', 'desk:admin'],
   // blog (REQ-7, owner Q7): owner and admin only; the database re-checks the role in blog_admin_* functions
   // user management (19 Oct 2026): admins may list and restrict; deleting users and asking for research consent are owner only
-  admin: ['tab:users', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage', 'tab:blog', 'blog:publish', 'tab:usermgmt', 'users:restrict'],
+  // Desk reference data (charge rates, brokerage plans, market calendar, events; spec v1.0): owner and admin, audited
+  admin: ['tab:users', 'tab:errors', 'tab:support', 'tab:product', 'user:lookup', 'user:pii', 'roles:manage', 'tab:blog', 'blog:publish', 'tab:usermgmt', 'users:restrict', 'desk:admin'],
   support: ['tab:errors', 'tab:support', 'user:lookup', 'user:pii'],
   finance: ['tab:finance'],
   analyst: ['tab:users', 'tab:product'],

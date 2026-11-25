@@ -39,7 +39,9 @@
     "./insights/share": "./src/insights/share.ts",
     "./insights/share-qr": "./src/insights/share-qr.ts",
     "./insights/benchmarks": "./src/insights/benchmarks.ts",
-    "./insights/market": "./src/insights/market.ts"
+    "./insights/market": "./src/insights/market.ts",
+    "./desk/charges": "./src/desk/charges.ts",
+    "./desk/session": "./src/desk/session.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
