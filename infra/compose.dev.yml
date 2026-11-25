@@ -93,6 +93,8 @@ services:
       MARKETIQ_URL: http://marketiq:8000      # private Market IQ data service (docs/MARKET_IQ.md)
       MARKETIQ_INTERNAL_KEY: ${MARKETIQ_INTERNAL_KEY:?run npm run stack:env}
       MARKET_IQ_ACCESS: ${MARKET_IQ_ACCESS:-owner}   # off | owner | paid  (paid only once the data licence is cleared)
+      NEWS_PROVIDER: ${NEWS_PROVIDER:-fake}   # Desk headlines: off | fake (dev sample items; the real provider comes later)
+      EVENTS_PROVIDER: ${EVENTS_PROVIDER:-fake}
     networks: [edge, internal, marketiq]   # edge = egress for email, Google, Razorpay; marketiq = the data service
     depends_on:
       migrate: { condition: service_completed_successfully }

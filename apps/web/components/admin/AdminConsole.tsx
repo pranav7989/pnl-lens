@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/components/admin/AdminConsole.tsx
  * @area  Admin
- * @what  Admin console UI: Users, User management, Finance, Errors, Support, Product, Blog and Research tabs (shown per role).
+ * @what  Admin console UI: Users, User management, Finance, Errors, Support, Product, Blog, Research and Desk tabs (shown per role).
  */
 'use client';
 import { useEffect, useState } from 'react';
@@ -10,13 +10,15 @@ import { withViewTransition } from '@/lib/motion/viewTransition';
 import BlogAdmin from './BlogAdmin';
 import ResearchAdmin from './ResearchAdmin';
 import UserAdmin from './UserAdmin';
+import DeskAdmin from './DeskAdmin';
 
-type Tab = 'users' | 'finance' | 'errors' | 'support' | 'product' | 'blog' | 'research' | 'usermgmt';
+type Tab = 'users' | 'finance' | 'errors' | 'support' | 'product' | 'blog' | 'research' | 'usermgmt' | 'desk';
 const TABS: { id: Tab; name: string; perm: string }[] = [
   { id: 'users', name: 'Users', perm: 'tab:users' }, { id: 'usermgmt', name: 'User management', perm: 'tab:usermgmt' }, { id: 'finance', name: 'Finance', perm: 'tab:finance' },
   { id: 'errors', name: 'Errors', perm: 'tab:errors' }, { id: 'support', name: 'Support', perm: 'tab:support' }, { id: 'product', name: 'Product', perm: 'tab:product' },
   { id: 'blog', name: 'Blog', perm: 'tab:blog' },
   { id: 'research', name: 'Research', perm: 'tab:research' },
+  { id: 'desk', name: 'Desk', perm: 'desk:admin' },
 ];
 const n = (v: any) => Number(v || 0);
 const money = (minor: any, cur = 'INR') => (cur === 'USD' ? '$' : '₹') + (n(minor) / 100).toLocaleString(cur === 'USD' ? 'en-US' : 'en-IN', { maximumFractionDigits: 0 });
@@ -40,7 +42,7 @@ export default function AdminConsole({ role, perms, pg }: { role: string; perms:
   const [data, setData] = useState<Record<string, any>>({});
   const [err, setErr] = useState('');
   const load = (t: Tab) => fetch(`/api/v1/admin/metrics?tab=${t}`).then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.message || j.error); setData((d) => ({ ...d, [t]: j })); }).catch((e) => setErr(e.message));
-  useEffect(() => { if (tab && tab !== 'blog' && tab !== 'research' && tab !== 'usermgmt' && !data[tab]) load(tab); }, [tab]); // eslint-disable-line
+  useEffect(() => { if (tab && tab !== 'blog' && tab !== 'research' && tab !== 'usermgmt' && tab !== 'desk' && !data[tab]) load(tab); }, [tab]); // eslint-disable-line
   if (!pg) return <div className="panel center-card"><h3>Admin console</h3><p className="muted">Connect PostgreSQL (STORE_DRIVER=pg) to see live metrics.</p></div>;
   const d = tab ? data[tab] : null;
   return (
@@ -49,7 +51,7 @@ export default function AdminConsole({ role, perms, pg }: { role: string; perms:
         {tab !== 'blog' && tab !== 'research' && tab !== 'usermgmt' && <button className="btn ghost" onClick={() => tab && load(tab)}>Refresh</button>}</div>
       <nav className="tabs" role="tablist">{tabs.map((t) => <button key={t.id} role="tab" aria-selected={tab === t.id} data-tab={t.id} onClick={() => withViewTransition(() => setTab(t.id), { react: true })}>{t.name}</button>)}</nav>
       {err && <p className="status err">{err}</p>}
-      {tab === 'blog' ? <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}><BlogAdmin /></div> : tab === 'research' ? <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}><ResearchAdmin /></div> : tab === 'usermgmt' ? <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}><UserAdmin /></div> : !d ? <div style={{ padding: 20 }}><Loading /></div> : (
+      {tab === 'blog' ? <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}><BlogAdmin /></div> : tab === 'research' ? <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}><ResearchAdmin /></div> : tab === 'usermgmt' ? <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}><UserAdmin /></div> : tab === 'desk' ? <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}><DeskAdmin /></div> : !d ? <div style={{ padding: 20 }}><Loading /></div> : (
         <div className="rv-grid" style={{ marginTop: 16, viewTransitionName: 'mo-swap' }}>
           {tab === 'users' && <UsersTab d={d} canRoles={perms.includes('roles:manage')} />}
           {tab === 'finance' && <FinanceTab d={d} />}

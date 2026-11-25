@@ -156,6 +156,16 @@ def market() -> dict:
     return sheets.market_sheet()
 
 
+@app.get("/internal/instruments/fno", dependencies=[Depends(require_key)])
+def instruments_fno() -> dict:
+    """For the Desk in PnL Lens: upcoming index expiries and the lot size of every live future (no prices)."""
+    con = db.connect()
+    try:
+        return instruments.fno_reference(con)
+    finally:
+        con.close()
+
+
 @app.get("/internal/header", dependencies=[Depends(require_key)])
 def header_route() -> dict:
     return {"as_of": datetime.now(config.IST).isoformat(), "indices": sheets.header()}

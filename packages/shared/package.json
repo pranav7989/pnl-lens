@@ -41,7 +41,9 @@
     "./insights/benchmarks": "./src/insights/benchmarks.ts",
     "./insights/market": "./src/insights/market.ts",
     "./desk/charges": "./src/desk/charges.ts",
-    "./desk/session": "./src/desk/session.ts"
+    "./desk/session": "./src/desk/session.ts",
+    "./providers/news": "./src/providers/news.ts",
+    "./providers/events": "./src/providers/events.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

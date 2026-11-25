@@ -86,17 +86,18 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 388 files._
+_Generated from file headers by `npm run docs:index` — 396 files._
 
 ### Pages
 
 | File | What it does |
 |---|---|
 | `apps/web/app/(app)/market/page.tsx` | Live Market sheets (Nifty, Bank Nifty, Market; India): access decided by the API (sign-in, plan, region, flag); upgrade card without a plan, not found otherwise. |
-| `apps/web/app/desk/page.tsx` | Desk (spec v1.0, PR 1): date and session line, and the charges / breakeven / position-size calculator; public (visitors see the calculator), signed-in traders get their saved risk and slippage. |
+| `apps/web/app/desk/page.tsx` | Desk (spec v1.0): date and session line, today's scheduled events and overnight headlines (signed in), and the charges / breakeven / position-size calculator; public (visitors see the calculator), signed-in traders get their saved risk and slippage. |
 | `apps/web/app/layout.tsx` | Root layout: fonts (Manrope + ₹ glyph), html lang (en-IN / en by site), header with logo and reports left (from the API), browser error reporter. |
 | `apps/web/app/not-found.tsx` | 404 page. |
-| `apps/web/components/desk/DeskCalculator.tsx` | Desk header (date · session · IST time) and the calculator card: segment tabs, exchange, typed prices, the charges table, breakeven and net (charges only and with slippage), position size from the risk per trade. |
+| `apps/web/components/desk/DeskCalculator.tsx` | Desk header (date · session · IST time), today's cards (signed in) and the calculator card: segment tabs, exchange, typed prices, the charges table, breakeven and net (charges only and with slippage), position size from the risk per trade. |
+| `apps/web/components/desk/DeskToday.tsx` | Desk cards for signed-in traders: Scheduled events (time, title, HIGH/MED/EXPIRY tag, the day's timeline with a now marker) and Overnight headlines (news only, links open in a new tab, "unavailable · last updated" when the feed is down); refreshed every 60 s. |
 | `apps/web/components/market/MarketShell.tsx` | The Market page frame: Nifty / Bank Nifty / Market tabs, the data service status (login, instrument list, session, daily jobs) refreshed every 30 s, and the disclaimer; the live sheets fill these tabs in later phases. |
 | `apps/web/components/nav/NavLinks.tsx` | Header navigation links (active-state aware). |
 
@@ -236,8 +237,9 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 | `apps/api/src/routes/users-admin.ts` | Admin user management: user list with research status, "Request reports" email (owner), restrict / unrestrict (owner, admin), delete (owner); the public one-click consent link. |
 | `apps/web/app/admin/blog/preview/[id]/page.tsx` | REQ-7 private article preview (any status) for owner/admin: the public article layout with a "Preview" banner; never indexed. |
 | `apps/web/app/admin/page.tsx` | Admin console page: staff only (role from the API, read from the database on every request). |
-| `apps/web/components/admin/AdminConsole.tsx` | Admin console UI: Users, User management, Finance, Errors, Support, Product, Blog and Research tabs (shown per role). |
+| `apps/web/components/admin/AdminConsole.tsx` | Admin console UI: Users, User management, Finance, Errors, Support, Product, Blog, Research and Desk tabs (shown per role). |
 | `apps/web/components/admin/BlogAdmin.tsx` | REQ-7 admin "Blog" tab (owner/admin): post list with views, Markdown editor with live preview, cover upload, SEO panel, publish/schedule/unpublish/archive/delete. |
+| `apps/web/components/admin/DeskAdmin.tsx` | Admin "Desk" tab (owner/admin): feed status (headlines, events, generated rows, expiry copy, calendar check) with Run now, add an event by hand, hide or show events for the next 14 days; every change is audited. |
 | `apps/web/components/admin/ResearchAdmin.tsx` | Admin "Research" tab (owner only): research datasets built on the 1st and 16th from opted-in users, Build now, download; find who a subject or report code belongs to (reason required, audited). |
 | `apps/web/components/admin/UserAdmin.tsx` | Admin "User management" tab: search and filter users, see whose reports are in the research dataset, Request reports (owner), Restrict / Unrestrict (owner, admin), Delete (owner). |
 | `apps/web/components/ErrorReporter.tsx` | Sends browser errors to /api/v1/errors (max 5 per page load). |
@@ -257,9 +259,9 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 | `apps/api/src/lib/queue.ts` | Enqueues analysis jobs on BullMQ (Redis) for apps/worker; job id = analysis id, so a repeat is a no-op. |
 | `apps/api/src/lib/sniff.ts` | Upload type check: the real file type from its bytes (the engine's own detectKind) plus a reject list for non-statements. |
 | `apps/api/src/lib/storage.ts` | Object storage (S3 API on Garage): encrypted statements (api key write-only), export archives (read-only), blog media (read/write, public via the API). |
-| `apps/api/src/main.ts` | API process entry: config, Postgres (lens_app only), Redis, storage, queue, check-up reminder, weekly summary and market data timers; listens on PORT; graceful shutdown. |
+| `apps/api/src/main.ts` | API process entry: config, Postgres (lens_app only), Redis, storage, queue, check-up reminder, weekly summary, market data and Desk feed timers; listens on PORT; graceful shutdown. |
 | `apps/api/src/routes/blog.ts` | REQ-7 blog API: public posts/feed/media (cacheable) and owner/admin-only writing, publishing, live preview and image upload (WebP via sharp). |
-| `apps/api/src/routes/desk.ts` | Desk (spec v1.0, PR 1): public rates/session config and calculator, the trader's desk settings, and owner/admin editing of charge rates, brokerage plans and the market calendar (audited). |
+| `apps/api/src/routes/desk.ts` | Desk (spec v1.0): public rates/session config and calculator, today's events and overnight headlines (signed in), the trader's desk settings, and owner/admin editing of charge rates, brokerage plans, the market calendar and events, plus running a feed now (audited). |
 | `apps/api/src/routes/health.ts` | GET /health (liveness) and GET /ready (Postgres as lens_app, Redis, storage). |
 | `apps/api/src/routes/market-iq.ts` | Market IQ live sheets: GET /market-iq/access (may this user see them?), and for users with access /market-iq/status, /sheet/:underlying, /decoder/:underlying and /market, all proxied to the private data service (the only caller). |
 
@@ -384,6 +386,7 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 | `packages/db/migrations/0031_market_daily.sql` | Market context (India only): daily closes of NIFTY 50, NIFTY BANK and India VIX, fetched automatically by the api (Upstox public history, NSE as fallback), and a sync status row per symbol for monitoring. |
 | `packages/db/migrations/0032_founding_traders.sql` | Founding traders (share card v2): users.founding_no 1–1000, given once on a user's first paid plan (or a manual grant the owner marks as founding), never to staff or test accounts; users.is_test; a gap-free counter. |
 | `packages/db/migrations/0033_desk_reference.sql` | Desk (spec v1.0, PR 1): reference data (market calendar 2026, expiry calendar, instrument master, charge rates with effective dates, brokerage plans) and per-trader desk_settings; seeds the 1 Apr 2026 rates and 2026 NSE holidays. |
+| `packages/db/migrations/0034_desk_events_headlines.sql` | Desk (spec v1.0, PR 2): scheduled events (provider, generated and manual, with a change history), overnight headlines (title, source, time, link and category only, never a body) and the status of each feed. |
 | `packages/db/optional/pg_cron.sql` | Optional: schedule the purge inside Postgres if pg_cron is available. |
 | `packages/db/scripts/seed-dev.mjs` | Applies seed.sql (dev user with credits) — only when SEED_DEV_DATA=true (set by infra/compose.dev.yml only). |
 | `packages/db/scripts/setup-roles.mjs` | Creates/updates the login roles lens_app and lens_worker with passwords from env (runs after migrations, as superuser). |
@@ -434,6 +437,7 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 | `apps/api/test/auth.test.ts` | Sign-in (email code), session cookie, /me, /plans, CSRF origin check, consents, export and account deletion, health/ready — on real Postgres. |
 | `apps/api/test/benchmarks.test.ts` | How you compare: the report's segment, "not enough traders yet" without quantiles, the share it beats from stored quantiles (own segment first, else all traders, lower-is-better flipped), owner only. |
 | `apps/api/test/blog.test.ts` | REQ-7 blog API: roles (403 for support/finance/analyst/user), CRUD, publish visibility, Markdown sanitising, slug redirects, image upload checks (WebP + 1200×630), cache headers, sign-up/upload attribution. |
+| `apps/api/test/desk-feeds.test.ts` | Desk PR 2 on a real database: headlines (dedupe by link and by title within 6 h, 7-day retention, failing feed -> "unavailable"), events (create/update/hide/show with history, manual rows never overwritten), generated open/holiday/expiry rows, the expiry + lot-size copy from Market IQ, the calendar check alert, GET /desk/today and the admin events endpoints. |
 | `apps/api/test/desk.test.ts` | Desk API on the real seeded rates (migration 0033): public config and calculator (spec B2.6 golden to the paisa, rate set by date, position size), the trader's settings, owner/admin editing of rates, brokerage plans and the calendar (permission + audit). |
 | `apps/api/test/digest.test.ts` | Weekly summary: prefs on/off, unsubscribe link (good and bad token), sender: only opted-in active users with a report, from Monday 09:00 IST, once a week, with focus rules, report link and a working unsubscribe link. |
 | `apps/api/test/events.test.ts` | POST /events: allow-listed names only; visitors may send only the landing events (REQ-4); journey events from signed-in users (REQ-2). |
@@ -461,7 +465,7 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 | `packages/db/test/db/blog.test.ts` | REQ-7 blog in the database: app role reads the public view only, owner/admin-only functions, audit rows, visibility rules, slug redirects. |
 | `packages/db/test/db/capital.test.ts` | Report capital (0028): set and clear by the owner only, limits enforced, app may update only that column (and title), included in "Export my data". |
 | `packages/db/test/db/credits.test.ts` | Credits spec (19 Oct 2026) acceptance checks in the database: reports left, "+" free up to the limit, failed files and deletes spend/return nothing, plan window, soonest-expiring first. |
-| `packages/db/test/db/desk.test.ts` | Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export. |
+| `packages/db/test/db/desk.test.ts` | Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export; events and headlines (0034): events are never deleted, their history is append-only, the worker has no access. |
 | `packages/db/test/db/digest.test.ts` | Weekly summary (0029): opt-in off by default, the app may switch it, one send per user and week, closing the account turns it off and clears the sends. |
 | `packages/db/test/db/founding.test.ts` | Founding trader numbers (0032): given once and in order, on a paid plan or a manual grant marked founding, never to staff or test accounts, never past 1000, no gaps after a rolled-back grant; reset only before the first paid order; in the data export; app roles cannot touch the counter. |
 | `packages/db/test/db/harness.ts` | DB test harness: fresh database per suite on the throwaway test Postgres, real migrate + setup-roles scripts, role-scoped clients, fixtures. |
@@ -486,6 +490,7 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 | `packages/shared/test/capital.test.ts` | Capital %: return, a year at this pace (only for 30+ days), average/largest loss, worst day, drawdown and the 1% / 2% loss counts on a hand-made case; null without capital; finite on every golden report. |
 | `packages/shared/test/deep.test.ts` | Deep dive statistics: consistency/risk by day, R-multiples, weekday × hour heatmap and days to expiry: correct on small hand-made cases, finite and complete on every golden report, null when the statement cannot show them. |
 | `packages/shared/test/desk-charges.test.ts` | Desk calculator: the spec B2.6 golden example to the paisa (charges only and with slippage), one case per segment, delivery STT on both sides, the brokerage cap, STT rounding flag, rate set by date, position size (lots, zero-lot message, costs included), session state. |
+| `packages/shared/test/desk-providers.test.ts` | Desk providers: headlines keep only title/source/link/time/category (HTML stripped, bad links and future times refused), title keys for dedupe in any script; impact mapping; generated market-open/close, holiday and expiry rows follow the calendars (including the Sept 2025 Thursday -> Tuesday change), fakes are labelled. |
 | `packages/shared/test/drill.test.ts` | Drill-down parity: for every golden report and every drillable cluster view, the trades the renderer's DRILL rules pick are exactly the engine's bucket (same count, same P&L). |
 | `packages/shared/test/edge.test.ts` | Edge verdict and projection: deterministic, sensible on clear cases (always winning, coin flip, always losing, too few), finite and ordered on every golden report. |
 | `packages/shared/test/journal.test.ts` | Journal stats: notes match trades by trade identity (also across reports), groups by setup / tag / emotion add up, best and worst need 2+ trades. |
@@ -505,19 +510,19 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 | `packages/shared/test/share.test.ts` | Share card ("My Trading Discipline") on every golden report: no results, returns, percentages, money, names, securities or underlyings (legal safety rule); the disclaimer always present (SEBI named for India); deterministic slot filling; formats; layout fits; the committed QR reads back as SHARE_URL. |
 | `services/market-iq/tests/__init__.py` | Package marker for the Market IQ tests. |
 | `services/market-iq/tests/conftest.py` | Test setup: the daily jobs never start during tests; the IST trading day is pinned to the fixtures' day (12 Nov 2026). |
-| `services/market-iq/tests/test_app.py` | Internal API: /healthz open, every /internal/* call needs the shared key (missing key = 503, wrong key = 401), status carries no secrets. |
+| `services/market-iq/tests/test_app.py` | Internal API: /healthz open, every /internal/* call needs the shared key (missing key = 503, wrong key = 401), status carries no secrets; the Desk's instrument reference needs the key too. |
 | `services/market-iq/tests/test_calc.py` | Phase 6 formulas on small hand-made inputs with known answers: ATM/step/window, PCR, max pain (5-strike chain), ATM IV, S/R, ΔOI totals, donut, compass, buildup tags, sentiment bands (positioning wording only), decoder lines, contributions check line, scanners. |
 | `services/market-iq/tests/test_chain.py` | Option chain on a real (trimmed) Dhan response: parsing, 3 s rate limit per underlying + expiry, 60 s snapshots without all-zero strikes, reading the chain back at a time, stale marking, expiry fallback, clean-up, the future rolling to the next contract after expiry. |
 | `services/market-iq/tests/test_feed.py` | Live feed: packet parsing (several per frame, IST trade time, float prev OI), subscription batches, 1-minute bars, a full run against a fake Dhan WebSocket (subscribe, reconnect, saved bars) and today's backfill. |
 | `services/market-iq/tests/test_history.py` | Volume baselines: cumulative and 10-minute curves averaged over sessions, the last 10 sessions kept, the nightly job paced and tolerant of a failing stock, lookup at a minute of day. |
-| `services/market-iq/tests/test_instruments.py` | Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays. |
+| `services/market-iq/tests/test_instruments.py` | Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays, the Desk's expiries and lot sizes. |
 | `services/market-iq/tests/test_nse_flows.py` | Phase 5 on real NSE files: FII/DII cash parsing, the FII index futures row of the derivatives .xls, the evening job (cash + missing futures days), CSV backfill, constituents, and index weights recovered from minute bars. |
 | `services/market-iq/tests/test_scheduler.py` | Daily jobs: IST times, skipped on holidays, failures recorded without crashing, token job waits for .env. |
 | `services/market-iq/tests/test_sheets.py` | Phase 7 assembly: a full Nifty sheet from the real chain fixture + minute bars (KPIs, sentiment, chain rows with tags and ITM, 5-minute candles with futures volume, time bar, contributions), replay at a past minute, the decoder, Sheet 3 from live state, and the internal routes. |
 | `services/market-iq/tests/test_token.py` | Dhan token manager with mocked HTTP: login, reuse, renewal on expiry and rejection, clear errors, no secrets in logs. |
 | `tests/e2e-web/blog.spec.ts` | REQ-7 blog end to end: owner drafts, previews, publishes, unpublishes, schedules; /blog, article, landing preview, sitemap; raw-HTML SEO; sanitising; support sees no Blog tab; events. |
 | `tests/e2e-web/credits.spec.ts` | Credits spec (19 Oct 2026) in the browser: "N reports left" pill and "Plans" menu, plan card wording, free preview (3 numbers, 2 insights, blurred, from ₹99/$9), plan window end, no "credit" on customer screens. |
-| `tests/e2e-web/desk.spec.ts` | Desk (PR 1): a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage and gets them back. |
+| `tests/e2e-web/desk.spec.ts` | Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console. |
 | `tests/e2e-web/digest.spec.ts` | Weekly summary email: off by default, turned on in Your data, the email arrives once with focus rules and the report link, and its "Stop these emails" link turns it off (button, no sign-in). |
 | `tests/e2e-web/edge.spec.ts` | Edge tab: verdict, next-100-trades projection, how you compare (waiting, then from stored benchmarks), capital % (add, kept after reload, remove), consistency and risk by day, R-multiples, weekday × hour heatmap; the same numbers on a reload; no sideways scroll on a phone. Drill-down: a cluster row opens Positions filtered to its trades. |
 | `tests/e2e-web/helpers.ts` | E2E helpers: sign in (password, or an emailed code from the API's console mail log then the required password), give a user a plan, run SQL as the admin. |
@@ -565,8 +570,11 @@ _Generated from file headers by `npm run docs:index` — 388 files._
 
 | File | What it does |
 |---|---|
+| `apps/api/src/lib/desk-sync.ts` | Desk feeds on API timers: headlines every 5 min (dedupe, 7-day retention), events every 30 min 06:00–22:00 IST (manual rows never overwritten, history kept), generated open/close/holiday/expiry rows, the 07:40 copy of expiries and lot sizes from Market IQ, the 07:35 calendar check (admin alert once a day). |
 | `packages/shared/src/desk/charges.ts` | Desk calculator (spec v1.0 B2): brokerage, STT/CTT, exchange charges, SEBI fee, stamp duty, GST, breakeven and net P&L (charges only, and with the trader's slippage), and position size from a risk budget; pure, shared by the browser and the API. |
 | `packages/shared/src/desk/session.ts` | Desk session state (spec B2.7): pre-open / open / closed / holiday for a segment from the market calendar row of the day, in IST; plus the header date line. |
+| `packages/shared/src/providers/events.ts` | Scheduled-events provider interface for the Desk, impact mapping (provider importance -> HIGH/MED/LOW), the generator of market-open/close, holiday and expiry rows from the market and expiry calendars, and a fake provider with clearly marked sample events. |
+| `packages/shared/src/providers/news.ts` | Headlines provider interface for the Desk, the cleaner that keeps only title, source, link, time and category (never a body), the title key for the 6-hour dedupe, and a fake provider with clearly marked sample items. |
 
 ### Docs
 

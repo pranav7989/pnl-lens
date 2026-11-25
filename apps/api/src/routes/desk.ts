@@ -1,7 +1,7 @@
 /**
  * @file  apps/api/src/routes/desk.ts
  * @area  API
- * @what  Desk (spec v1.0, PR 1): public rates/session config and calculator, the trader's desk settings, and owner/admin editing of charge rates, brokerage plans and the market calendar (audited).
+ * @what  Desk (spec v1.0): public rates/session config and calculator, today's events and overnight headlines (signed in), the trader's desk settings, and owner/admin editing of charge rates, brokerage plans, the market calendar and events, plus running a feed now (audited).
  */
 /**
  * The calculator itself runs in the browser (packages/shared/src/desk/charges.ts); POST /desk/calc runs the same
@@ -9,11 +9,15 @@
  * The Desk uses no report credits.
  */
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { can, type Perm, type Role } from '@pnl-lens/shared/admin/rbac';
 import { calcCharges, positionSize, SEGMENTS, type DeskSegment, type ChargeRates, type BrokeragePlan } from '@pnl-lens/shared/desk/charges';
 import { istParts, sessionState, SESSION_LABEL } from '@pnl-lens/shared/desk/session';
+import { CATEGORIES, type Impact } from '@pnl-lens/shared/providers/events';
 import type { App, Deps } from '../app.js';
+import { JOBS, deskProviders, type DeskJob } from '../lib/desk-sync.js';
+import { marketIqConfig } from '../lib/market-iq.js';
 import { fail, ok, requireUser, sessionUser } from '../lib/http.js';
 
 const SEGMENT = z.enum(SEGMENTS as [DeskSegment, ...DeskSegment[]]);
@@ -82,6 +86,45 @@ export async function deskRoutes(app: App, deps: Deps) {
     const charges = calcCharges({ segment: b.segment, buy: b.buy, sell: b.sell, qty: b.qty, rates: rate, brokerage, slippagePerUnit: b.slippagePerUnit ?? null });
     const size = b.size ? positionSize({ segment: b.segment, ...b.size, rates: rate, brokerage, slippagePerUnit: b.slippagePerUnit ?? null }) : null;
     return ok(reply, { rates: { effective_from: rate.effective_from, source_note: rate.source_note }, brokerage: plan.name, charges, size });
+  });
+
+  // ---------------------------------------------------------------- today: events and overnight headlines (signed in)
+  const HEADLINES_MAX = 6, HEADLINES_STALE_MIN = 15;
+  let todayCache: { day: string; at: number; data: unknown } | null = null;     // nothing personal in it: shared by all users for 60 s
+  async function today(now: Date) {
+    const p = istParts(now);
+    const cal = await calendar(p.day);
+    const eq = cal.find((c) => c.segment === 'equity' && c.exchange === 'NSE') ?? null;
+    const state = sessionState(eq, p.minutes);
+    const { rows: events } = await q(`select id, to_char(at, 'HH24:MI') as at, title, impact, category, country from public.desk_events
+                                       where day = $1 and not hidden order by at nulls first, id`, [p.day]);
+    // overnight = since the last NSE equity close before now
+    const { rows: [prev] } = await q(`select ((day + close) at time zone 'Asia/Kolkata') as t from public.market_calendar
+                                       where segment = 'equity' and exchange = 'NSE' and not is_holiday and close is not null
+                                         and ((day + close) at time zone 'Asia/Kolkata') <= $1 order by day desc limit 1`, [now]);
+    const since: Date = prev?.t ?? new Date(now.getTime() - 18 * 3600e3);
+    const provider = deskProviders().news;
+    const { rows: items } = await q(`select title, source, url, category, published_at from public.desk_headlines
+                                      where published_at > $1 and published_at <= $2 order by published_at desc limit $3`, [since, now, HEADLINES_MAX]);
+    const { rows: [feed] } = await q(`select last_ok_at from public.desk_feed_status where feed = 'headlines'`);
+    const lastOk: Date | null = feed?.last_ok_at ?? null;
+    const headlineState = !provider ? 'off' : !lastOk || now.getTime() - lastOk.getTime() > HEADLINES_STALE_MIN * 60_000 ? 'unavailable' : 'ok';
+    return {
+      date: p.day, label: p.label, time: `${String(Math.floor(p.minutes / 60)).padStart(2, '0')}:${String(p.minutes % 60).padStart(2, '0')}`,
+      session: { state, label: SESSION_LABEL[state], note: eq?.note ?? null },
+      events: events.map((e) => ({ id: e.id, at: e.at, title: e.title, impact: e.impact as Impact, category: e.category, country: e.country })),
+      headlines: { state: headlineState, since: since.toISOString(), lastUpdated: lastOk?.toISOString() ?? null,
+        items: headlineState === 'off' ? [] : items.map((h) => ({ title: h.title, source: h.source, url: h.url, category: h.category, publishedAt: (h.published_at as Date).toISOString() })) },
+    };
+  }
+
+  app.get('/desk/today', { schema: { tags: ['desk'], security: [{ session: [] }], summary: 'Today: session, scheduled events and overnight headlines (signed in)' } }, async (req, reply) => {
+    const user = await requireUser(req, reply); if (!user) return;
+    const now = new Date(), day = istParts(now).day;
+    const ttl = Number(process.env.DESK_TODAY_CACHE_MS ?? 60_000);
+    if (!todayCache || todayCache.day !== day || now.getTime() - todayCache.at >= ttl) todayCache = { day, at: now.getTime(), data: await today(now) };
+    reply.header('Cache-Control', 'private, max-age=60');
+    return ok(reply, todayCache.data);
   });
 
   // ---------------------------------------------------------------- the trader's settings
@@ -196,5 +239,58 @@ export async function deskRoutes(app: App, deps: Deps) {
       [b.day, b.segment, b.exchange, b.is_holiday, b.pre_open, b.open, b.close, b.note]);
     await audit(who.id, 'desk_market_calendar_set', b);
     return ok(reply, { ok: true });
+  });
+
+  // ---------------------------------------------------------------- owner/admin: events and feeds (audited)
+  const syncDeps = () => ({ pool: deps.pool, ...deskProviders(), marketIq: marketIqConfig(), log: (event: string, extra?: object) => app.log.info({ event, ...extra }) });
+  const EVENT = z.object({ day: DAY, at: TIME, title: z.string().trim().min(3).max(200), impact: z.enum(['high', 'medium', 'low', 'expiry', 'info']),
+    category: z.enum(CATEGORIES as [string, ...string[]]), country: z.string().regex(/^[A-Z]{2}$/).default('IN') });
+  const EVENT_COLS = `id, day::text as day, to_char(at, 'HH24:MI') as at, title, impact, category, country, source, manual, hidden, updated_at`;
+
+  app.get('/admin/desk/events', { schema: { ...admin, summary: 'Events for a period, feed status (owner/admin)', querystring: z.object({ from: DAY.optional(), to: DAY.optional() }) } }, async (req, reply) => {
+    if (!(await requirePerm(req, reply, 'desk:admin'))) return;
+    const from = req.query.from ?? istParts(new Date()).day;
+    const to = req.query.to ?? new Date(Date.parse(from) + 14 * 864e5).toISOString().slice(0, 10);
+    const { rows: events } = await q(`select ${EVENT_COLS} from public.desk_events where day between $1 and $2 order by day, at nulls first, id`, [from, to]);
+    const { rows: feeds } = await q('select feed, provider, last_attempt_at, last_ok_at, last_error, last_count from public.desk_feed_status order by feed');
+    const p = deskProviders(), m = marketIqConfig();
+    reply.header('Cache-Control', 'no-store');
+    return ok(reply, { from, to, events, feeds, providers: { news: p.news?.name ?? 'off', events: p.events?.name ?? 'off', marketIq: !!(m.url && m.key) } });
+  });
+
+  app.post('/admin/desk/events', { schema: { ...admin, summary: 'Add an event by hand (owner/admin, audited); providers never overwrite it', body: EVENT } }, async (req, reply) => {
+    const who = await requirePerm(req, reply, 'desk:admin'); if (!who) return;
+    const b = req.body;
+    const { rows: [e] } = await q(`insert into public.desk_events (day, at, title, impact, category, country, source, source_id, manual, updated_by)
+                                   values ($1, $2, $3, $4, $5, $6, 'manual', $7, true, $8) returning ${EVENT_COLS}`, [b.day, b.at, b.title, b.impact, b.category, b.country, randomUUID(), who.id]);
+    await q(`insert into public.desk_event_history (event_id, actor, change, after) values ($1, $2, 'created', $3)`, [e.id, who.id, JSON.stringify(b)]);
+    await audit(who.id, 'desk_event_added', { id: e.id, ...b });
+    todayCache = null;
+    return ok(reply, { event: e }, 201);
+  });
+
+  app.patch('/admin/desk/events/:id', { schema: { ...admin, summary: 'Edit or hide an event (owner/admin, audited); it becomes manual', params: z.object({ id: z.coerce.number().int().positive() }),
+    body: EVENT.partial().omit({ country: true }).extend({ hidden: z.boolean().optional() }) } }, async (req, reply) => {
+    const who = await requirePerm(req, reply, 'desk:admin'); if (!who) return;
+    const { rows: [old] } = await q(`select ${EVENT_COLS} from public.desk_events where id = $1`, [req.params.id]);
+    if (!old) return fail(reply, 404, 'not_found', 'No such event.');
+    const b = req.body;
+    const next = { day: b.day ?? old.day, at: b.at !== undefined ? b.at : old.at, title: b.title ?? old.title, impact: b.impact ?? old.impact, category: b.category ?? old.category, hidden: b.hidden ?? old.hidden };
+    const { rows: [e] } = await q(`update public.desk_events set day = $2, at = $3, title = $4, impact = $5, category = $6, hidden = $7, manual = true, updated_by = $8, updated_at = now()
+                                   where id = $1 returning ${EVENT_COLS}`, [old.id, next.day, next.at, next.title, next.impact, next.category, next.hidden, who.id]);
+    const onlyHidden = Object.keys(b).every((k) => k === 'hidden');
+    const change = onlyHidden ? (next.hidden ? 'hidden' : 'shown') : 'updated';
+    await q(`insert into public.desk_event_history (event_id, actor, change, before, after) values ($1, $2, $3, $4, $5)`, [old.id, who.id, change, JSON.stringify(old), JSON.stringify(next)]);
+    await audit(who.id, 'desk_event_edited', { id: old.id, change, ...b });
+    todayCache = null;
+    return ok(reply, { event: e });
+  });
+
+  app.post('/admin/desk/sync', { schema: { ...admin, summary: 'Run a Desk feed now (owner/admin, audited)', body: z.object({ job: z.enum(Object.keys(JOBS) as [DeskJob, ...DeskJob[]]) }) } }, async (req, reply) => {
+    const who = await requirePerm(req, reply, 'desk:admin'); if (!who) return;
+    const r = await JOBS[req.body.job](syncDeps(), new Date());
+    await audit(who.id, 'desk_sync_run', { job: req.body.job, count: r.count, error: r.error });
+    todayCache = null;
+    return ok(reply, { job: req.body.job, count: r.count, error: r.error, problems: 'problems' in r ? r.problems : undefined });
   });
 }

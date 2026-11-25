@@ -1,7 +1,7 @@
 /**
  * @file  packages/db/test/db/desk.test.ts
  * @area  Tests
- * @what  Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export.
+ * @what  Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export; events and headlines (0034): events are never deleted, their history is append-only, the worker has no access.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { testDbAvailable, freshDb, makeUser, asRole, expectPgError, type TestDb } from './harness.js';
@@ -49,5 +49,20 @@ describe.skipIf(!ok)('desk reference data (0033)', () => {
     expect(row.d.desk_settings).toMatchObject({ max_trades_day: 3 });
     await q('select delete_account($1)', [u]);
     expect(await q('select count(*)::int n from desk_settings where user_id = $1', [u])).toEqual([{ n: 0 }]);
+  });
+
+  it('0034: events are hidden, never deleted; history is append-only; headlines expire; the worker has no access', async () => {
+    const [e] = await asRole(t, 'lens_app', `insert into desk_events (day, title, impact, source, source_id) values ('2026-11-26', 'Test event', 'high', 'test', 'x1') returning id`);
+    await asRole(t, 'lens_app', `insert into desk_event_history (event_id, change) values ($1, 'created')`, [e.id]);
+    await asRole(t, 'lens_app', `update desk_events set hidden = true where id = $1`, [e.id]);
+    await expectPgError(asRole(t, 'lens_app', `delete from desk_events where id = $1`, [e.id]), '42501');
+    await expectPgError(asRole(t, 'lens_app', `update desk_event_history set change = 'updated'`), '42501');
+    await expectPgError(asRole(t, 'lens_app', `delete from desk_event_history`), '42501');
+    await expectPgError(asRole(t, 'lens_app', `insert into desk_events (day, title, impact, source, source_id) values ('2026-11-26', 'Bad', 'urgent', 'test', 'x2')`), '23514');
+    await expectPgError(asRole(t, 'lens_app', `insert into desk_headlines (provider, title, title_key, source, url, published_at) values ('t', 'T', 't', 'S', 'javascript:alert(1)', now())`), '23514');
+    await asRole(t, 'lens_app', `insert into desk_headlines (provider, title, title_key, source, url, published_at) values ('t', 'T', 't', 'S', 'https://n.example/1', now())`);
+    await asRole(t, 'lens_app', `delete from desk_headlines where provider = 't'`);
+    await expectPgError(asRole(t, 'lens_worker', `select * from desk_events`), '42501');
+    await expectPgError(asRole(t, 'lens_worker', `select * from desk_headlines`), '42501');
   });
 });

@@ -335,6 +335,8 @@
 /* ===== admin console ===== */
 .ad-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 12px; }
 .ad-role { color: var(--y); text-transform: capitalize; }
+.desk-ad-form { display: grid; grid-template-columns: 150px 110px minmax(0, 1fr) 120px 120px auto; gap: 8px; align-items: center; }
+@media (max-width: 860px) { .desk-ad-form { grid-template-columns: 1fr 1fr; } }
 .ad-k6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .ad-bars { display: flex; align-items: flex-end; gap: 4px; height: 170px; padding-top: 6px; }
 .ad-bars > div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; min-width: 0; }

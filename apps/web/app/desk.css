@@ -37,3 +37,29 @@
 @media (max-width: 520px) {
   .desk-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* today: scheduled events and overnight headlines */
+.desk-today { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.desk-guest { margin: 0; }
+.desk-tl { margin: 0 0 14px; }
+.desk-tl-bar { position: relative; height: 6px; border-radius: 999px; background: var(--s3); }
+.desk-tl-dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--ink-3); border: 2px solid var(--s1); }
+.desk-tl-dot.high, .desk-tl-dot.expiry { background: var(--y); }
+.desk-tl-now { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
+.desk-tl-ends { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.desk-tl-note { margin: 0 0 12px; }
+.desk-ev, .desk-hl { list-style: none; margin: 0; padding: 0; }
+.desk-ev li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 14px; }
+.desk-ev li + li, .desk-hl li + li { border-top: 1px solid var(--line); }
+.desk-ev-t { color: var(--ink-3); font-variant-numeric: tabular-nums; font-size: 13px; }
+.desk-ev-title { color: var(--ink); }
+.desk-ev-title small { color: var(--ink-3); }
+.desk-ev li[data-impact="info"] .desk-ev-title { color: var(--ink-2); }
+.desk-tag { font-size: 11px; font-weight: 600; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-2); }
+.desk-tag.high { background: var(--y); border-color: var(--y); color: var(--on-y); }
+.desk-tag.expiry { border-color: var(--y-line); color: var(--y); }
+.desk-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-3); }
+.desk-hl li { display: grid; gap: 2px; padding: 9px 0; }
+.desk-hl a { color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.4; }
+.desk-hl a:hover { color: var(--y); }
+.desk-hl-meta { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 860px) { .desk-today { grid-template-columns: 1fr; } }

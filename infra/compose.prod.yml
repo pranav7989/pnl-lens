@@ -112,6 +112,8 @@ services:
       MARKETIQ_URL: http://marketiq:8000
       MARKETIQ_INTERNAL_KEY: ${MARKETIQ_INTERNAL_KEY:?set in .env}
       MARKET_IQ_ACCESS: ${MARKET_IQ_ACCESS:-owner}   # off | owner | paid  (paid only once the data licence is cleared)
+      NEWS_PROVIDER: ${NEWS_PROVIDER:-off}    # Desk headlines: off until the owner picks a provider (never 'fake' in production)
+      EVENTS_PROVIDER: ${EVENTS_PROVIDER:-off}
     networks: [edge, internal, marketiq]
     depends_on:
       migrate: { condition: service_completed_successfully }

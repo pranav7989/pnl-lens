@@ -1,7 +1,7 @@
 /**
  * @file  apps/api/src/main.ts
  * @area  API
- * @what  API process entry: config, Postgres (lens_app only), Redis, storage, queue, check-up reminder, weekly summary and market data timers; listens on PORT; graceful shutdown.
+ * @what  API process entry: config, Postgres (lens_app only), Redis, storage, queue, check-up reminder, weekly summary, market data and Desk feed timers; listens on PORT; graceful shutdown.
  */
 import { Redis } from 'ioredis';
 import { createDb, assertRole } from '@pnl-lens/db';
@@ -12,6 +12,8 @@ import { bullQueue, memoryQueue } from './lib/queue.js';
 import { startReminderLoop } from './lib/reminders.js';
 import { startDigestLoop } from './lib/digest.js';
 import { startMarketSync } from './lib/market-sync.js';
+import { startDeskSync, deskProviders } from './lib/desk-sync.js';
+import { marketIqConfig } from './lib/market-iq.js';
 import { sendMail } from '@pnl-lens/shared/mail';
 
 const config = loadConfig();
@@ -40,10 +42,16 @@ const stopMarket = process.env.MARKET_SYNC === 'off' ? () => {} : startMarketSyn
   db, pool,
   log: (event, extra = {}) => console.log(JSON.stringify({ time: new Date().toISOString(), service: 'api', event, ...extra })),
 });
+// Desk feeds: headlines, scheduled events, generated open/close/expiry rows, expiry copy from Market IQ, calendar check
+const stopDesk = process.env.DESK_SYNC === 'off' ? () => {} : startDeskSync({
+  pool, ...deskProviders(), marketIq: marketIqConfig(),
+  log: (event, extra = {}) => console.log(JSON.stringify({ time: new Date().toISOString(), service: 'api', event, ...extra })),
+});
 const shutdown = async () => {
   stopReminders();
   stopDigest();
   stopMarket();
+  stopDesk();
   await app.close().catch(() => {});
   await queue.close().catch(() => {});
   await db.destroy().catch(() => {});

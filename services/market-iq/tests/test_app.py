@@ -1,6 +1,6 @@
 # @file  services/market-iq/tests/test_app.py
 # @area  Tests
-# @what  Internal API: /healthz open, every /internal/* call needs the shared key (missing key = 503, wrong key = 401), status carries no secrets.
+# @what  Internal API: /healthz open, every /internal/* call needs the shared key (missing key = 503, wrong key = 401), status carries no secrets; the Desk's instrument reference needs the key too.
 import pytest
 from fastapi.testclient import TestClient
 
@@ -40,3 +40,9 @@ def test_internal_calls_need_the_key(client, monkeypatch):
 def test_no_public_docs(client):
     for p in ("/docs", "/redoc", "/openapi.json", "/"):
         assert client.get(p).status_code == 404
+
+
+def test_fno_reference_route_needs_the_key(client):
+    assert client.get("/internal/instruments/fno").status_code == 401
+    r = client.get("/internal/instruments/fno", headers={"x-internal-key": KEY})
+    assert r.status_code == 200 and set(r.json()) == {"as_of", "expiries", "futures"}

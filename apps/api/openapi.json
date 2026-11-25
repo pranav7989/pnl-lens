@@ -3026,6 +3026,24 @@
         }
       }
     },
+    "/api/v1/desk/today": {
+      "get": {
+        "summary": "Today: session, scheduled events and overnight headlines (signed in)",
+        "tags": [
+          "desk"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/desk/settings": {
       "get": {
         "summary": "My desk settings",
@@ -3429,6 +3447,247 @@
                   "open",
                   "close",
                   "note"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/desk/events": {
+      "get": {
+        "summary": "Events for a period, feed status (owner/admin)",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      },
+      "post": {
+        "summary": "Add an event by hand (owner/admin, audited); providers never overwrite it",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "at": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  },
+                  "impact": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "expiry",
+                      "info"
+                    ]
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "macro",
+                      "policy",
+                      "results",
+                      "market",
+                      "expiry",
+                      "holiday",
+                      "global",
+                      "other"
+                    ]
+                  },
+                  "country": {
+                    "default": "IN",
+                    "type": "string",
+                    "pattern": "^[A-Z]{2}$"
+                  }
+                },
+                "required": [
+                  "day",
+                  "at",
+                  "title",
+                  "impact",
+                  "category"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/desk/events/{id}": {
+      "patch": {
+        "summary": "Edit or hide an event (owner/admin, audited); it becomes manual",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "at": {
+                    "nullable": true,
+                    "type": "string",
+                    "pattern": "^\\d{2}:\\d{2}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  },
+                  "impact": {
+                    "type": "string",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "expiry",
+                      "info"
+                    ]
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "macro",
+                      "policy",
+                      "results",
+                      "market",
+                      "expiry",
+                      "holiday",
+                      "global",
+                      "other"
+                    ]
+                  },
+                  "hidden": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/desk/sync": {
+      "post": {
+        "summary": "Run a Desk feed now (owner/admin, audited)",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "job": {
+                    "type": "string",
+                    "enum": [
+                      "headlines",
+                      "events",
+                      "generated",
+                      "expiries",
+                      "calendar_check"
+                    ]
+                  }
+                },
+                "required": [
+                  "job"
                 ]
               }
             }

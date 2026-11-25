@@ -188,6 +188,29 @@ def option_strikes(con: sqlite3.Connection, underlying: str, expiry: str) -> lis
     return [r["strike"] for r in rows]
 
 
+def fno_reference(con: sqlite3.Connection, today: date | None = None) -> dict:
+    """For the PnL Lens Desk: upcoming index expiries (weekly/monthly, from the contracts themselves, never from weekday
+    names) and the lot size of every live index and stock future. Index options share their future's lot size."""
+    d = (today or config.today()).isoformat()
+    exp: dict[tuple[str, str, str], str] = {}
+    for r in con.execute("select exch_id, symbol, expiry, expiry_flag, instrument from instruments "
+                         "where instrument in ('OPTIDX', 'FUTIDX') and expiry >= ? order by expiry", (d,)):
+        k = (r["exch_id"], r["symbol"], r["expiry"])
+        monthly = r["instrument"] == "FUTIDX" or r["expiry_flag"] == "M"
+        if monthly or k not in exp:
+            exp[k] = "monthly" if monthly else "weekly"
+    for r in con.execute("select distinct expiry from instruments where exch_id = 'NSE' and instrument = 'FUTSTK' and expiry >= ?", (d,)):
+        exp[("NSE", "STOCKS", r["expiry"])] = "monthly"
+    futs = con.execute("select exch_id, symbol, instrument, expiry, lot_size from instruments "
+                       "where instrument in ('FUTIDX', 'FUTSTK') and expiry >= ? order by symbol, expiry", (d,)).fetchall()
+    return {
+        "as_of": as_of(con),
+        "expiries": [{"exchange": e, "underlying": u, "expiry": x, "kind": k} for (e, u, x), k in sorted(exp.items(), key=lambda i: (i[0][2], i[0][1]))],
+        "futures": [{"exchange": r["exch_id"], "underlying": r["symbol"], "instrument": r["instrument"], "expiry": r["expiry"],
+                     "lot_size": int(r["lot_size"]) if r["lot_size"] else None} for r in futs],
+    }
+
+
 # ---------------------------------------------------------------- CLI
 
 def main(argv: list[str] | None = None) -> int:

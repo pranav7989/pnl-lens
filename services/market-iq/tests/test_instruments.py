@@ -1,6 +1,6 @@
 # @file  services/market-iq/tests/test_instruments.py
 # @area  Tests
-# @what  Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays.
+# @what  Instrument list on a sample of the real Dhan file: kept rows, segment-safe key, index IDs, futures, F&O stocks, strikes, holidays, the Desk's expiries and lot sizes.
 """Instrument list on a sample of the real Dhan file: what is kept, the segment-safe key, and every lookup."""
 import json
 from datetime import date
@@ -83,3 +83,16 @@ def test_refresh_downloads_replaces_and_logs(tmp_path):
         n2 = ins.refresh(c, client)
     assert n1 == n2 == c.execute("select count(*) from instruments").fetchone()[0]
     assert c.execute("select count(*) from job_log where job = 'instruments' and status = 'ok'").fetchone()[0] == 2
+
+
+def test_fno_reference_for_the_desk_expiries_from_contracts_and_lot_sizes(con):
+    ref = ins.fno_reference(con, date(2026, 11, 12))
+    ex = {(e["underlying"], e["expiry"]): e["kind"] for e in ref["expiries"]}
+    assert ex[("NIFTY", "2026-11-17")] == "weekly"                       # an options-only (W) expiry
+    assert ex[("NIFTY", "2026-11-23")] == "monthly" and ex[("BANKNIFTY", "2026-12-29")] == "monthly"
+    assert ex[("STOCKS", "2026-11-23")] == "monthly"
+    assert [e["expiry"] for e in ref["expiries"]] == sorted(e["expiry"] for e in ref["expiries"])
+    lots = {(f["underlying"], f["expiry"]): f["lot_size"] for f in ref["futures"]}
+    assert lots[("NIFTY", "2026-11-23")] == 65 and lots[("BANKNIFTY", "2026-11-23")] == 30
+    assert all("NSETEST" not in f["underlying"] for f in ref["futures"])
+    assert not any(e["expiry"] < "2026-12-01" for e in ins.fno_reference(con, date(2026, 12, 1))["expiries"])
