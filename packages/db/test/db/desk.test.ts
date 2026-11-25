@@ -1,7 +1,7 @@
 /**
  * @file  packages/db/test/db/desk.test.ts
  * @area  Tests
- * @what  Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export; events and headlines (0034): events are never deleted, their history is append-only, the worker has no access.
+ * @what  Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export; events and headlines (0034): events are never deleted, their history is append-only, the worker has no access; Trade Check plans and rules (0036): a kept line needs a reason, the app never deletes, export and account deletion.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { testDbAvailable, freshDb, makeUser, asRole, expectPgError, type TestDb } from './harness.js';
@@ -64,5 +64,29 @@ describe.skipIf(!ok)('desk reference data (0033)', () => {
     await asRole(t, 'lens_app', `delete from desk_headlines where provider = 't'`);
     await expectPgError(asRole(t, 'lens_worker', `select * from desk_events`), '42501');
     await expectPgError(asRole(t, 'lens_worker', `select * from desk_headlines`), '42501');
+  });
+
+  it('0036: a kept line needs a reason; the app never deletes; in the export; gone when the account is closed', async () => {
+    const u = await makeUser(t);
+    const [r] = await asRole(t, 'lens_app', `insert into trader_rules (user_id, kind, params, source) values ($1, 'max_trades_day', '{"n":3}', 'manual') returning id`, [u]);
+    await expectPgError(asRole(t, 'lens_app', `insert into trader_rules (user_id, kind, params, source) values ($1, 'anything', '{}', 'manual')`, [u]), '23514');
+    const [p] = await asRole(t, 'lens_app', `insert into trade_plans (user_id, plan_date) values ($1, '2026-11-25') returning id`, [u]);
+    const [l] = await asRole(t, 'lens_app', `insert into trade_plan_lines (plan_id, user_id, position, raw_text, parsed, features, check_result, check_version)
+                                             values ($1, $2, 1, 'NIFTY 24300 CE buy 120 1 lot', '{}', '{}', '{"chips":[]}', '1.0') returning id`, [p.id, u]);
+    await expectPgError(asRole(t, 'lens_app', `update trade_plan_lines set decision = 'kept' where id = $1`, [l.id]), '23514');
+    await asRole(t, 'lens_app', `update trade_plan_lines set decision = 'kept', keep_reason = 'Small size' where id = $1`, [l.id]);
+    await asRole(t, 'lens_app', `insert into insight_events (user_id, line_id, chip_key) values ($1, $2, 'rule:1')`, [u, l.id]);
+    await asRole(t, 'lens_app', `insert into plan_checklist (user_id, plan_date, items) values ($1, '2026-11-25', '[{"text":"a","done":true}]')`, [u]);
+    for (const tbl of ['trader_rules', 'trade_plans', 'trade_plan_lines', 'plan_checklist', 'insight_events'])
+      await expectPgError(asRole(t, 'lens_app', `delete from ${tbl}`), '42501');
+    await expectPgError(asRole(t, 'lens_worker', 'select * from trade_plan_lines'), '42501');
+    const req = (await q(`insert into data_requests (user_id, kind, status) values ($1, 'export', 'processing') returning id`, [u]))[0].id;
+    const [row] = await asRole(t, 'lens_worker', 'select public.export_user_data($1) as d', [req]);
+    expect(row.d.trade_check_rules).toMatchObject([{ kind: 'max_trades_day', params: { n: 3 } }]);
+    expect(row.d.trade_plans[0]).toMatchObject({ date: '2026-11-25', lines: [{ text: 'NIFTY 24300 CE buy 120 1 lot', decision: 'kept', keep_reason: 'Small size' }], checklist: [{ text: 'a', done: true }] });
+    expect(r.id).toBeTruthy();
+    await q('select delete_account($1)', [u]);
+    for (const tbl of ['trader_rules', 'trade_plans', 'trade_plan_lines', 'plan_checklist', 'insight_events'])
+      expect(await q(`select count(*)::int n from ${tbl} where user_id = $1`, [u]), tbl).toEqual([{ n: 0 }]);
   });
 });

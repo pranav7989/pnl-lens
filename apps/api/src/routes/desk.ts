@@ -20,6 +20,7 @@ import { historyLine, describe as describeSegment, period, dayLabel, TEXT } from
 import type { App, Deps } from '../app.js';
 import { JOBS, deskProviders, type DeskJob } from '../lib/desk-sync.js';
 import { marketIqConfig } from '../lib/market-iq.js';
+import { deskAccess } from '../lib/desk-access.js';
 import { fail, ok, requireUser, sessionUser } from '../lib/http.js';
 
 const SEGMENT = z.enum(SEGMENTS as [DeskSegment, ...DeskSegment[]]);
@@ -130,19 +131,13 @@ export async function deskRoutes(app: App, deps: Deps) {
   });
 
   // ---------------------------------------------------------------- Trade Check profile and watch-outs (active plan + a report)
-  /** Plan, rules, watch-outs and Trade Check need an open plan window and at least one live report (owner decision, 25 Nov). */
-  async function deskAccess(userId: string): Promise<'ok' | 'no_plan' | 'no_report'> {
-    const { rows: [r] } = await q(`select exists (select 1 from public.subscriptions where user_id = $1 and starts_at <= now() and ends_at > now()) as plan,
-                                          exists (select 1 from public.reports where user_id = $1 and purged_at is null and report is not null) as report`, [userId]);
-    return !r.plan ? 'no_plan' : !r.report ? 'no_report' : 'ok';
-  }
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
   const day = (d: unknown) => (d instanceof Date ? d.toISOString().slice(0, 10) : d == null ? null : String(d).slice(0, 10));
 
   app.get('/desk/profile', { schema: { tags: ['desk'], security: [{ session: [] }], summary: 'My Trade Check profile and watch-outs (active plan and a report)' } }, async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     reply.header('Cache-Control', 'no-store');
-    const access = await deskAccess(user.id);
+    const access = await deskAccess(deps.pool, user.id);
     if (access !== 'ok') return ok(reply, { access, profile: null });
     const { rows: [p] } = await q(`select active_version, built_at, period_from, period_to, newest_trade, n_trades, currency, unavailable from public.trader_profiles where user_id = $1`, [user.id]);
     if (!p) return ok(reply, { access, profile: null, building: true });

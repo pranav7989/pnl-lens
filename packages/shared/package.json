@@ -47,7 +47,10 @@
     "./features": "./src/features/build.ts",
     "./profile": "./src/profile/build.ts",
     "./profile/source": "./src/profile/source.ts",
-    "./plan/templates": "./src/plan/templates.ts"
+    "./plan/templates": "./src/plan/templates.ts",
+    "./plan/parse": "./src/plan/parse.ts",
+    "./plan/check": "./src/plan/check.ts",
+    "./plan/suggest": "./src/plan/suggest.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

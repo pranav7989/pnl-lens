@@ -67,11 +67,31 @@ export function historyLine(p: Pattern, currency: string, now: Date): string {
   return `Your history: ${what} · ${sample} · ${money} (${period(p.period_from, p.period_to)})${older}`;
 }
 
+export type RuleKind = 'max_trades_day' | 'max_daily_loss' | 'stop_after_losses' | 'max_lots' | 'no_segment' | 'time_window';
+/** The trader's own rule in their words, e.g. "No option buys on expiry day", "Daily loss limit ₹6,000". */
+export function ruleLabel(kind: RuleKind, params: any, currency = 'INR'): string {
+  switch (kind) {
+    case 'max_trades_day': return `No more than ${plural(Number(params?.n), 'trade')} a day`;
+    case 'max_daily_loss': return `Daily loss limit ${fmtMoney(Number(params?.amount), currency)}`;
+    case 'stop_after_losses': return `Stop for the day after ${plural(Number(params?.n), 'loss', 'losses')}`;
+    case 'max_lots': return params?.ratio != null ? `No more than ${params.ratio}× my usual size` : `No more than ${plural(Number(params?.lots), 'lot')}`;
+    case 'no_segment': return `No ${describe(params?.dims ?? {})}`;
+    case 'time_window': return `Trade only between ${params?.from} and ${params?.to}`;
+  }
+}
+export const ruleChip = (label: string, detail?: string) => `Breaks your rule: "${label}"${detail ? ` · ${detail}` : ''}`;
+
 export const TEXT = {
   noProfile: 'Upload a tradebook to see how lines like this went for you.',
   noWatchouts: 'Upload a statement to see your watch-outs.',
   nothingClear: 'Nothing stands out in your trades yet: no habit has enough trades to call strong or weak.',
   unlockTime: 'Upload a tradebook to unlock time-of-day checks.',
+  acrossUnderlyings: ' · across all the instruments you traded',
+  addStopLoss: 'Add a stop-loss to check your daily loss limit.',
+  noLotSize: 'Lot size unknown for this instrument: write the quantity to check size rules.',
+  tradeOfDay: (n: number) => `this is trade ${n} of the day`,
+  plannedLoss: (amount: string) => `planned loss at stop-loss ${amount}`,
+  sizeNow: (s: string) => `this line is ${s}`,
   checkedAgainst: (to: string) => `Checked against your trades up to ${to}`,
   disclaimer: 'Trade Check shows your own history and your own rules. It is not investment advice and never recommends a trade.',
 } as const;

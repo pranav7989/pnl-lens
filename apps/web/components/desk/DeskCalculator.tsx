@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/components/desk/DeskCalculator.tsx
  * @area  Pages
- * @what  Desk header (date · session · IST time), watch-outs and today's cards (signed in) and the calculator card: segment tabs, exchange, typed prices, the charges table, breakeven and net (charges only and with slippage), position size from the risk per trade.
+ * @what  Desk header (date · session · IST time), watch-outs, the trade plan and today's cards (signed in) and the calculator card: segment tabs, exchange, typed prices, the charges table, breakeven and net (charges only and with slippage), position size from the risk per trade.
  */
 'use client';
 import { useEffect, useMemo, useState } from 'react';
@@ -11,6 +11,7 @@ import { istParts, sessionState, SESSION_LABEL, type CalendarDay } from '@pnl-le
 import { api } from '@/lib/api-browser';
 import DeskToday, { type DeskTodayData } from './DeskToday';
 import DeskWatchouts, { type DeskProfileData } from './DeskWatchouts';
+import DeskPlan, { type DeskPlanData } from './DeskPlan';
 
 type Rate = ChargeRates & { segment: DeskSegment; exchange: string; effective_from: string; source_note: string | null };
 type Plan = { name: string; segment: DeskSegment; flat_per_order: number | null; pct: number | null; cap_per_order: number | null; is_default: boolean };
@@ -45,7 +46,7 @@ function Field({ label, value, onChange, hint, id }: { label: string; value: str
   );
 }
 
-export default function DeskCalculator({ config, settings, signedIn, today = null, profile = null }: { config: DeskConfig; settings: DeskSettings | null; signedIn: boolean; today?: DeskTodayData | null; profile?: DeskProfileData | null }) {
+export default function DeskCalculator({ config, settings, signedIn, today = null, profile = null, tradePlan = null }: { config: DeskConfig; settings: DeskSettings | null; signedIn: boolean; today?: DeskTodayData | null; profile?: DeskProfileData | null; tradePlan?: DeskPlanData | null }) {
   const [segment, setSegment] = useState<DeskSegment>('options');
   const exchanges = useMemo(() => config.rates.filter((r) => r.segment === segment).map((r) => r.exchange).sort((a, b) => EX_ORDER.indexOf(a) - EX_ORDER.indexOf(b)), [config.rates, segment]);
   const [exchange, setExchange] = useState(settings?.default_exchange || 'NSE');
@@ -115,6 +116,7 @@ export default function DeskCalculator({ config, settings, signedIn, today = nul
       </div>
 
       {profile && <DeskWatchouts data={profile} />}
+      {tradePlan && <DeskPlan initial={tradePlan} />}
       {today ? <DeskToday initial={today} /> : !signedIn && (
         <p className="panel muted small desk-guest" data-desk-guest><Link className="link" href="/login?next=/desk">Sign in</Link> to see today&apos;s scheduled events and overnight headlines.</p>
       )}

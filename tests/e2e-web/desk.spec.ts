@@ -1,7 +1,7 @@
 /**
  * @file  tests/e2e-web/desk.spec.ts
  * @area  Tests
- * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console; watch-outs go from "needs a plan" to "upload a statement" to the worker-built profile of a real tradebook.
+ * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console; watch-outs go from "needs a plan" to "upload a statement" to the worker-built profile of a real tradebook; the trade plan: unclear line highlighted, a line checked as you type and saved with its chips, Keep anyway needs a reason, Remove, checklist kept.
  */
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
@@ -124,4 +124,48 @@ test('watch-outs: plan, then a statement, then the profile the worker builds', a
   await expect(wo.locator('.desk-wo-list li, p.muted').first()).toBeVisible();
   for (const t of await wo.locator('.desk-wo-list li').allTextContents()) expect(t).toMatch(/Your history: .+ \(.+\d{4}\)/);
   await expect(wo).toContainText('From your own past trades. Not a recommendation.');
+});
+
+test('trade plan: type, check, add, keep anyway with a reason, remove; checklist', async ({ page }) => {
+  test.setTimeout(240_000);
+  const email = `desk-plan-${Date.now()}@e2e.local`;
+  await signIn(page, email, '/upload');
+  givePlan(email);
+  await page.goto('/upload');
+  await page.setInputFiles('#file', path.join(FIX, 'zerodha_tradebook.csv'));
+  await page.check('input[name=consent]');
+  await page.getByRole('button', { name: 'Analyse' }).click();
+  await page.waitForURL(/\/report\//, { timeout: 90_000 });
+  sql(`insert into trader_rules (user_id, kind, params, source) select id, 'no_segment', '{"dims":{"instrument":"option","side":"buy"}}', 'manual' from users where email = '${email}'`);
+  const card = page.locator('[data-desk-plan]');
+  await expect.poll(async () => { await page.goto('/desk'); return card.count(); }, { timeout: 60_000 }).toBe(1);
+  await expect(card.locator('[data-desk-rules]')).toContainText('No option buys');
+
+  await page.fill('#tc-line', 'NIFTY CE buy 120');
+  await expect(card.locator('[data-desk-preview] [data-field="strike"]')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Add', exact: true })).toBeDisabled();
+  await page.fill('#tc-line', 'NIFTY 24300 CE buy 120, SL 90, target 170, 1 lot');
+  await expect(card.locator('[data-desk-preview]')).toContainText('NIFTY 24300 CE · buy · 120 · SL 90 · target 170 · 1 lot');
+  await expect(card.locator('[data-desk-preview] [data-chip="block"]')).toHaveText(/Breaks your rule: "No option buys"/);
+  await card.getByRole('button', { name: 'Add', exact: true }).click();
+  const line = card.locator('.tc-lines > li').first();
+  await expect(line.locator('[data-chip="block"]')).toHaveText(/Breaks your rule: "No option buys"/);
+  await line.getByRole('button', { name: 'Keep anyway' }).click();
+  await expect(line.getByRole('button', { name: 'Keep', exact: true })).toBeDisabled();
+  await line.getByLabel('Why keep it').fill('Hedge for my futures position');
+  await line.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(line.locator('.tc-badge')).toHaveText('Kept: Hedge for my futures position');
+
+  await page.fill('#tc-line', 'RELIANCE buy 2500 SL 2450 qty 10');
+  await card.getByRole('button', { name: 'Add', exact: true }).click();
+  const second = card.locator('.tc-lines > li').nth(1);
+  await expect(second).toContainText('RELIANCE · buy · 2500 · SL 2450 · qty 10');
+  await second.getByRole('button', { name: 'Remove' }).click();
+  await expect(second.locator('.tc-badge')).toHaveText('Removed');
+  await expect(card.locator('.tc-count')).toHaveText('1 line planned');
+
+  await card.locator('.tc-tick input').first().check();
+  await page.reload();
+  await expect(page.locator('[data-desk-plan] .tc-tick input').first()).toBeChecked();
+  await expect(page.locator('[data-desk-plan] .tc-lines > li').first().locator('.tc-badge')).toHaveText('Kept: Hedge for my futures position');
 });

@@ -1,12 +1,13 @@
 /**
  * @file  apps/web/app/desk/page.tsx
  * @area  Pages
- * @what  Desk (spec v1.0): date and session line, your watch-outs (plan + report), today's scheduled events and overnight headlines (signed in), and the charges / breakeven / position-size calculator; public (visitors see the calculator), signed-in traders get their saved risk and slippage.
+ * @what  Desk (spec v1.0): date and session line, your watch-outs and trade plan with Trade Check (plan + report), today's scheduled events and overnight headlines (signed in), and the charges / breakeven / position-size calculator; public (visitors see the calculator), signed-in traders get their saved risk and slippage.
  */
 import { apiServer, getMe } from '@/lib/api-client';
 import DeskCalculator, { type DeskConfig, type DeskSettings } from '@/components/desk/DeskCalculator';
 import type { DeskTodayData } from '@/components/desk/DeskToday';
 import type { DeskProfileData } from '@/components/desk/DeskWatchouts';
+import type { DeskPlanData } from '@/components/desk/DeskPlan';
 import '../desk.css';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,8 @@ export default async function DeskPage() {
     me ? apiServer<DeskTodayData>('/desk/today') : Promise.resolve(null),
     me ? apiServer<DeskProfileData>('/desk/profile') : Promise.resolve(null),
   ]);
+  // the trade plan needs the same access as the watch-outs (active plan + a live report)
+  const plan = profile?.ok && profile.data.access === 'ok' ? await apiServer<DeskPlanData>('/desk/context') : null;
   if (!cfg.ok) {
     return (
       <div className="desk">
@@ -29,5 +32,5 @@ export default async function DeskPage() {
       </div>
     );
   }
-  return <DeskCalculator config={cfg.data} settings={settings?.ok ? settings.data : null} signedIn={!!me} today={today?.ok ? today.data : null} profile={profile?.ok ? profile.data : null} />;
+  return <DeskCalculator config={cfg.data} settings={settings?.ok ? settings.data : null} signedIn={!!me} today={today?.ok ? today.data : null} profile={profile?.ok ? profile.data : null} tradePlan={plan?.ok ? plan.data : null} />;
 }

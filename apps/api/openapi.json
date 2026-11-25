@@ -3722,6 +3722,796 @@
           }
         }
       }
+    },
+    "/api/v1/desk/context": {
+      "get": {
+        "summary": "Trade Check context, today's plan, rules, suggestions and checklist",
+        "tags": [
+          "desk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "query",
+            "name": "date",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/plans/{date}/lines": {
+      "post": {
+        "summary": "Add a plan line (checked and stored)",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "input": {
+                    "default": "typed",
+                    "type": "string",
+                    "enum": [
+                      "typed",
+                      "voice"
+                    ]
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "path",
+            "name": "date",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/lines/{id}": {
+      "patch": {
+        "summary": "Edit a plan line (checked again)",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/lines/{id}/decision": {
+      "patch": {
+        "summary": "Remove a line, or keep it anyway with a reason",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "removed",
+                      "kept"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/rules": {
+      "post": {
+        "summary": "Add a rule (by hand, or accepting a suggestion)",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "max_trades_day"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "n": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 100
+                              }
+                            },
+                            "required": [
+                              "n"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "max_daily_loss"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "amount": {
+                                "type": "number",
+                                "minimum": 0,
+                                "exclusiveMinimum": true,
+                                "maximum": 1000000000
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "stop_after_losses"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "n": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 10
+                              }
+                            },
+                            "required": [
+                              "n"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "max_lots"
+                            ]
+                          },
+                          "params": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "lots": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1000
+                                  }
+                                },
+                                "required": [
+                                  "lots"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "ratio": {
+                                    "type": "number",
+                                    "minimum": 1,
+                                    "maximum": 20
+                                  }
+                                },
+                                "required": [
+                                  "ratio"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "no_segment"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "dims": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                }
+                              }
+                            },
+                            "required": [
+                              "dims"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "time_window"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              },
+                              "to": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "to"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "default": "manual",
+                        "type": "string",
+                        "enum": [
+                          "manual",
+                          "suggested",
+                          "plan"
+                        ]
+                      },
+                      "suggestion": {
+                        "type": "string",
+                        "maxLength": 200
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/rules/{id}": {
+      "patch": {
+        "summary": "Change or switch off a rule",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "params": {},
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/rules/dismiss": {
+      "post": {
+        "summary": "Ignore a suggested rule",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "max_trades_day"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "n": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 100
+                              }
+                            },
+                            "required": [
+                              "n"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "max_daily_loss"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "amount": {
+                                "type": "number",
+                                "minimum": 0,
+                                "exclusiveMinimum": true,
+                                "maximum": 1000000000
+                              }
+                            },
+                            "required": [
+                              "amount"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "stop_after_losses"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "n": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 10
+                              }
+                            },
+                            "required": [
+                              "n"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "max_lots"
+                            ]
+                          },
+                          "params": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "lots": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1000
+                                  }
+                                },
+                                "required": [
+                                  "lots"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "ratio": {
+                                    "type": "number",
+                                    "minimum": 1,
+                                    "maximum": 20
+                                  }
+                                },
+                                "required": [
+                                  "ratio"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "no_segment"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "dims": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 40
+                                }
+                              }
+                            },
+                            "required": [
+                              "dims"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "time_window"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              },
+                              "to": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "to"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "suggestion": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "suggestion"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/checklist/{date}": {
+      "put": {
+        "summary": "Save the day's checklist",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "done": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "done"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "path",
+            "name": "date",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
     }
   },
   "servers": [

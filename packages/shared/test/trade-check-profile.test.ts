@@ -180,7 +180,7 @@ describe('wording (doc §1, §12)', () => {
   it('no template or rendered line gives advice', () => {
     const { profile } = profileFromRows(rows(expiryExample().trades), NOW);
     const rendered = profile.patterns.filter((p) => p.shown).map((p) => historyLine(p, 'INR', NOW));
-    const fixed = Object.values(TEXT).map((v) => (typeof v === 'function' ? v('30 Sep 2026') : v));
+    const fixed = Object.values(TEXT).map((v) => (typeof v === 'function' ? (v as (x: any) => string)('30 Sep 2026') : v));
     for (const s of [...rendered, ...fixed]) expect(isAdvice(s), s).toBe(false);
     expect(rendered.length).toBeGreaterThan(20);
     for (const bad of ['You should cut size', 'Avoid expiry day', "Don't take this trade", 'Buy NIFTY 24300 CE', 'Consider a smaller lot', 'target at 170'])

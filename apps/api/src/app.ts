@@ -38,6 +38,7 @@ import { benchmarkRoutes } from './routes/benchmarks.js';
 import { marketRoutes } from './routes/market.js';
 import { marketIqRoutes } from './routes/market-iq.js';
 import { deskRoutes } from './routes/desk.js';
+import { tradeCheckRoutes } from './routes/trade-check.js';
 
 export interface Deps {
   config: Config;
@@ -148,6 +149,7 @@ export async function buildApp(deps: Deps): Promise<App> {
     await marketRoutes(v1 as App, deps);
     await marketIqRoutes(v1 as App, deps);
     await deskRoutes(v1 as App, deps);
+    await tradeCheckRoutes(v1 as App, deps);
     if (deps.config.exposeOpenApi) v1.get('/openapi.json', { schema: { hide: true } }, async () => app.swagger());
   }, { prefix: '/api/v1' });
 

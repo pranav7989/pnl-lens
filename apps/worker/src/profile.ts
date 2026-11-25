@@ -58,11 +58,11 @@ export async function rebuildProfile(pool: pg.Pool, userId: string, now = new Da
       await c.query(`insert into public.trader_patterns (${pcols.join(', ')}) values ${values.join(', ')}`, params);
     }
     // the switch: a check reads active_version, so it sees the old profile or the new one, never half of one
-    await c.query(`insert into public.trader_profiles (user_id, active_version, built_at, period_from, period_to, newest_trade, n_trades, currency, source_report_ids, unavailable)
-                   values ($1, $2, now(), $3, $4, $4, $5, $6, $7, $8)
+    await c.query(`insert into public.trader_profiles (user_id, active_version, built_at, period_from, period_to, newest_trade, n_trades, currency, source_report_ids, unavailable, usual_qty)
+                   values ($1, $2, now(), $3, $4, $4, $5, $6, $7, $8, $9)
                    on conflict (user_id) do update set active_version = excluded.active_version, built_at = excluded.built_at, period_from = excluded.period_from,
-                     period_to = excluded.period_to, newest_trade = excluded.newest_trade, n_trades = excluded.n_trades, currency = excluded.currency, source_report_ids = excluded.source_report_ids, unavailable = excluded.unavailable`,
-    [userId, version, b.period_from, b.period_to, b.n_trades, prepared.currency, prepared.reportIds, prepared.unavailable]);
+                     period_to = excluded.period_to, newest_trade = excluded.newest_trade, n_trades = excluded.n_trades, currency = excluded.currency, source_report_ids = excluded.source_report_ids, unavailable = excluded.unavailable, usual_qty = excluded.usual_qty`,
+    [userId, version, b.period_from, b.period_to, b.n_trades, prepared.currency, prepared.reportIds, prepared.unavailable, JSON.stringify(prepared.usualQty)]);
     await c.query('delete from public.trader_patterns where user_id = $1 and profile_version <= $2', [userId, version - KEEP_VERSIONS]);
     await c.query('delete from public.trader_baselines where user_id = $1 and profile_version <= $2', [userId, version - KEEP_VERSIONS]);
     await c.query('commit');

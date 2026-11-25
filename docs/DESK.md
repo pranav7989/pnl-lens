@@ -144,19 +144,55 @@ Built from the owner's architecture doc ("Trade Check: personalised trade plans 
 
 **Wording:** all text comes from `packages/shared/src/plan/templates.ts`. A test scans every template and rendered line for advice phrasing. A lawyer should confirm the wording before launch.
 
+## Trade Check: the trade plan (PR 4, migration 0036)
+Doc phase 2: the "Trade plan for the day" card for traders with a plan and a report.
+
+1. **Write a line**, e.g. `NIFTY 24300 CE buy 120, SL 90, target 170, 1 lot`.
+   - The parser (`plan/parse.ts`) uses a strict grammar: underlying, strike, CE / PE / FUT, buy / sell, entry, SL, target, lots or qty, and an optional time. Side-first lines, `24300CE`, `sl:90`, `1lot` and `at 10:30` are read too.
+   - Anything unclear is shown under the input as a field to fix, and the line can't be added.
+2. **Checked as you type**, 300 ms after the last key, by `check()` (`plan/check.ts`) in the browser. On save, the API runs the **same function on the same context** and stores `check_result` with `check_version` 1.0. A test proves the browser and the API give identical results.
+3. **Chips:**
+   - **✕** every rule the line breaks;
+   - **!** / **✓** at most 2 of the trader's own habits that match (weak first);
+   - **info**, e.g. "Add a stop-loss to check your daily loss limit".
+   - With no profile, the one line "Upload a tradebook to see how lines like this went for you."
+   - For an instrument never traded, a history chip adds "across all the instruments you traded".
+4. **What the line is checked as:**
+   - **Features:** the same function as the trader's stored trades. The contract is the nearest expiry in the expiry calendar (futures: the nearest monthly), the quantity is lots × the current lot size, and "place in the day" is the line's place in today's plan.
+   - **Loss at stop-loss:** |entry − SL| × quantity plus the round trip's charges, as in the calculator.
+5. **Decide:**
+   - Edit line, Remove, or **Keep anyway, which needs a one-line reason**.
+   - Each choice is stored on the line and in `insight_events`.
+   - The whole day is checked again after every change, because a line's checks depend on the lines before it.
+6. **Rules** (v1 kinds: `max_trades_day`, `max_daily_loss`, `stop_after_losses`, `max_lots` (lots or × usual), `no_segment`, `time_window`):
+   - **Suggested from your trades** (`plan/suggest.ts`):
+     - the strongest weak habits, as "No …";
+     - the 30-day plan rules a machine can check (`re-entry` → stop after 1 loss; `daily-limit` → daily loss limit, with the amount from settings or typed; `avoid-worst` → no trades in that instrument; `overtrade` → weekly target ÷ 5 trades a day);
+     - the limits in Desk settings.
+   - Accept or Ignore. Either way the suggestion is never offered again.
+   - `stop_after_losses` needs today's results (Journal "taken", phase 3), so for now it is listed as unavailable.
+7. **Pre-trade checklist:** 4 items, saved per day.
+
+**Speed:**
+- `check()` takes about 1 ms in the browser.
+- Saving a checked line (parse, re-check the day, store) has a p95 under 150 ms in the API test.
+- The doc's 1,000-trader load target is left for the VM load run (docs/LOAD_TEST.md).
+
 ## Build (web P0)
 | PR | Contents | State |
 |---|---|---|
 | 1 | Reference data, calculator, settings, admin endpoints, `/desk` page with the session line and the calculator card, nav link, disclaimer | built |
 | 2 | Events and headlines: providers with fakes, API timers, expiry and lot sizes from Market IQ, admin Desk tab, `GET /desk/today` | built |
 | 3 | Trade Check phase 1: features, profile builder and rebuild job, watch-outs card | built |
-| 4 | Trade Check phase 2: typed plan lines, parser, `check()` in browser + API, rules (incl. suggested from your trades), chips, decision log, checklist | next |
+| 4 | Trade Check phase 2: typed plan lines, parser, `check()` in browser + API, rules (incl. suggested from your trades), chips, decision log, checklist | built |
+| later | Doc phase 3 (Journal taken/result, tradebook auto-match, 15:30 plan vs actual), phase 4 (voice, cohort opt-in 50+), phase 5 (learn) | |
 
 Tests:
 - `packages/shared/test/desk-charges.test.ts`;
 - `apps/api/test/desk.test.ts`;
 - `packages/shared/test/desk-providers.test.ts`, `packages/shared/test/trade-check-profile.test.ts`;
 - `apps/worker/test/profile.test.ts`, `apps/api/test/desk-profile.test.ts`;
+- `packages/shared/test/trade-check-lines.test.ts`, `apps/api/test/trade-check.test.ts`;
 - `apps/api/test/desk-feeds.test.ts`;
 - `packages/db/test/db/desk.test.ts`;
 - `services/market-iq/tests/test_instruments.py` (the expiry reference);
