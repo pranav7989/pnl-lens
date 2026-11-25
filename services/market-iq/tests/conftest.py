@@ -6,11 +6,11 @@ import os
 os.environ["MARKET_IQ_SCHEDULER"] = "off"   # tests never start the real daily jobs
 
 
-from datetime import date  # noqa: E402
+from datetime import date
 
-import pytest  # noqa: E402
+import pytest
 
-from app import config  # noqa: E402
+from app import config
 
 
 @pytest.fixture(autouse=True)
