@@ -8,6 +8,40 @@
  * Report renderer v2 (website + offline app). DOM-string rendering scoped to `root`, no dependencies.
  * Every user-derived string goes through esc(). Tiles carry data-behav="<key>" for the behaviour card.
  */
+/** Level names and score ranges. Mirrors the thresholds in packages/engine/src/engine.js buildProgress (engine unchanged). */
+export const LEVEL_RANGES = [['Building', 0, 39], ['Developing', 40, 54], ['Steady', 55, 69], ['Disciplined', 70, 84], ['Elite', 85, 100]];
+
+/**
+ * The level ladder under the score: 5 segments in one row, each label centred in its own column below
+ * (never overlapping). Narrow cards (ladder under 344 px) show only the current level's label (report.css).
+ * Hover or tap a segment for its name and score range.
+ */
+export function ladderHtml(index) {
+  const cl = (i) => (i < index ? 'done' : i === index ? 'on' : '');
+  return `<div class="pg-ladder" role="list" aria-label="Levels">
+    <div class="pg-lad-bar">${LEVEL_RANGES.map(([n, a, b], i) => `<i class="${cl(i)}" role="listitem" tabindex="0" aria-label="${n}: ${a}–${b}${i === index ? ' (your level)' : ''}" data-tip="${n}: ${a}–${b}"></i>`).join('')}</div>
+    <div class="pg-lad-lab" aria-hidden="true">${LEVEL_RANGES.map(([n], i) => `<span class="${cl(i)}">${n}</span>`).join('')}</div></div>`;
+}
+
+/**
+ * Drill-down (analysis roadmap A6): which trades make up a cluster row. Only the views whose keys are plain trade
+ * fields are drillable, and each rule mirrors the engine's bucketize key exactly (packages/engine/src/engine.js
+ * buildBuckets; parity is tested against every golden report in packages/shared/test/drill.test.ts). Range views
+ * (size, premium, hold, hour, busy day, loss depth) use engine-internal cut-offs and are not drillable.
+ */
+const DOWS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const DRILL = {
+  group: (t, k) => t.group === k,
+  underlying: (t, k) => t.underlying === k,
+  weekday: (t, k) => !!t.isOpt && t.weekday === k,
+  expiryType: (t, k) => !!t.isOpt && t.expiryType === k,
+  callPut: (t, k) => !!t.isOpt && (t.kind === 'CE' ? 'Calls (CE)' : 'Puts (PE)') === k,
+  style: (t, k) => t.kind === 'EQ' && t.style === k,
+  entryDow: (t, k) => !!t.entryDate && DOWS[new Date(String(t.entryDate).slice(0, 10) + 'T00:00:00Z').getUTCDay()] === k,
+  month: (t, k) => !!t.exitDate && String(t.exitDate).slice(0, 7) === k,
+  direction: (t, k) => t.direction === k,
+};
+
 export function mountReport(root, R, fmt) {
   const inr = fmt.inr, pct = fmt.pct;
   const $ = (s) => root.querySelector(s), $$ = (s) => [...root.querySelectorAll(s)];
@@ -23,14 +57,15 @@ export function mountReport(root, R, fmt) {
   const panel = (key, title, sub, body, span = 's6', extra = '') =>
     `<div class="rv-panel ${span} ${extra}" data-behav="${key}"><div class="rv-ph"><h3>${title}</h3>${sub ? `<small>${sub}</small>` : ''}${info(key)}</div>${body}</div>`;
   const kpi = (key, lab, val, c, sub) =>
-    `<div class="rv-kpi" data-behav="${key}"><div class="rv-kl">${lab}${info(key)}</div><div class="rv-kv ${c}">${val}</div><div class="rv-ks">${sub || ''}</div></div>`;
+    `<div class="rv-kpi" data-behav="${key}"><div class="rv-kl">${lab}${info(key)}</div><div class="rv-kv ${c}" data-count-up>${val}</div><div class="rv-ks">${sub || ''}</div></div>`;
 
   function bars(rows, opts = {}) {
     if (!rows || !rows.length) return `<p class="rv-empty">${opts.empty || 'Not enough data for this view.'}</p>`;
     const max = Math.max(1, ...rows.map((r) => Math.abs(r.pnl)));
     return `<div class="rv-bars">${rows.map((r) => {
       const w = (Math.abs(r.pnl) / max) * 50;
-      return `<div class="rv-bar-row"><div class="rv-bl"><b>${esc(r.key)}</b><span>${r.n} trade${r.n === 1 ? '' : 's'}${opts.noWin ? '' : ` · ${Math.round(r.winRate * 100)}% win`}</span></div>
+      const d = opts.drill ? ` data-drill="${opts.drill}" data-key="${esc(r.key)}" role="button" tabindex="0" title="Show these trades"` : '';
+      return `<div class="rv-bar-row${opts.drill ? ' rv-drill' : ''}"${d}><div class="rv-bl"><b>${esc(r.key)}</b><span>${r.n} trade${r.n === 1 ? '' : 's'}${opts.noWin ? '' : ` · ${Math.round(r.winRate * 100)}% win`}</span></div>
         <div class="rv-track"><i class="${r.pnl >= 0 ? 'pos' : 'neg'}" style="${r.pnl >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i><em></em></div>
         <div class="rv-bv ${cls(r.pnl)}">${inr(r.pnl)}</div></div>`;
     }).join('')}</div>`;
@@ -40,7 +75,8 @@ export function mountReport(root, R, fmt) {
     const max = Math.max(1, ...rows.map((r) => Math.abs(r.pnl)));
     return `<div class="rv-tiles ${opts.cls || ''}">${rows.map((r) => {
       const h = Math.max(4, (Math.abs(r.pnl) / max) * 100);
-      return `<div class="rv-tile ${r.pnl >= 0 ? 'up' : 'down'}"><div class="rv-tk">${esc(opts.label ? opts.label(r.key) : r.key)}</div>
+      const d = opts.drill ? ` data-drill="${opts.drill}" data-key="${esc(r.key)}" role="button" tabindex="0" title="Show these trades"` : '';
+      return `<div class="rv-tile ${r.pnl >= 0 ? 'up' : 'down'}${opts.drill ? ' rv-drill' : ''}"${d}><div class="rv-tk">${esc(opts.label ? opts.label(r.key) : r.key)}</div>
         <div class="rv-tv ${cls(r.pnl)}">${inr(r.pnl)}</div>
         <div class="rv-tm">${r.n} trade${r.n === 1 ? '' : 's'} · ${Math.round(r.winRate * 100)}% win</div>
         <div class="rv-tbar"><i style="height:${h}%"></i></div></div>`;
@@ -62,6 +98,19 @@ export function mountReport(root, R, fmt) {
   }
 
   /* ---------- overview ---------- */
+  /**
+   * REQ-2 "What's next" card at the end of Overview and Progress (website only: fmt.next comes from the journey in
+   * packages/shared/src/journey.ts). Single users also see a blurred, illustrative trend preview (no numbers).
+   */
+  function whatsNext() {
+    const n = fmt.next; if (!n) return '';
+    const preview = n.kind === 'upgrade'
+      ? `<div class="wn-preview" aria-hidden="true"><svg viewBox="0 0 400 120" preserveAspectRatio="none"><polyline points="0,95 60,80 120,86 180,62 240,58 300,40 360,34 400,22" fill="none" stroke="#FFD60A" stroke-width="4"/><polyline points="0,110 400,110" stroke="#333" stroke-width="2"/></svg><span>Unlock month-by-month progress with Snapshot</span></div>`
+      : '';
+    return `<div class="rv-panel s12 wn" data-whats-next><div><h3>What's next</h3><p>${esc(n.text)}</p></div>
+      <a class="btn" href="${esc(n.href)}" data-wn-cta="${esc(n.kind)}">${esc(n.cta)} →</a>${preview}</div>`;
+  }
+
   function overview() {
     const dn = { dp: 'DP charges', amc: 'Demat AMC', autosq: 'Auto square-off fees', margin: 'Margin penalties', other: 'Other debits' };
     const heads = Object.entries(R.heads || {}).filter(([, v]) => v).sort((a, b) => b[1] - a[1]);
@@ -92,7 +141,7 @@ export function mountReport(root, R, fmt) {
     h += panel('leaks', 'Top leaks', '<a href="#" data-go="insights">All insights &amp; fixes →</a>', `<div class="rv-leaks">${(R.leaks || []).slice(0, 4).map((l) =>
       `<div class="rv-leak"><span class="rv-lv ${l.level}">${l.level}</span><div><b>${esc(l.title)}</b><p>${esc(l.fix)}</p></div><em class="loss">${inr(-l.impact)}</em></div>`).join('') || '<p class="rv-empty">No major leaks found.</p>'}</div>`, 's7');
     if ((R.curve || []).length > 2) h += panel('curve', 'Cumulative P&amp;L', `worst drawdown ${inr(m.maxDD || 0)}`, curve(), 's7');
-    h += panel('instrument', 'By instrument', '', bars(R.b.group), (R.curve || []).length > 2 ? 's5' : 's6');
+    h += panel('instrument', 'By instrument', '', bars(R.b.group, { drill: 'group' }), (R.curve || []).length > 2 ? 's5' : 's6');
     if (R.seq) {
       const a = R.seq.afterWin, l = R.seq.afterLoss;
       h += panel('afterwinloss', 'After a win vs after a loss', 'the next trade you take', `<div class="rv-vs">
@@ -101,7 +150,7 @@ export function mountReport(root, R, fmt) {
         <p class="rv-note">Worst streak ${R.seq.worstStreak} losses in a row${R.seq.worstDay ? ` · worst day ${esc(R.seq.worstDay.date)} (${inr(R.seq.worstDay.pnl)})` : ''}.</p>`, 's6');
     }
     if ((R.b.year || []).length > 1) h += panel('year', 'By expiry year', 'F&amp;O only', bars(R.b.year), 's6');
-    $('#overview').innerHTML = h + '</div>';
+    $('#overview').innerHTML = h + whatsNext() + '</div>';
   }
 
   /* ---------- insights ---------- */
@@ -138,32 +187,32 @@ export function mountReport(root, R, fmt) {
   function clusters() {
     const b = R.b;
     const when = [
-      panel('month', 'By month', 'when you closed each trade', tiles(b.month, { label: monthLabel, cls: 'months' }), 's12'),
-      panel('entryDow', 'Entry weekday', 'the day you opened the trade', tiles(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((d) => (b.entryDow || []).find((r) => r.key === d)).filter(Boolean), { cls: 'days' }), 's12'),
+      panel('month', 'By month', 'when you closed each trade', tiles(b.month, { label: monthLabel, cls: 'months', drill: 'month' }), 's12'),
+      panel('entryDow', 'Entry weekday', 'the day you opened the trade', tiles(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((d) => (b.entryDow || []).find((r) => r.key === d)).filter(Boolean), { cls: 'days', drill: 'entryDow' }), 's12'),
       (b.entryHour || []).length > 1 ? panel('entryHour', 'Time of entry', '', tiles(b.entryHour, { cls: 'four' }), 's6') : '',
       (b.busyDay || []).length > 1 ? panel('busyDay', 'Trades per day', 'how results change with activity', tiles(b.busyDay, { cls: 'four' }), 's6') : '',
-      (b.weekday || []).length ? panel('weekday', 'Expiry day', 'when the option contract expired', tiles(b.weekday, { cls: 'days' }), 's12') : '',
+      (b.weekday || []).length ? panel('weekday', 'Expiry day', 'when the option contract expired', tiles(b.weekday, { cls: 'days', drill: 'weekday' }), 's12') : '',
       (b.year || []).length > 1 ? panel('year', 'By year', '', tiles(b.year, { cls: 'four' }), 's12') : '',
     ].join('');
     const how = [
       panel('hold', 'Holding period', '', bars(b.hold, { empty: 'Needs entry and exit dates.' })),
-      b.style && b.style.length ? panel('style', 'Holding style', 'stocks', bars(b.style)) : '',
+      b.style && b.style.length ? panel('style', 'Holding style', 'stocks', bars(b.style, { drill: 'style' })) : '',
       panel('size', 'Position size', 'buy value', bars(b.size)),
       panel('lossDepth', 'How deep losers went', '% of buy value', bars(b.lossDepth, { noWin: true })),
-      panel('worstU', 'Worst underlyings', '', bars((b.underlying || []).filter((u) => u.pnl < 0).slice(0, 8))),
-      panel('bestU', 'Best underlyings', '', bars([...(b.underlying || [])].filter((u) => u.pnl > 0).sort((x, y) => y.pnl - x.pnl).slice(0, 8))),
-      panel('group', 'Instrument', '', bars(b.group)),
+      panel('worstU', 'Worst underlyings', '', bars((b.underlying || []).filter((u) => u.pnl < 0).slice(0, 8), { drill: 'underlying' })),
+      panel('bestU', 'Best underlyings', '', bars([...(b.underlying || [])].filter((u) => u.pnl > 0).sort((x, y) => y.pnl - x.pnl).slice(0, 8), { drill: 'underlying' })),
+      panel('group', 'Instrument', '', bars(b.group, { drill: 'group' })),
       (b.premium || []).length ? panel('premium', 'Entry premium', 'per unit', bars(b.premium)) : '',
-      (b.callPut || []).length ? panel('callPut', 'Calls vs puts', '', bars(b.callPut)) : '',
-      (b.expiryType || []).length ? panel('expiryType', 'Weekly vs monthly', 'options', bars(b.expiryType)) : '',
-      (b.direction || []).length > 1 ? panel('direction', 'Long vs short', '', bars(b.direction)) : '',
+      (b.callPut || []).length ? panel('callPut', 'Calls vs puts', '', bars(b.callPut, { drill: 'callPut' })) : '',
+      (b.expiryType || []).length ? panel('expiryType', 'Weekly vs monthly', 'options', bars(b.expiryType, { drill: 'expiryType' })) : '',
+      (b.direction || []).length > 1 ? panel('direction', 'Long vs short', '', bars(b.direction, { drill: 'direction' })) : '',
     ].join('');
     $('#clusters').innerHTML = `<div class="rv-seg" role="tablist" aria-label="Cluster groups">
         <button role="tab" aria-selected="true" data-seg="when">When you trade</button>
         <button role="tab" aria-selected="false" data-seg="how">How you hold, size &amp; pick</button></div>
       <div class="rv-grid" data-group="when">${when}</div>
       <div class="rv-grid" data-group="how" hidden>${how}</div>
-      <p class="rv-note">Expiry days come from the contract symbol (holidays ignored). Month, weekday and time views need trade dates — a tradebook gives the most detail.</p>`;
+      <p class="rv-note">Expiry days come from the contract symbol (holidays ignored). Month, weekday and time views need trade dates — a tradebook gives the most detail. Click a month, day, instrument or name to see its trades.</p>`;
   }
 
 
@@ -180,7 +229,7 @@ export function mountReport(root, R, fmt) {
       goals: { now: 'Targets set from your weakest habits this month.', ideal: 'Work on one or two goals at a time. Small, steady improvements compound.' },
       heatmap: { now: 'Each habit scored month by month. Brighter cells are stronger habits.', ideal: 'Rows turning brighter from left to right, with no column suddenly dark.' },
       saved: { now: P.saved ? `Habit-related losses ${P.saved.total >= 0 ? 'fell' : 'rose'} by ${inr(Math.abs(P.saved.total))} since your first month.` : 'Needs two or more months of trades.', ideal: 'Habit-related losses shrinking every month, so more of each gain is kept.' },
-      checkups: { now: H.length ? `${H.length} check-up${H.length === 1 ? '' : 's'} saved on this device.` : 'No earlier check-ups saved yet.', ideal: 'A check-up every month, on the same day, with the full month\'s tradebook.' },
+      checkups: { now: H.length ? `${H.length} check-up${H.length === 1 ? '' : 's'} saved ${fmt.historyWhere || 'on this device'}.` : 'No earlier check-ups saved yet.', ideal: 'A check-up every month, on the same day, with the full month\'s tradebook.' },
     });
   }
   function ring(score, delta) {
@@ -211,23 +260,44 @@ export function mountReport(root, R, fmt) {
     return `<svg viewBox="0 0 ${W} ${Hh}" class="pg-spark ${good ? 'good' : 'bad'}"><path d="${d}"/></svg>`;
   }
   const STATUS = { fixed: ['Fixed', '✓'], improving: ['Improving', '↗'], same: ['Same', '→'], worse: ['Worse', '↘'], new: ['New', '!'], present: ['Present', '•'], clean: ['Clean', '✓'] };
+  /** 30-day plan check-up (website): the last plan's rules scored on this report. Met / Missed / not visible in a statement. */
+  function planCheckPanel() {
+    const c = fmt.planCheck; if (!c || !c.items || !c.items.length) return '';
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dm = (iso) => { const [, m, d] = String(iso).split('-'); return `${Number(d)} ${MON[Number(m) - 1]}`; };
+    const scope = c.scope === 'since' ? `scored on the ${c.trades} trades since ${dm(c.generatedOn)}` : `scored on this whole statement (${c.trades} trades)`;
+    const row = (i) => {
+      const st = i.met === true ? 'met' : i.met === false ? 'missed' : 'self';
+      const tag = i.met === true ? 'Met' : i.met === false ? 'Missed' : 'Self-check';
+      return `<li class="pc-row ${st}"><span class="pc-st" aria-label="${tag}">${tag}</span><div class="pc-body"><b>${esc(i.title)}</b>
+        <span class="pc-nums">${i.now ? `Then ${esc(i.before)} <i>→</i> now <b>${esc(i.now)}</b> · target ${esc(i.target)}` : 'Not visible in a statement: tick it yourself on your plan.'}</span></div></li>`;
+    };
+    const dos = c.items.filter((i) => i.kind === 'do'), donts = c.items.filter((i) => i.kind === 'dont');
+    return `<div class="rv-panel s12 pc" data-plan-check><div class="rv-ph"><h3>Your 30-day plan check-up</h3><small>plan from ${esc(dm(c.generatedOn))}${c.fromReportName ? ` (${esc(c.fromReportName)})` : ''} · ${esc(scope)}</small></div>
+      <div class="pc-head"><div class="pc-score"><b>${c.met}</b><span>of ${c.measured} measurable rules met</span></div>
+        <div class="pc-bar" role="img" aria-label="${c.met} of ${c.measured} met"><i style="width:${c.measured ? Math.round((c.met / c.measured) * 100) : 0}%"></i></div>
+        <p class="pc-note">${c.measured && c.met === c.measured ? 'Every measurable rule held. Keep the same process and download your next plan.' : c.met ? 'Keep what held; the missed rules are your focus for the next 30 days.' : 'None held yet. Pick the one rule that cost the most and start there.'}</p></div>
+      <div class="pc-cols"><div><h4>Do</h4><ul class="pc-list">${dos.map(row).join('')}</ul></div><div><h4>Don’t</h4><ul class="pc-list">${donts.map(row).join('')}</ul></div></div></div>`;
+  }
+
   function progressTab() {
     const el = $('#progress'); if (!el) return;
-    if (!P) { el.innerHTML = '<div class="rv-panel"><p class="rv-empty">Progress tracking is available for reports created with the latest version.</p></div>'; return; }
+    if (!P) { el.innerHTML = `<div class="rv-grid">${planCheckPanel()}<div class="rv-panel s12"><p class="rv-empty">Progress tracking is available for reports created with the latest version.</p></div></div>`; return; }
     const ms = P.months, cur = ms[ms.length - 1] || null, prev = ms[ms.length - 2] || null, first = ms[0] || null;
     const headScore = cur ? cur.score : P.overall.score;
     const lab = (k) => { const [y, mo] = k.split('-'); return new Date(Date.UTC(+y, +mo - 1, 1)).toLocaleString('en', { month: 'short', timeZone: 'UTC' }) + ' ' + y.slice(2); };
     const lv = P.level || { name: '', index: 0, next: null };
-    const LADDER = ['Building', 'Developing', 'Steady', 'Disciplined', 'Elite'];
     let h = '<div class="rv-grid">';
     // 1 — hero
     h += `<div class="rv-panel s12 pg-hero" data-behav="score">${info('score')}
       <div class="pg-hero-ring">${ring(headScore, P.delta)}</div>
       <div class="pg-hero-mid"><span class="pg-kicker">Level</span><b class="pg-level">${esc(lv.name)}</b>
-        <div class="pg-ladder">${LADDER.map((n, i) => `<i class="${i < lv.index ? 'done' : i === lv.index ? 'on' : ''}" title="${n}"><span>${n}</span></i>`).join('')}</div>
+        ${ladderHtml(lv.index)}
         <p class="pg-next">${lv.next ? `<b>${lv.next.gap}</b> point${lv.next.gap === 1 ? '' : 's'} to <b>${esc(lv.next.name)}</b>` : 'Top level reached. Keep it steady.'}</p></div>
       <div class="pg-hero-note"><span class="pg-kicker">${cur ? esc(lab(cur.key)) + ' summary' : 'Summary'}</span><p>${esc(P.summary || '')}</p>
         ${(P.badges || []).length ? `<div class="pg-badges">${P.badges.map((b) => `<span class="pg-badge" title="${esc(b.desc)}"><i></i>${esc(b.name)}</span>`).join('')}</div>` : ''}</div></div>`;
+    // 30-day plan check-up, right under the score
+    h += planCheckPanel();
     // 2 — radar + goals
     h += `<div class="rv-panel s7" data-behav="radar"><div class="rv-ph"><h3>Your six habits</h3><small>0–100, higher is better</small>${info('radar')}</div>${radar(cur ? cur.d : P.overall.d, prev ? prev.d : null)}</div>`;
     const gfmt = (g, v) => (g.fmt === 'x' ? Number(v).toFixed(2) : g.fmt === '%' ? Math.round(v) + '%' : Number(v).toFixed(1));
@@ -285,10 +355,12 @@ export function mountReport(root, R, fmt) {
     h += `<div class="rv-panel s12" data-behav="checkups"><div class="rv-ph"><h3>Check-up history</h3><small>${H.length ? `next check-up due ${due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'your first check-up'}</small>${info('checkups')}</div>
       ${H.length ? `<div class="pg-hist">${H.map((c, i) => `<div class="pg-hc${i === H.length - 1 ? ' cur' : ''}"><span>${esc(new Date(c.savedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }))}</span><b class="${c.score >= 70 ? 'gain' : c.score >= 50 ? '' : 'loss'}">${c.score}</b><small>${esc(c.label)}</small>${i ? `<em class="${c.score - H[i - 1].score >= 0 ? 'gain' : 'loss'}">${c.score - H[i - 1].score >= 0 ? '+' : ''}${c.score - H[i - 1].score}</em>` : '<em>baseline</em>'}</div>`).join('')}</div>` : ''}
       <p class="rv-note">Come back every month with that month's tradebook. Each check-up is compared with the last, so you can see which habits changed.</p></div>`;
-    el.innerHTML = h + '</div>';
+    el.innerHTML = h + whatsNext() + '</div>';
   }
   /* ---------- positions ---------- */
   let sortKey = 'pnl', sortDir = 1;
+  /** drill-down filter from a cluster row: { label, test } */
+  let drill = null;
   const COLS = [['symbol', 'Symbol'], ['group', 'Group'], ['expiry', 'Expiry'], ['qty', 'Qty', 1], ['avgBuy', 'Avg buy', 1], ['buy', 'Buy value', 1], ['sell', 'Sell value', 1], ['pct', 'Return', 1], ['pnl', 'Realized', 1], ['netEst', 'After charges', 1]];
   function positions() {
     const groups = [...new Set(R.trades.map((t) => t.group))];
@@ -296,13 +368,28 @@ export function mountReport(root, R, fmt) {
       <div class="rv-filters"><input id="q" type="search" placeholder="Search symbol" aria-label="Search symbol">
         <select id="fg" aria-label="Filter by group"><option value="">All groups</option>${groups.map((g) => `<option>${esc(g)}</option>`).join('')}</select>
         <select id="fo" aria-label="Filter by outcome"><option value="">Winners and losers</option><option value="w">Winners</option><option value="l">Losers</option></select></div>
+      <div class="rv-drill-chip" id="pdrill" hidden></div>
       <div class="rv-tw" id="ptable"></div></div>`;
     ['#q', '#fg', '#fo'].forEach((s) => on($(s), 'input', drawPositions));
     drawPositions();
   }
+  const DRILL_LABEL = {
+    month: (k) => `trades closed in ${monthLabel(k)}`, entryDow: (k) => `trades opened on a ${k}`, weekday: (k) => `contracts expiring on a ${k}`,
+    group: (k) => k, underlying: (k) => k, callPut: (k) => k, expiryType: (k) => `${k} options`, direction: (k) => `${k} trades`, style: (k) => `${k} stock trades`,
+  };
+  /** cluster row → Positions filtered to exactly those trades */
+  function openDrill(dim, key) {
+    const test = DRILL[dim]; if (!test) return;
+    drill = { label: (DRILL_LABEL[dim] || ((k) => k))(key), test: (t) => test(t, key) };
+    show('positions');
+    drawPositions();
+    const el = $('#positions'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
   function drawPositions() {
     const q = $('#q').value.trim().toUpperCase(), g = $('#fg').value, o = $('#fo').value;
-    const rows = R.trades.filter((t) => (!q || t.symbol.toUpperCase().includes(q)) && (!g || t.group === g) && (!o || (o === 'w' ? t.pnl > 0 : t.pnl < 0)));
+    const rows = R.trades.filter((t) => (!drill || drill.test(t)) && (!q || t.symbol.toUpperCase().includes(q)) && (!g || t.group === g) && (!o || (o === 'w' ? t.pnl > 0 : t.pnl < 0)));
+    const chip = $('#pdrill');
+    if (chip) { chip.hidden = !drill; chip.innerHTML = drill ? `Showing <b>${esc(drill.label)}</b><button type="button" data-drill-clear>Show all positions ×</button>` : ''; }
     rows.sort((a, b) => { const x = a[sortKey], y = b[sortKey]; return (typeof x === 'number' ? x - y : String(x || '').localeCompare(String(y || ''))) * sortDir; });
     const max = Math.max(1, ...R.trades.map((t) => Math.abs(t.pnl)));
     const tot = rows.reduce((s, t) => s + t.pnl, 0);
@@ -358,16 +445,36 @@ export function mountReport(root, R, fmt) {
   }, { passive: true });
   on(window, 'resize', () => { if (tipFor) place(tipFor); });
   on(document, 'keydown', (e) => { if (e.key === 'Escape') hideTip(); });
+  on(root, 'keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const dr = e.target.closest && e.target.closest('[data-drill]'); if (dr) { e.preventDefault(); openDrill(dr.dataset.drill, dr.dataset.key); }
+  });
 
   /* ---------- navigation ---------- */
-  function show(id) {
+  function swap(id, enter) {
     $$('.tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
-    $$('.tab').forEach((t) => { const onTab = t.id === id; t.classList.toggle('hide', !onTab); if (onTab) { t.classList.remove('rv-enter'); void t.offsetWidth; t.classList.add('rv-enter'); } });
+    $$('.tab').forEach((t) => { const onTab = t.id === id; t.classList.toggle('hide', !onTab); if (onTab && enter) { t.classList.remove('rv-enter'); void t.offsetWidth; t.classList.add('rv-enter'); } });
     hideTip();
+  }
+  /* motion (19 Oct 2026): the tab content cross-fades with a View Transition where supported (the old rv-enter
+     animation otherwise); only the panel is named, so the header and the tab bar stay still */
+  function show(id) {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const cur = $$('.tab').find((t) => !t.classList.contains('hide'));
+    if (!document.startViewTransition || reduce || !cur || cur.id === id) { swap(id, true); return; }
+    cur.style.viewTransitionName = 'rv-tab';
+    const vt = document.startViewTransition(() => {
+      cur.style.viewTransitionName = '';
+      swap(id, false);
+      const next = document.getElementById(id); if (next) next.style.viewTransitionName = 'rv-tab';
+    });
+    vt.finished.finally(() => { const next = document.getElementById(id); if (next) next.style.viewTransitionName = ''; });
   }
   on(root, 'click', (e) => {
     const tb = e.target.closest('[data-tip]');
     if (tb) { e.preventDefault(); e.stopPropagation(); const el = tb.closest('[data-behav]'); if (tipFor === el && pinned) hideTip(); else { showTip(el, tb.dataset.tip); pinned = true; } return; }
+    const dr = e.target.closest('[data-drill]'); if (dr) { openDrill(dr.dataset.drill, dr.dataset.key); return; }
+    if (e.target.closest('[data-drill-clear]')) { drill = null; drawPositions(); return; }
     const b = e.target.closest('[data-tab]'); if (b) { show(b.dataset.tab); return; }
     const g = e.target.closest('[data-go]'); if (g) { e.preventDefault(); show(g.dataset.go); return; }
     const sg = e.target.closest('[data-seg]');

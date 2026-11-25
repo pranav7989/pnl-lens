@@ -21,8 +21,8 @@
   /* ---------- plans (same numbers as lib/pricing.ts) ---------- */
   var PLANS = {
     single: { name: 'Single', reports: 1, files: 2, days: 7 },
-    snapshot: { name: 'Snapshot', reports: 5, files: 3, days: 183 },
-    progress: { name: 'Progress', reports: 25, files: 3, days: 92 },
+    snapshot: { name: 'Snapshot', reports: 5, files: 3, days: 92 },
+    progress: { name: 'Progress', reports: 25, files: 3, days: 183 },
     discipline: { name: 'Discipline', reports: 90, files: 3, days: 365 },
   };
   function newPlan(id) { var p = PLANS[id], now = Date.now(); return { id: id, startedAt: new Date(now).toISOString(), endsAt: new Date(now + p.days * 864e5).toISOString(), used: 0 }; }
