@@ -63,3 +63,11 @@
 .desk-hl a:hover { color: var(--y); }
 .desk-hl-meta { font-size: 12px; color: var(--ink-3); }
 @media (max-width: 860px) { .desk-today { grid-template-columns: 1fr; } }
+/* watch-outs (Trade Check) */
+.desk-wo-list { list-style: none; margin: 0; padding: 0; }
+.desk-wo-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 8px 0; font-size: 14px; color: var(--ink); }
+.desk-wo-list li + li { border-top: 1px solid var(--line); }
+.desk-wo-mark { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; font-weight: 700; border: 1px solid var(--line-strong); color: var(--ink-2); }
+.desk-wo-mark.weak { border-color: var(--y-line); color: var(--y); }
+.desk-wo-hint { margin: 10px 0 0; }
+.desk-wo-foot { margin: 12px 0 0; font-size: 12px; color: var(--ink-3); }

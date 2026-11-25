@@ -19,3 +19,9 @@ export const exportJobId = (requestId: string) => `export-${requestId}`;
 export const RESEARCH_JOB = 'research';
 export interface ResearchJobData { researchId: string }
 export const researchJobId = (id: string) => `research-${id}`;
+
+/** Trade Check profile rebuild (one trader): asked by the API whenever the trader's live reports change; a nightly
+ * catch-up covers anything missed. Its own queue, so a rebuild never waits behind a data export. */
+export const PROFILE_QUEUE = 'profiles';
+export const PROFILE_JOB = 'rebuild';
+export interface ProfileJobData { userId: string }

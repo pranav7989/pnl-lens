@@ -50,7 +50,7 @@ export function rng(seed: number): () => number {
   };
 }
 /** seed from the P&L values themselves, so the same trades always give the same draws */
-function seedOf(xs: number[]): number {
+export function seedOf(xs: number[]): number {
   let h = 2166136261 ^ xs.length;
   for (const x of xs) { h ^= Math.round(x * 100) | 0; h = Math.imul(h, 16777619); }
   return h >>> 0;

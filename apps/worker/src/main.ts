@@ -1,7 +1,7 @@
 /**
  * @file  apps/worker/src/main.ts
  * @area  Worker
- * @what  Worker process: BullMQ consumer for analysis jobs (retries, dead-letter on final failure), data exports and research datasets, schedules (nightly purge, storage sweep, research dataset on the 1st and 16th, peer benchmarks nightly), local health endpoint.
+ * @what  Worker process: BullMQ consumer for analysis jobs (retries, dead-letter on final failure), data exports and research datasets, Trade Check profile rebuilds, schedules (nightly purge, storage sweep, research dataset on the 1st and 16th, peer benchmarks and profile catch-up nightly), local health endpoint.
  */
 /**
  * Runs on the internal network only (no internet) as lens_worker. Health is served on 127.0.0.1 inside the container
@@ -16,11 +16,12 @@ import { s3WorkerStorage } from './storage.js';
 import { runEngineIsolated } from './engine-runner.js';
 import { engineVersion } from './engine-version.js';
 import { createAnalysisWorker } from './queue-worker.js';
-import { DATA_QUEUE, RESEARCH_JOB, type ExportJobData, type ResearchJobData } from '@pnl-lens/shared/jobs';
+import { DATA_QUEUE, RESEARCH_JOB, PROFILE_QUEUE, type ExportJobData, type ResearchJobData, type ProfileJobData } from '@pnl-lens/shared/jobs';
 import { buildResearchExport, sweepResearch } from './research.js';
 import { processExport, failExport, sweepExports } from './export.js';
 import { nightly, sweepStorage } from './maintenance.js';
 import { buildBenchmarks } from './benchmarks.js';
+import { rebuildProfile, rebuildDueProfiles } from './profile.js';
 
 const MAINTENANCE_QUEUE = 'maintenance';
 const log = (event: string, extra: object = {}) => console.log(JSON.stringify({ time: new Date().toISOString(), service: 'worker', event, ...extra }));
@@ -55,6 +56,13 @@ exportsWorker.on('failed', async (job, err) => {
   await failExport(db, (job.data as ExportJobData).requestId).catch(() => {});
 });
 
+// Trade Check profiles: rebuilt when a trader's live reports change (asked by the API), two at a time
+const profilesWorker = new Worker<ProfileJobData>(PROFILE_QUEUE, async (job) => {
+  const r = await rebuildProfile(pool, job.data.userId);
+  log('profile_rebuilt', { version: r.version, trades: r.trades, patterns: r.patterns, shown: r.shown });
+  return r;
+}, { connection, concurrency: 2, lockDuration: 120_000 });
+
 // Schedules (02:00 IST nightly purge; storage sweep every 15 minutes). Upserting is idempotent across restarts.
 const maintenanceQueue = new Queue(MAINTENANCE_QUEUE, { connection });
 await maintenanceQueue.upsertJobScheduler('nightly-purge', { pattern: '0 2 * * *', tz: 'Asia/Kolkata' }, { name: 'nightly' });
@@ -64,10 +72,14 @@ await maintenanceQueue.upsertJobScheduler('research-export', { pattern: '0 3 1,1
 // peer benchmarks from the consenting traders' data: nightly at 02:45 IST, and once at start-up
 await maintenanceQueue.upsertJobScheduler('benchmarks', { pattern: '45 2 * * *', tz: 'Asia/Kolkata' }, { name: 'benchmarks' });
 await maintenanceQueue.add('benchmarks', {}, { jobId: `benchmarks-start-${new Date().toISOString().slice(0, 13)}`, removeOnComplete: true, removeOnFail: true });
+// Trade Check profiles missed by the API's requests (and every trader's first profile after this release): 02:30 IST and at start-up
+await maintenanceQueue.upsertJobScheduler('profiles', { pattern: '30 2 * * *', tz: 'Asia/Kolkata' }, { name: 'profiles' });
+await maintenanceQueue.add('profiles', {}, { jobId: `profiles-start-${new Date().toISOString().slice(0, 13)}`, removeOnComplete: true, removeOnFail: true });
 const maintenance = new Worker(MAINTENANCE_QUEUE, async (job) => {
   const result = job.name === 'nightly' ? await nightly(db, storage)
     : job.name === 'research' ? await buildResearchExport({ db, storage, currentKek: cfg.currentKek })
     : job.name === 'benchmarks' ? await buildBenchmarks(db)
+    : job.name === 'profiles' ? await rebuildDueProfiles(pool)
     : { files: await sweepStorage(db, storage), exports: await sweepExports(db, storage), research: await sweepResearch(db, storage) };
   log(`maintenance_${job.name}`, { result });
   return result;
@@ -111,6 +123,7 @@ const shutdown = async () => {
   await analyses.close().catch(() => {});                              // lets running jobs finish
   await maintenance.close().catch(() => {});
   await exportsWorker.close().catch(() => {});
+  await profilesWorker.close().catch(() => {});
   await maintenanceQueue.close().catch(() => {});
   await db.destroy().catch(() => {});
   connection.disconnect();

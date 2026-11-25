@@ -3044,6 +3044,24 @@
         }
       }
     },
+    "/api/v1/desk/profile": {
+      "get": {
+        "summary": "My Trade Check profile and watch-outs (active plan and a report)",
+        "tags": [
+          "desk"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/desk/settings": {
       "get": {
         "summary": "My desk settings",

@@ -1,7 +1,7 @@
 <!--
 @file  docs/DESK.md
 @area  Docs
-@what  Desk (spec v1.0, web P0): what it is, the rules it keeps (no advice, no live prices, news only), owner decisions of 25 Nov 2026, the calculator formulas and golden example, reference data and how to change rates, events and headlines (providers, timers, admin), access, and what is built in each PR.
+@what  Desk (spec v1.0, web P0): what it is, the rules it keeps (no advice, no live prices, news only), owner decisions of 25 Nov 2026, the calculator formulas and golden example, reference data and how to change rates, events and headlines (providers, timers, admin), Trade Check (profile and watch-outs), access, and what is built in each PR.
 -->
 # Desk
 
@@ -105,17 +105,58 @@ The browser refreshes both cards every 60 s (`GET /desk/today`, cached 60 s in t
 
 Any problem raises one error event a day in the admin **Errors** tab. Each job's last success, count and error are listed in the **Desk** tab, which also has **Run now** buttons.
 
+## Trade Check: profile and watch-outs (PR 3, migration 0035)
+Built from the owner's architecture doc ("Trade Check: personalised trade plans from each trader's own P&L", 24 Nov 2026), phase 1.
+
+1. **Features** (`packages/shared/src/features/build.ts`): one pure function describes a stored trade, and in PR 4 a typed plan line, in the same words:
+   - underlying, instrument, call/put, opening side;
+   - weekly/monthly, days to expiry (0 / 1 / 2–4 / 5+), weekday;
+   - time of day (before 11:00 / 11:00–13:00 / from 13:00);
+   - size vs the usual quantity (≤1× / 1–2× / >2×);
+   - place in the day, losses before it in the day;
+   - premium band (<₹50 / ₹50–150 / >₹150).
+
+   A feature the data can't give is left out (statements have no side, dates or times), and the card says "Upload a tradebook to unlock time-of-day checks."
+2. **Profile** (`packages/shared/src/profile/build.ts`):
+   - **Segments:** every single feature, every pair, and 6 named triples.
+   - **Shown:** only with **8 trades on 4 different days**.
+   - **Statistics:** Wilson 90% win-rate range, seeded bootstrap of the average, shrinkage (k = 10) towards the trader's own average, recency weights with a 90-day half-life **counted back from the trader's newest trade** (so an old statement still shows its habits, and newer better trades fade an old warning).
+   - **Weak:** the win-rate top is under the overall rate − 10 points, or the shrunk average is below 0 and the segment is in the bottom 20% by total.
+   - **Strong:** the win-rate bottom is over the overall rate + 5 points, and the shrunk average is above 0.
+3. **Rebuild** (worker `profile.rebuild`, queue `profiles`):
+   - **When:** the API asks for one whenever a report is saved, gets files, or is deleted. A nightly catch-up (02:30 IST and at start-up) covers anything missed.
+   - **Input:** the trades of all live reports in the trader's main currency, read through `profile_source_trades()`. A trade in two reports counts once.
+   - **Versioning:** a new version is written and switched in one transaction. Two versions are kept.
+4. **Watch-outs** (`GET /desk/profile`; needs an active plan and a live report):
+   - up to 3 lines, weak habits first and one strength when there is one;
+   - the same habit is never shown twice (narrower/broader segments, or the very same trades);
+   - every line states its sample and period, e.g. "Your history: option buys on expiry day · 12 expiries · 3 profitable · −₹18,420 (Apr–Sep 2026)";
+   - "(older data)" when the newest trade is over 60 days old;
+   - the card header: "Checked against your trades up to …".
+
+**Deviations from the doc, written down in the code:**
+- **Size** uses the trader's median quantity, because there is no lot-size history before Nov 2026.
+- **Time buckets** break on whole hours, because stored trades have the hour only.
+- **"After losses"** uses the day's earlier entries, because exit times aren't stored.
+- **Statements without dates** use the contract expiry as the day.
+- **Recency** counts back from the newest trade, not from today. Weighting from today would hide every habit of an older statement; the doc's "(older data)" rule shows such profiles are still meant to be shown.
+- Built in the worker from Postgres. A Redis cache can follow if PR 4's checks need it.
+
+**Wording:** all text comes from `packages/shared/src/plan/templates.ts`. A test scans every template and rendered line for advice phrasing. A lawyer should confirm the wording before launch.
+
 ## Build (web P0)
 | PR | Contents | State |
 |---|---|---|
 | 1 | Reference data, calculator, settings, admin endpoints, `/desk` page with the session line and the calculator card, nav link, disclaimer | built |
 | 2 | Events and headlines: providers with fakes, API timers, expiry and lot sizes from Market IQ, admin Desk tab, `GET /desk/today` | built |
-| 3 | Trade plan, rules, checklist, Trade Check v1 and watch-outs | waits for the Trade Check document |
+| 3 | Trade Check phase 1: features, profile builder and rebuild job, watch-outs card | built |
+| 4 | Trade Check phase 2: typed plan lines, parser, `check()` in browser + API, rules (incl. suggested from your trades), chips, decision log, checklist | next |
 
 Tests:
 - `packages/shared/test/desk-charges.test.ts`;
 - `apps/api/test/desk.test.ts`;
-- `packages/shared/test/desk-providers.test.ts`;
+- `packages/shared/test/desk-providers.test.ts`, `packages/shared/test/trade-check-profile.test.ts`;
+- `apps/worker/test/profile.test.ts`, `apps/api/test/desk-profile.test.ts`;
 - `apps/api/test/desk-feeds.test.ts`;
 - `packages/db/test/db/desk.test.ts`;
 - `services/market-iq/tests/test_instruments.py` (the expiry reference);

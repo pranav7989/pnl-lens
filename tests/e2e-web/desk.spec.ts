@@ -1,10 +1,11 @@
 /**
  * @file  tests/e2e-web/desk.spec.ts
  * @area  Tests
- * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console.
+ * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console; watch-outs go from "needs a plan" to "upload a statement" to the worker-built profile of a real tradebook.
  */
 import { test, expect } from '@playwright/test';
-import { signIn, sql } from './helpers';
+import path from 'node:path';
+import { signIn, sql, givePlan, FIX } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -100,4 +101,27 @@ test('admin: add an event in the console, it shows on the Desk; hide it again', 
   await expect(page.locator('tr', { hasText: 'E2E budget speech (hidden)' })).toBeVisible();
   await page.goto('/desk');
   await expect(page.locator('[data-desk-events]')).not.toContainText('E2E budget speech');
+});
+
+test('watch-outs: plan, then a statement, then the profile the worker builds', async ({ page }) => {
+  test.setTimeout(240_000);
+  const email = `desk-wo-${Date.now()}@e2e.local`;
+  await signIn(page, email, '/desk');
+  const wo = page.locator('[data-desk-watchouts]');
+  await expect(wo.locator('[data-desk-wo-state="no_plan"]')).toContainText('come with an active plan');
+  givePlan(email);
+  await page.reload();
+  await expect(wo.locator('[data-desk-wo-state="no_report"]')).toContainText('Upload a statement to see your watch-outs.');
+  await page.goto('/upload');
+  await page.setInputFiles('#file', path.join(FIX, 'zerodha_tradebook.csv'));
+  await page.check('input[name=consent]');
+  await page.getByRole('button', { name: 'Analyse' }).click();
+  await page.waitForURL(/\/report\//, { timeout: 90_000 });
+  // the API asked the worker for a rebuild when the report was saved
+  await expect.poll(async () => { await page.goto('/desk'); return wo.textContent({ timeout: 5_000 }).catch(() => null); }, { timeout: 120_000, intervals: [1000, 2000, 3000] })
+    .toContain('Checked against your trades up to 26 Mar 2025');
+  await expect(wo.getByRole('link', { name: 'update' })).toHaveAttribute('href', '/upload');
+  await expect(wo.locator('.desk-wo-list li, p.muted').first()).toBeVisible();
+  for (const t of await wo.locator('.desk-wo-list li').allTextContents()) expect(t).toMatch(/Your history: .+ \(.+\d{4}\)/);
+  await expect(wo).toContainText('From your own past trades. Not a recommendation.');
 });

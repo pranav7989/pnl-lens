@@ -43,7 +43,11 @@
     "./desk/charges": "./src/desk/charges.ts",
     "./desk/session": "./src/desk/session.ts",
     "./providers/news": "./src/providers/news.ts",
-    "./providers/events": "./src/providers/events.ts"
+    "./providers/events": "./src/providers/events.ts",
+    "./features": "./src/features/build.ts",
+    "./profile": "./src/profile/build.ts",
+    "./profile/source": "./src/profile/source.ts",
+    "./plan/templates": "./src/plan/templates.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

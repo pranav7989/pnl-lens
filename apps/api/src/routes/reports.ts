@@ -71,6 +71,7 @@ export async function reportRoutes(app: App, deps: Deps) {
       const id = await createReportFromAnalysis(deps.db, user.id, req.body.analysisId, req.body.title ?? null);
       const files = await deps.db.selectFrom('reports').select('file_names').where('id', '=', id).executeTakeFirst();
       await trackWith(deps.pool, user.id, 'report_created', { files: files?.file_names.length ?? null });
+      await deps.queue.enqueueProfile(user.id).catch(() => {});           // Trade Check profile follows the reports
       return ok(reply, { id }, 201);
     } catch (e) { return claimFail(reply, e); }
   });
@@ -82,7 +83,9 @@ export async function reportRoutes(app: App, deps: Deps) {
     const user = await requireUser(req, reply); if (!user) return;
     if (!UUID.test(req.params.id)) return fail(reply, 404, 'not_found');
     try {
-      return ok(reply, { id: await addAnalysisToReport(deps.db, user.id, req.params.id, req.body.analysisId) });
+      const id = await addAnalysisToReport(deps.db, user.id, req.params.id, req.body.analysisId);
+      await deps.queue.enqueueProfile(user.id).catch(() => {});
+      return ok(reply, { id });
     } catch (e) { return claimFail(reply, e); }
   });
 
@@ -150,6 +153,8 @@ export async function reportRoutes(app: App, deps: Deps) {
   app.delete('/reports/:id', { schema: { ...s, summary: 'Delete a report, its trades and its files', params: z.object({ id: z.string() }) } }, async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!UUID.test(req.params.id)) return fail(reply, 404, 'not_found');
-    return (await deleteReport(deps.db, user.id, req.params.id)) ? ok(reply, { deleted: true }) : fail(reply, 404, 'not_found');
+    if (!(await deleteReport(deps.db, user.id, req.params.id))) return fail(reply, 404, 'not_found');
+    await deps.queue.enqueueProfile(user.id).catch(() => {});
+    return ok(reply, { deleted: true });
   });
 }

@@ -33,6 +33,7 @@ Status moves `queued` → `parsing` → `analysing` → `storing` → `ready` | 
 | `nightly` | 02:00 Asia/Kolkata | `purge_raw_files()` (30 days, D3), `purge_drafts()` (24 h), `purge_otp_codes()` (7 days), then the sweep |
 | `sweep` | every 15 min | Deletes the storage objects of shredded files and sets `object_deleted_at`. The API's storage key is write-only, so only the worker can delete. Also removes expired data-export archives and research datasets older than 90 days |
 | `research` | 03:00 Asia/Kolkata on the 1st and 16th (also "Build now" in the admin console, job `research` on queue `data-requests`) | Research dataset (`src/research.ts`): reads the pseudonymised research views (users whose current research consent is yes) in one read-only snapshot, writes `subjects.csv`, `reports.csv`, `trades.csv`, `habits.csv` and a README, replaces internal report ids with per-export pseudonyms, zips, encrypts with the current KEK, stores under `research/` in the exports bucket and records `research_exports` (kept 90 days) |
+| `profiles` | 02:30 Asia/Kolkata, and at start-up | Trade Check catch-up (`src/profile.ts`): rebuilds the profile of every trader returned by `profiles_due()` (no profile yet, or older than their newest live report, or a profile left with no reports). The usual trigger is queue `profiles` (job `rebuild`, asked by the API when a report is saved, gets files or is deleted; two at a time) |
 
 Reports and trades are never purged by time (D4).
 
@@ -54,5 +55,6 @@ Every derived row carries `engine_version` = `e1-` plus the first 12 hex charact
 | `src/engine-child.ts`, `src/engine-runner.ts` | The isolated engine run and its limits |
 | `src/maintenance.ts` | Nightly purge and storage sweep |
 | `src/research.ts` | Research dataset builder and its 90-day sweep |
+| `src/profile.ts` | Trade Check profile rebuild (features, baselines, patterns; new version switched in one transaction) and the nightly catch-up |
 | `src/storage.ts`, `src/config.ts`, `src/engine-version.ts` | Storage adapter, env checks, version hash |
 | `scripts/build.mjs` | esbuild: `dist/main.js` + `dist/engine-child.js`. Engine libraries (SheetJS, pdf.js, cfb) stay external, installed in the image |

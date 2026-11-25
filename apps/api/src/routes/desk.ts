@@ -1,7 +1,7 @@
 /**
  * @file  apps/api/src/routes/desk.ts
  * @area  API
- * @what  Desk (spec v1.0): public rates/session config and calculator, today's events and overnight headlines (signed in), the trader's desk settings, and owner/admin editing of charge rates, brokerage plans, the market calendar and events, plus running a feed now (audited).
+ * @what  Desk (spec v1.0): public rates/session config and calculator, today's events and overnight headlines (signed in), the trader's Trade Check profile and watch-outs (plan + report), the trader's desk settings, and owner/admin editing of charge rates, brokerage plans, the market calendar and events, plus running a feed now (audited).
  */
 /**
  * The calculator itself runs in the browser (packages/shared/src/desk/charges.ts); POST /desk/calc runs the same
@@ -15,6 +15,8 @@ import { can, type Perm, type Role } from '@pnl-lens/shared/admin/rbac';
 import { calcCharges, positionSize, SEGMENTS, type DeskSegment, type ChargeRates, type BrokeragePlan } from '@pnl-lens/shared/desk/charges';
 import { istParts, sessionState, SESSION_LABEL } from '@pnl-lens/shared/desk/session';
 import { CATEGORIES, type Impact } from '@pnl-lens/shared/providers/events';
+import { topPatterns, type Pattern } from '@pnl-lens/shared/profile';
+import { historyLine, describe as describeSegment, period, dayLabel, TEXT } from '@pnl-lens/shared/plan/templates';
 import type { App, Deps } from '../app.js';
 import { JOBS, deskProviders, type DeskJob } from '../lib/desk-sync.js';
 import { marketIqConfig } from '../lib/market-iq.js';
@@ -125,6 +127,48 @@ export async function deskRoutes(app: App, deps: Deps) {
     if (!todayCache || todayCache.day !== day || now.getTime() - todayCache.at >= ttl) todayCache = { day, at: now.getTime(), data: await today(now) };
     reply.header('Cache-Control', 'private, max-age=60');
     return ok(reply, todayCache.data);
+  });
+
+  // ---------------------------------------------------------------- Trade Check profile and watch-outs (active plan + a report)
+  /** Plan, rules, watch-outs and Trade Check need an open plan window and at least one live report (owner decision, 25 Nov). */
+  async function deskAccess(userId: string): Promise<'ok' | 'no_plan' | 'no_report'> {
+    const { rows: [r] } = await q(`select exists (select 1 from public.subscriptions where user_id = $1 and starts_at <= now() and ends_at > now()) as plan,
+                                          exists (select 1 from public.reports where user_id = $1 and purged_at is null and report is not null) as report`, [userId]);
+    return !r.plan ? 'no_plan' : !r.report ? 'no_report' : 'ok';
+  }
+  const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+  const day = (d: unknown) => (d instanceof Date ? d.toISOString().slice(0, 10) : d == null ? null : String(d).slice(0, 10));
+
+  app.get('/desk/profile', { schema: { tags: ['desk'], security: [{ session: [] }], summary: 'My Trade Check profile and watch-outs (active plan and a report)' } }, async (req, reply) => {
+    const user = await requireUser(req, reply); if (!user) return;
+    reply.header('Cache-Control', 'no-store');
+    const access = await deskAccess(user.id);
+    if (access !== 'ok') return ok(reply, { access, profile: null });
+    const { rows: [p] } = await q(`select active_version, built_at, period_from, period_to, newest_trade, n_trades, currency, unavailable from public.trader_profiles where user_id = $1`, [user.id]);
+    if (!p) return ok(reply, { access, profile: null, building: true });
+    const { rows } = await q(`select segment_key, dims, n_trades, n_days, n_expiries, wins, win_days, win_rate, wr_low, wr_high, total_pnl, expectancy, expectancy_shrunk,
+                                     recency, score, shown, verdict, period_from, period_to, last_trade_at
+                                from public.trader_patterns where user_id = $1 and profile_version = $2 and shown and verdict <> 'neutral'`, [user.id, p.active_version]);
+    const patterns: Pattern[] = rows.map((r) => ({
+      segment_key: r.segment_key, dims: r.dims, n_trades: r.n_trades, n_days: r.n_days, n_expiries: r.n_expiries, wins: r.wins, win_days: r.win_days,
+      win_rate: Number(r.win_rate), wr_low: Number(r.wr_low), wr_high: Number(r.wr_high), total_pnl: Number(r.total_pnl), expectancy: Number(r.expectancy),
+      expectancy_low: null, expectancy_high: null, expectancy_shrunk: Number(r.expectancy_shrunk), recency: Number(r.recency), score: Number(r.score),
+      shown: true, verdict: r.verdict, period_from: day(r.period_from), period_to: day(r.period_to), last_trade_at: day(r.last_trade_at),
+    }));
+    const now = new Date(), to = day(p.period_to);
+    const watchouts = topPatterns(patterns).map((w) => ({
+      kind: w.verdict, segment: w.segment_key, what: describeSegment(w.dims), text: historyLine(w, p.currency, now),
+      trades: w.n_trades, days: w.n_days, period: period(w.period_from, w.period_to),
+    }));
+    return ok(reply, {
+      access,
+      profile: {
+        version: p.active_version, builtAt: (p.built_at as Date).toISOString(), periodFrom: day(p.period_from), periodTo: to, trades: num(p.n_trades),
+        checkedAgainst: to ? TEXT.checkedAgainst(dayLabel(to)) : null, unavailable: p.unavailable as string[],
+        unlockTime: (p.unavailable as string[]).includes('time_bucket') ? TEXT.unlockTime : null,
+        watchouts, nothingClear: watchouts.length ? null : TEXT.nothingClear,
+      },
+    });
   });
 
   // ---------------------------------------------------------------- the trader's settings
