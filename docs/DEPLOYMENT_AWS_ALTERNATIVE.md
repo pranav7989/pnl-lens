@@ -1,5 +1,7 @@
 # Deploying PnL Lens on AWS
 
+> **Outdated alternative.** Written for the old single-image web app (before backend-v2). The supported deployment is one VM with Docker Compose: `docs/DEPLOYMENT_VM.md`. Kept only as a reference if AWS is ever needed; it would have to be redone for the api/worker/web images, Postgres, Redis and object storage.
+
 Region: **ap-south-1 (Mumbai)**. Everything below is standard AWS; no third-party hosting or database.
 
 > AWS App Runner stopped accepting new customers on 30 April 2026, so this guide uses
