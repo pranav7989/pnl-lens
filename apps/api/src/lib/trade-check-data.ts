@@ -1,7 +1,7 @@
 /**
  * @file  apps/api/src/lib/trade-check-data.ts
  * @area  Desk
- * @what  Reads what Trade Check needs for one trader and day: the active profile (shown habits, usual sizes, instruments traded), their active rules, upcoming expiries, lot sizes, charge rates and brokerage; returned as the same JSON the browser gets (GET /desk/context), so the browser and the API run check() on identical inputs.
+ * @what  Reads what Trade Check needs for one trader and day: the active profile (shown habits, usual sizes, instruments traded), their active rules, upcoming expiries, lot sizes, charge rates and brokerage, and the day's journal (trades not in the plan); returned as the same JSON the browser gets (GET /desk/context), so the browser and the API run check() on identical inputs.
  */
 import type { Pattern } from '@pnl-lens/shared/profile';
 import type { CheckContextData, CheckProfile, TraderRule } from '@pnl-lens/shared/plan/check';
@@ -41,7 +41,7 @@ export async function activeRules(q: Q, userId: string): Promise<TraderRule[]> {
 
 export async function contextData(q: Q, userId: string, date: string, now = new Date()): Promise<CheckContextData> {
   const ist = istParts(now);
-  const [profile, rules, exp, lots, rates, plans, settings] = await Promise.all([
+  const [profile, rules, exp, lots, rates, plans, settings, journal] = await Promise.all([
     checkProfile(q, userId),
     activeRules(q, userId),
     q.query(`select underlying, exchange, expiry::text as expiry, kind from public.expiry_calendar where expiry between $1::date and $1::date + 45 order by expiry`, [date]),
@@ -52,6 +52,7 @@ export async function contextData(q: Q, userId: string, date: string, now = new 
               order by segment, exchange, effective_from desc`, [date, SEGMENTS]),
     q.query('select name, segment, flat_per_order, pct, cap_per_order, is_default from public.brokerage_plans where segment = any($1::text[])', [SEGMENTS]),
     q.query('select brokerage_plan from public.desk_settings where user_id = $1', [userId]),
+    q.query('select created_at, pnl from public.journal_trades where user_id = $1 and plan_date = $2 order by created_at', [userId, date]),
   ]);
   const chosen = settings.rows[0]?.brokerage_plan ?? null;
   const costs: CheckContextData['costs'] = {};
@@ -69,5 +70,6 @@ export async function contextData(q: Q, userId: string, date: string, now = new 
     expiries: exp.rows, lots: Object.fromEntries(lots.rows.map((l) => [l.underlying, Number(l.lot_size)])), costs,
     profile: profile ? { version: profile.version, currency: profile.currency, patterns: profile.patterns, usualQty: profile.usualQty, tradedUnderlyings: profile.tradedUnderlyings } : null,
     rules,
+    journal: journal.rows.map((j) => ({ createdAt: (j.created_at as Date).toISOString(), pnl: j.pnl == null ? null : Number(j.pnl) })),
   };
 }

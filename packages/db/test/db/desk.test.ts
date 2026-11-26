@@ -1,7 +1,7 @@
 /**
  * @file  packages/db/test/db/desk.test.ts
  * @area  Tests
- * @what  Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export; events and headlines (0034): events are never deleted, their history is append-only, the worker has no access; Trade Check plans and rules (0036): a kept line needs a reason, the app never deletes, export and account deletion.
+ * @what  Desk reference data (0033): seeded rate sets (1 Apr 2026 for every segment and exchange plus the earlier F&O STT), default brokerage plans, calendar and 2026 NSE holidays; grants (app edits reference rows, never deletes rates; worker read-only); desk settings per user, cleared on account deletion, in the data export; events and headlines (0034): events are never deleted, their history is append-only, the worker has no access; Trade Check plans and rules (0036): a kept line needs a reason, the app never deletes, export and account deletion; actuals (0037): outcomes, journal trades and day scores in the export and gone with the account.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { testDbAvailable, freshDb, makeUser, asRole, expectPgError, type TestDb } from './harness.js';
@@ -79,7 +79,7 @@ describe.skipIf(!ok)('desk reference data (0033)', () => {
     await asRole(t, 'lens_app', `insert into plan_checklist (user_id, plan_date, items) values ($1, '2026-11-25', '[{"text":"a","done":true}]')`, [u]);
     for (const tbl of ['trader_rules', 'trade_plans', 'trade_plan_lines', 'plan_checklist', 'insight_events'])
       await expectPgError(asRole(t, 'lens_app', `delete from ${tbl}`), '42501');
-    await expectPgError(asRole(t, 'lens_worker', 'select * from trade_plan_lines'), '42501');
+    await expectPgError(asRole(t, 'lens_worker', `update trade_plan_lines set raw_text = 'x'`), '42501');   // reads them since 0037 (tradebook matching), never writes
     const req = (await q(`insert into data_requests (user_id, kind, status) values ($1, 'export', 'processing') returning id`, [u]))[0].id;
     const [row] = await asRole(t, 'lens_worker', 'select public.export_user_data($1) as d', [req]);
     expect(row.d.trade_check_rules).toMatchObject([{ kind: 'max_trades_day', params: { n: 3 } }]);
@@ -87,6 +87,28 @@ describe.skipIf(!ok)('desk reference data (0033)', () => {
     expect(r.id).toBeTruthy();
     await q('select delete_account($1)', [u]);
     for (const tbl of ['trader_rules', 'trade_plans', 'trade_plan_lines', 'plan_checklist', 'insight_events'])
+      expect(await q(`select count(*)::int n from ${tbl} where user_id = $1`, [u]), tbl).toEqual([{ n: 0 }]);
+  });
+
+  it('0037: outcomes, journal trades and day scores: the app may remove only its journal entries; export; account deletion', async () => {
+    const u = await makeUser(t);
+    const [p] = await asRole(t, 'lens_app', `insert into trade_plans (user_id, plan_date) values ($1, '2026-11-26') returning id`, [u]);
+    const [l] = await asRole(t, 'lens_app', `insert into trade_plan_lines (plan_id, user_id, position, raw_text, parsed, features, check_result, check_version)
+                                             values ($1, $2, 1, 'NIFTY FUT buy 25000 1 lot', '{}', '{}', '{"chips":[]}', '1.0') returning id`, [p.id, u]);
+    await asRole(t, 'lens_app', `insert into plan_outcomes (line_id, user_id, taken, manual_pnl) values ($1, $2, true, -1200)`, [l.id, u]);
+    const [j] = await asRole(t, 'lens_app', `insert into journal_trades (user_id, plan_date, raw_text, parsed, pnl) values ($1, '2026-11-26', 'SBIN buy 800 qty 10', '{}', 300) returning id`, [u]);
+    await asRole(t, 'lens_app', `insert into plan_day_scores (user_id, plan_date, planned, taken, not_taken, unmarked, off_plan, on_plan_pnl, off_plan_pnl, rules_kept, rules_total, source)
+                                 values ($1, '2026-11-26', 1, 1, 0, 0, 1, -1200, 300, 1, 1, 'journal')`, [u]);
+    await expectPgError(asRole(t, 'lens_app', 'delete from plan_outcomes'), '42501');
+    await expectPgError(asRole(t, 'lens_app', 'delete from plan_day_scores'), '42501');
+    await expectPgError(asRole(t, 'lens_worker', 'delete from journal_trades'), '42501');
+    const req = (await q(`insert into data_requests (user_id, kind, status) values ($1, 'export', 'processing') returning id`, [u]))[0].id;
+    const [row] = await asRole(t, 'lens_worker', 'select public.export_user_data($1) as d', [req]);
+    expect(row.d.trade_plans[0]).toMatchObject({ lines: [{ outcome: { taken: true, result: -1200 } }], score: { planned: 1, off_plan: 1 } });
+    expect(row.d.journal_trades).toMatchObject([{ date: '2026-11-26', text: 'SBIN buy 800 qty 10', result: 300 }]);
+    await asRole(t, 'lens_app', 'delete from journal_trades where id = $1', [j.id]);
+    await q('select delete_account($1)', [u]);
+    for (const tbl of ['plan_outcomes', 'journal_trades', 'plan_day_scores'])
       expect(await q(`select count(*)::int n from ${tbl} where user_id = $1`, [u]), tbl).toEqual([{ n: 0 }]);
   });
 });

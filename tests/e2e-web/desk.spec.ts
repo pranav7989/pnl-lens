@@ -1,7 +1,7 @@
 /**
  * @file  tests/e2e-web/desk.spec.ts
  * @area  Tests
- * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console; watch-outs go from "needs a plan" to "upload a statement" to the worker-built profile of a real tradebook; the trade plan: unclear line highlighted, a line checked as you type and saved with its chips, Keep anyway needs a reason, Remove, checklist kept.
+ * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console; watch-outs go from "needs a plan" to "upload a statement" to the worker-built profile of a real tradebook; the trade plan: unclear line highlighted, a line checked as you type and saved with its chips, Keep anyway needs a reason, Remove, checklist kept; actuals: taken with a result, not taken, a trade not in the plan, the Plan vs actual tiles.
  */
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
@@ -168,4 +168,42 @@ test('trade plan: type, check, add, keep anyway with a reason, remove; checklist
   await page.reload();
   await expect(page.locator('[data-desk-plan] .tc-tick input').first()).toBeChecked();
   await expect(page.locator('[data-desk-plan] .tc-lines > li').first().locator('.tc-badge')).toHaveText('Kept: Hedge for my futures position');
+});
+
+test('actuals: taken with a result, not taken, a trade not in the plan, plan vs actual', async ({ page }) => {
+  test.setTimeout(240_000);
+  const email = `desk-pva-${Date.now()}@e2e.local`;
+  await signIn(page, email, '/upload');
+  givePlan(email);
+  await page.goto('/upload');
+  await page.setInputFiles('#file', path.join(FIX, 'zerodha_tradebook.csv'));
+  await page.check('input[name=consent]');
+  await page.getByRole('button', { name: 'Analyse' }).click();
+  await page.waitForURL(/\/report\//, { timeout: 90_000 });
+  const card = page.locator('[data-desk-plan]');
+  await expect.poll(async () => { await page.goto('/desk'); return card.count(); }, { timeout: 60_000 }).toBe(1);
+  for (const t of ['NIFTY FUT buy 25000 SL 24950 1 lot', 'RELIANCE buy 2500 SL 2450 qty 10']) {
+    await page.fill('#tc-line', t);
+    await card.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(card.locator('.tc-lines > li')).toHaveCount(t.startsWith('NIFTY') ? 1 : 2);
+  }
+  const first = card.locator('.tc-lines > li').nth(0), second = card.locator('.tc-lines > li').nth(1);
+  await first.getByRole('button', { name: 'Taken', exact: true }).click();
+  await first.getByLabel('Result (₹)').fill('-3250');
+  await first.getByRole('button', { name: 'Save' }).click();
+  await expect(first.locator('[data-outcome="taken"]')).toContainText('Taken · −₹3,250');
+  await second.getByRole('button', { name: 'Not taken' }).click();
+  await expect(second.locator('[data-outcome="not_taken"]')).toContainText('Not taken');
+  const j = page.locator('[data-desk-journal]');
+  await j.getByLabel('Trade not in the plan').fill('BANKNIFTY 52000 PE buy 300 1 lot');
+  await j.getByLabel('Result (₹)').fill('900');
+  await j.getByRole('button', { name: 'Log' }).click();
+  await expect(j.locator('li')).toContainText('BANKNIFTY 52000 PE buy 300 1 lot');
+  const pva = page.locator('[data-desk-pva]');
+  await expect(pva.locator('.pva-tiles')).toContainText('Planned2');
+  await expect(pva.locator('.pva-tiles > div').nth(1)).toContainText('1 not taken');
+  await expect(pva.locator('.pva-tiles > div').nth(2)).toContainText('1');
+  await expect(pva.locator('.pva-tiles > div').nth(3).locator('b')).toHaveText('−₹3,250');
+  await expect(pva.locator('.pva-tiles > div').nth(4).locator('b')).toHaveText('+₹900');
+  await expect(pva.locator('.pva-tiles > div').nth(5).locator('b')).toHaveText('1/1');
 });

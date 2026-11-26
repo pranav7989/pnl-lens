@@ -170,13 +170,34 @@ Doc phase 2: the "Trade plan for the day" card for traders with a plan and a rep
      - the 30-day plan rules a machine can check (`re-entry` → stop after 1 loss; `daily-limit` → daily loss limit, with the amount from settings or typed; `avoid-worst` → no trades in that instrument; `overtrade` → weekly target ÷ 5 trades a day);
      - the limits in Desk settings.
    - Accept or Ignore. Either way the suggestion is never offered again.
-   - `stop_after_losses` needs today's results (Journal "taken", phase 3), so for now it is listed as unavailable.
 7. **Pre-trade checklist:** 4 items, saved per day.
 
 **Speed:**
 - `check()` takes about 1 ms in the browser.
 - Saving a checked line (parse, re-check the day, store) has a p95 under 150 ms in the API test.
 - The doc's 1,000-trader load target is left for the VM load run (docs/LOAD_TEST.md).
+
+## Trade Check: actuals and plan vs actual (PR 5, migration 0037)
+Doc phase 3. The owner decided (25 Nov) that actuals are entered **on the Desk** and that the scores show as **Desk tiles**; the report's Progress tab and the 30-day check-up follow in a later PR.
+
+1. **Taken or not:** each plan line has **Taken** (with the result in ₹) or **Not taken**. This is the doc's "Journal" for the day. The report's Journal tab (notes on past trades) is unchanged.
+2. **Trades not in the plan:** a short list in the same card. Type the trade (instrument and buy/sell are enough) and its result.
+3. **From the tradebook:** after the next upload, the worker (job `profile.rebuild`, `apps/worker/src/actuals.ts`) matches the day's lines to its trades by **instrument (and strike), date and opening side** (`plan/actuals.ts`).
+   - Each trade goes to one line: first one per line in plan order, then further fills of the same instrument join the first line that matched.
+   - A match **wins over a typed result**, and the line shows "from your tradebook".
+   - Trades of a planned day that match no line are that day's off-plan trades.
+   - If the report is deleted, the matches are cleared and the day is scored again from what the trader typed.
+4. **Plan vs actual** (`plan_day_scores`, recomputed on every change):
+   - planned, taken (not taken / not marked), not in the plan;
+   - on-plan P&L, off-plan P&L;
+   - rules kept: taken lines whose check showed no rule break.
+
+   The tile header says "So far today" before 15:30 and "Today" after. A "Last 30 days" line sums the days.
+5. **Rules that need the day so far** now work:
+   - **"Stop for the day after N losses"** counts the earlier lines taken at a loss plus the journal losses logged before the line;
+   - **"No more than N trades a day"** also counts the trades not in the plan.
+
+   As before, the browser and the API check on exactly the same inputs.
 
 ## Build (web P0)
 | PR | Contents | State |
@@ -185,14 +206,15 @@ Doc phase 2: the "Trade plan for the day" card for traders with a plan and a rep
 | 2 | Events and headlines: providers with fakes, API timers, expiry and lot sizes from Market IQ, admin Desk tab, `GET /desk/today` | built |
 | 3 | Trade Check phase 1: features, profile builder and rebuild job, watch-outs card | built |
 | 4 | Trade Check phase 2: typed plan lines, parser, `check()` in browser + API, rules (incl. suggested from your trades), chips, decision log, checklist | built |
-| later | Doc phase 3 (Journal taken/result, tradebook auto-match, 15:30 plan vs actual), phase 4 (voice, cohort opt-in 50+), phase 5 (learn) | |
+| 5 | Trade Check phase 3: taken / not taken with results, trades not in the plan, tradebook auto-match, plan vs actual tiles | built |
+| later | Plan vs actual in the report's Progress tab and the 30-day check-up; doc phase 4 (voice, cohort opt-in 50+), phase 5 (learn) | |
 
 Tests:
 - `packages/shared/test/desk-charges.test.ts`;
 - `apps/api/test/desk.test.ts`;
 - `packages/shared/test/desk-providers.test.ts`, `packages/shared/test/trade-check-profile.test.ts`;
 - `apps/worker/test/profile.test.ts`, `apps/api/test/desk-profile.test.ts`;
-- `packages/shared/test/trade-check-lines.test.ts`, `apps/api/test/trade-check.test.ts`;
+- `packages/shared/test/trade-check-lines.test.ts`, `packages/shared/test/trade-check-actuals.test.ts`, `apps/api/test/trade-check.test.ts`, `apps/worker/test/actuals.test.ts`;
 - `apps/api/test/desk-feeds.test.ts`;
 - `packages/db/test/db/desk.test.ts`;
 - `services/market-iq/tests/test_instruments.py` (the expiry reference);

@@ -1,12 +1,13 @@
 /**
  * @file  apps/api/test/trade-check.test.ts
  * @area  Tests
- * @what  Trade Check phase 2 API on a real database: plan + report gate, context, suggestions (accept once, dismiss, never again), a typed line checked and stored (rule ✕ + history !), the browser's check() on the same context gives the stored result, unclear lines refused with the fields, rules re-checked over the day, remove / keep (reason required) / edit, per-trader isolation, checklist, chips logged, and the check time.
+ * @what  Trade Check phase 2 API on a real database: plan + report gate, context, suggestions (accept once, dismiss, never again), a typed line checked and stored (rule ✕ + history !), the browser's check() on the same context gives the stored result, unclear lines refused with the fields, rules re-checked over the day, remove / keep (reason required) / edit, per-trader isolation, checklist, chips logged, the check time, and actuals (taken or not with the result, trades not in the plan, the day's score and last 30 days, stop after N losses).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { testDbAvailable, makeUser, givePlan, readyAnalysis, golden } from '@pnl-lens/db/testing';
 import { createReportFromAnalysis } from '@pnl-lens/db';
 import { checkDay } from '@pnl-lens/shared/plan/check';
+import { outcomeOf } from '@pnl-lens/shared/plan/actuals';
 import { isAdvice } from '@pnl-lens/shared/plan/templates';
 import { testApp, as, type TestApp } from './helpers.js';
 
@@ -22,7 +23,7 @@ describe.skipIf(!ok)('trade check', () => {
     await x.t.admin.query(`insert into instrument_master (exchange, segment, symbol, underlying, instrument, expiry, lot_size, valid_from) values ('NSE', 'derivatives', 'NIFTY FUT X', 'NIFTY', 'FUTIDX', $1::date + 35, 65, $1)`, [today()]);
   });
   afterAll(async () => { await x?.close(); });
-  const call = async (u: string, method: 'GET' | 'POST' | 'PATCH' | 'PUT', url: string, payload?: object) =>
+  const call = async (u: string, method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', url: string, payload?: object) =>
     x.app.inject({ method, url: `/api/v1${url}`, headers: await as(u), ...(payload ? { payload } : {}) });
 
   /** a trader with a plan, a report and a profile where option buys on expiry day are weak */
@@ -140,5 +141,34 @@ describe.skipIf(!ok)('trade check', () => {
     }
     times.sort((a, b) => a - b);
     expect(times[Math.floor(times.length * 0.95) - 1]).toBeLessThan(150);
+  });
+
+  it('actuals: taken / not taken with the result, trades not in the plan, the day score; stop after 2 losses', async () => {
+    const u = await trader();
+    await call(u, 'POST', '/desk/rules', { kind: 'stop_after_losses', params: { n: 2 } });
+    const add = async (t: string) => (await call(u, 'POST', `/desk/plans/${today()}/lines`, { text: t })).json().line;
+    const a = await add('NIFTY FUT buy 25000 SL 24950 1 lot'), b = await add('RELIANCE buy 2500 SL 2450 qty 10');
+    let r = (await call(u, 'PATCH', `/desk/lines/${a.id}/outcome`, { taken: true, pnl: -3250 })).json();
+    expect(r.score).toMatchObject({ planned: 2, taken: 1, unmarked: 1, on_plan_pnl: -3250, rules_kept: 1, rules_total: 1, source: 'journal' });
+    r = (await call(u, 'PATCH', `/desk/lines/${b.id}/outcome`, { taken: false })).json();
+    expect(r.score).toMatchObject({ taken: 1, not_taken: 1, unmarked: 0 });
+    expect((await call(u, 'POST', `/desk/journal/${today()}`, { text: 'buy 120', pnl: -500 })).statusCode).toBe(400);
+    r = (await call(u, 'POST', `/desk/journal/${today()}`, { text: 'BANKNIFTY 52000 PE buy 300 1 lot', pnl: -900 })).json();
+    expect(r.journal).toHaveLength(1);
+    expect(r.score).toMatchObject({ off_plan: 1, off_plan_pnl: -900 });
+    // two losses so far today (a planned one and one not in the plan): the next line breaks the rule
+    const c = await add('SBIN buy 800 SL 790 qty 10');
+    expect(c.check_result.chips.map((x: any) => x.text)).toContain('Breaks your rule: "Stop for the day after 2 losses" · 2 losses so far today');
+    // the browser, from GET /desk/context, gets exactly the stored checks
+    const ctx = (await call(u, 'GET', '/desk/context')).json();
+    const input = ctx.lines.map((l: any) => { const o = outcomeOf(l.outcome); return { parsed: l.parsed, removed: l.decision === 'removed', createdAt: new Date(l.created_at).toISOString(), lost: o.taken === true && (o.pnl ?? 0) < 0 }; });
+    expect(checkDay(input, ctx.context)).toEqual(ctx.lines.map((l: any) => l.check_result));
+    expect(ctx.score).toMatchObject({ planned: 3, off_plan: 1 });
+    expect(ctx.history[0].date).toBe(today());
+    // removing the journal entry takes it out of the score
+    r = (await call(u, 'DELETE', `/desk/journal/${ctx.journal[0].id}`)).json();
+    expect(r.score).toMatchObject({ off_plan: 0, off_plan_pnl: 0 });
+    const other = await trader();
+    expect((await call(other, 'PATCH', `/desk/lines/${a.id}/outcome`, { taken: true, pnl: 1 })).statusCode).toBe(404);
   });
 });

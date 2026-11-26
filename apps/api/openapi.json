@@ -3917,6 +3917,148 @@
         }
       }
     },
+    "/api/v1/desk/lines/{id}/outcome": {
+      "patch": {
+        "summary": "Mark a plan line taken (with its result) or not taken",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "taken": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
+                  "pnl": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": -1000000000,
+                    "maximum": 1000000000
+                  }
+                },
+                "required": [
+                  "taken"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/journal/{date}": {
+      "post": {
+        "summary": "Log a trade that was not in the plan",
+        "tags": [
+          "desk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "pnl": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": -1000000000,
+                    "maximum": 1000000000
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "path",
+            "name": "date",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/desk/journal/{id}": {
+      "delete": {
+        "summary": "Remove a journal trade",
+        "tags": [
+          "desk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
     "/api/v1/desk/rules": {
       "post": {
         "summary": "Add a rule (by hand, or accepting a suggestion)",

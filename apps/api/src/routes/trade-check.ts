@@ -1,12 +1,13 @@
 /**
  * @file  apps/api/src/routes/trade-check.ts
  * @area  API
- * @what  Trade Check phase 2 (architecture doc §8): GET /desk/context (everything the browser's check() needs, today's plan lines, checklist, rules and suggestions), plan lines (add, edit, remove, keep with a reason; the API re-runs the same check() and stores the result with its version), the trader's rules (accept a suggestion, add, change, switch off, dismiss), the pre-trade checklist; all need an active plan and a live report.
+ * @what  Trade Check phases 2–3 (architecture doc §8): GET /desk/context (everything the browser's check() needs, the day's plan lines with outcomes, journal, score and last 30 days, checklist, rules and suggestions), plan lines (add, edit, remove, keep with a reason, taken or not with the result; the API re-runs the same check() and stores it with its version), trades not in the plan, the day's plan-vs-actual score, rules, checklist; all need an active plan and a live report.
  */
 import { z } from 'zod';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseLine, type ParsedLine } from '@pnl-lens/shared/plan/parse';
 import { checkDay } from '@pnl-lens/shared/plan/check';
+import { outcomeOf, scoreDay, type Outcome } from '@pnl-lens/shared/plan/actuals';
 import { suggestRules } from '@pnl-lens/shared/plan/suggest';
 import { ruleLabel, dayLabel, TEXT, CHECK_VERSION, type RuleKind } from '@pnl-lens/shared/plan/templates';
 import { FEATURES } from '@pnl-lens/shared/features';
@@ -54,18 +55,50 @@ export async function tradeCheckRoutes(app: App, deps: Deps) {
     const { rows: [p] } = await q('select id from public.trade_plans where user_id = $1 and plan_date = $2', [userId, date]);
     return p ? Number(p.id) : null;
   }
-  const lines = async (plan: number) => (await q(`select ${LINE_COLS} from public.trade_plan_lines where plan_id = $1 order by position`, [plan])).rows;
+  const lines = async (plan: number) => (await q(`select ${LINE_COLS.split(', ').map((c) => `l.${c}`).join(', ')},
+      case when o.line_id is null then null else jsonb_build_object('taken', o.taken, 'manual_pnl', o.manual_pnl::float8, 'matched_trade_ids', o.matched_trade_ids,
+        'matched_pnl', o.matched_pnl::float8) end as outcome
+      from public.trade_plan_lines l left join public.plan_outcomes o on o.line_id = l.id where l.plan_id = $1 order by l.position`, [plan])).rows;
+  /** a line as checkDay() needs it: when it was written, and whether it was taken at a loss */
+  const dayInput = (l: any) => {
+    const o = outcomeOf(l.outcome as Outcome | null);
+    return { parsed: l.parsed as ParsedLine, removed: l.decision === 'removed', createdAt: new Date(l.created_at).toISOString(), lost: o.taken === true && (o.pnl ?? 0) < 0 };
+  };
+  const journal = async (userId: string, date: string) => (await q(`select id, raw_text, parsed, pnl::float8 as pnl, created_at from public.journal_trades
+                                                                     where user_id = $1 and plan_date = $2 order by created_at`, [userId, date])).rows;
+
+  /** The day's plan vs actual, stored. A day scored from the tradebook keeps the tradebook's off-plan trades. */
+  async function rescore(userId: string, date: string, plan: number | null) {
+    const day = plan ? await lines(plan) : [];
+    const { rows: [old] } = await q('select source, off_plan, off_plan_pnl from public.plan_day_scores where user_id = $1 and plan_date = $2', [userId, date]);
+    const j = await journal(userId, date);
+    if (!day.length && !j.length) { return null; }
+    const fromTradebook = day.some((l) => (l.outcome?.matched_trade_ids ?? []).length);
+    const off = fromTradebook && old?.source === 'tradebook' ? Array.from({ length: old.off_plan }, (_, i) => ({ pnl: i === 0 ? Number(old.off_plan_pnl) : 0 })) : j.map((e) => ({ pnl: e.pnl }));
+    const sc = scoreDay(day.map((l) => ({ parsed: l.parsed, decision: l.decision, check_result: l.check_result, outcome: l.outcome })), off);
+    await q(`insert into public.plan_day_scores (user_id, plan_date, planned, taken, not_taken, unmarked, off_plan, on_plan_pnl, off_plan_pnl, rules_kept, rules_total, source, scored_at)
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())
+             on conflict (user_id, plan_date) do update set planned = excluded.planned, taken = excluded.taken, not_taken = excluded.not_taken, unmarked = excluded.unmarked,
+               off_plan = excluded.off_plan, on_plan_pnl = excluded.on_plan_pnl, off_plan_pnl = excluded.off_plan_pnl, rules_kept = excluded.rules_kept,
+               rules_total = excluded.rules_total, source = excluded.source, scored_at = now()`,
+    [userId, date, sc.planned, sc.taken, sc.not_taken, sc.unmarked, sc.off_plan, sc.on_plan_pnl, sc.off_plan_pnl, sc.rules_kept, sc.rules_total, sc.source]);
+    return sc;
+  }
+  const scores = async (userId: string, date: string) => (await q(`select plan_date::text as date, planned, taken, not_taken, unmarked, off_plan, on_plan_pnl::float8 as on_plan_pnl,
+      off_plan_pnl::float8 as off_plan_pnl, rules_kept, rules_total, source from public.plan_day_scores
+      where user_id = $1 and plan_date between $2::date - 29 and $2::date order by plan_date desc`, [userId, date])).rows;
 
   /** Re-run check() over the whole day (a line's checks depend on the lines before it) and store what changed. */
   async function recheck(userId: string, date: string, plan: number) {
     const ctx = await contextData(deps.pool, userId, date);
     const all = await lines(plan);
-    const results = checkDay(all.map((l) => ({ parsed: l.parsed as ParsedLine, removed: l.decision === 'removed' })), ctx);
+    const results = checkDay(all.map(dayInput), ctx);
     for (let i = 0; i < all.length; i++) {
       const r = results[i];
       if (!r || JSON.stringify(r) === JSON.stringify(all[i].check_result)) continue;
       await q('update public.trade_plan_lines set check_result = $2, features = $3, check_version = $4, updated_at = now() where id = $1', [all[i].id, JSON.stringify(r), JSON.stringify(r.features), r.check_version]);
     }
+    await rescore(userId, date, plan);
     return lines(plan);
   }
 
@@ -88,8 +121,10 @@ export async function tradeCheckRoutes(app: App, deps: Deps) {
     // a newer profile (a report was added or removed since): the day's lines are checked again against it
     let dayLines = plan ? await lines(plan) : [];
     if (plan && dayLines.some((l) => l.decision !== 'removed' && (l.check_result?.profile_version ?? null) !== (context.profile?.version ?? null))) dayLines = await recheck(userId, date, plan);
+    const [dayJournal, history] = await Promise.all([journal(userId, date), scores(userId, date)]);
     reply.header('Cache-Control', 'no-store');
     return ok(reply, {
+      journal: dayJournal, score: history.find((h) => h.date === date) ?? null, history,
       context, lines: dayLines, checklist: checklist.rows[0]?.items ?? DEFAULT_CHECKLIST.map((text) => ({ text, done: false })),
       rules: context.rules.map((r) => ({ ...r, label: ruleLabel(r.kind, r.params, currency) })), suggestions,
       checkedAgainst: profile?.periodTo ? TEXT.checkedAgainst(dayLabel(profile.periodTo)) : null,
@@ -144,6 +179,43 @@ export async function tradeCheckRoutes(app: App, deps: Deps) {
     await q('update public.insight_events set action = $2 where line_id = $1 and action is null', [l.id, decision]);
     const all = await recheck(userId, l.date, Number(l.plan_id));
     return ok(reply, { line: all.find((x) => Number(x.id) === Number(l.id)), lines: all });
+  });
+
+  // ---------------------------------------------------------------- actuals (doc phase 3): taken or not, trades not in the plan
+  const after = async (userId: string, date: string, plan: number | null) => {
+    const all = plan ? await recheck(userId, date, plan) : [];
+    if (!plan) await rescore(userId, date, null);
+    return { lines: all, journal: await journal(userId, date), score: (await scores(userId, date)).find((h) => h.date === date) ?? null };
+  };
+
+  app.patch('/desk/lines/:id/outcome', { schema: { ...s, summary: 'Mark a plan line taken (with its result) or not taken', params: z.object({ id: z.coerce.number().int().positive() }),
+    body: z.object({ taken: z.boolean().nullable(), pnl: z.number().min(-1e9).max(1e9).nullable().optional() }) } }, async (req, reply) => {
+    const userId = await gate(req, reply); if (!userId) return;
+    const l = await ownLine(userId, req.params.id); if (!l) return fail(reply, 404, 'not_found');
+    const { taken, pnl } = req.body;
+    await q(`insert into public.plan_outcomes (line_id, user_id, taken, manual_pnl) values ($1, $2, $3, $4)
+             on conflict (line_id) do update set taken = excluded.taken, manual_pnl = excluded.manual_pnl, updated_at = now()`, [l.id, userId, taken, taken ? pnl ?? null : null]);
+    return ok(reply, await after(userId, l.date, Number(l.plan_id)));
+  });
+
+  app.post('/desk/journal/:date', { schema: { ...s, summary: 'Log a trade that was not in the plan', params: z.object({ date: DAY }),
+    body: z.object({ text: z.string().trim().min(1).max(300), pnl: z.number().min(-1e9).max(1e9).nullable().optional() }) } }, async (req, reply) => {
+    const userId = await gate(req, reply, req.params.date); if (!userId) return;
+    const parsed = parseLine(req.body.text);
+    // what was traded matters, not the plan fields: an instrument and a side are enough
+    const missing = parsed.errors.filter((e) => ['underlying', 'side', 'strike', 'text'].includes(e.field));
+    if (missing.length) return reply.code(400).send({ error: 'unclear', message: 'Write the instrument and buy or sell.', errors: missing });
+    const { rows: [n] } = await q('select count(*)::int as n from public.journal_trades where user_id = $1 and plan_date = $2', [userId, req.params.date]);
+    if (n.n >= 50) return fail(reply, 400, 'too_many', 'Up to 50 journal trades a day.');
+    await q('insert into public.journal_trades (user_id, plan_date, raw_text, parsed, pnl) values ($1, $2, $3, $4, $5)', [userId, req.params.date, req.body.text, JSON.stringify(parsed), req.body.pnl ?? null]);
+    return ok(reply, await after(userId, req.params.date, await planId(userId, req.params.date)), 201);
+  });
+
+  app.delete('/desk/journal/:id', { schema: { ...s, summary: 'Remove a journal trade', params: z.object({ id: z.coerce.number().int().positive() }) } }, async (req, reply) => {
+    const userId = await gate(req, reply); if (!userId) return;
+    const { rows: [j] } = await q('delete from public.journal_trades where id = $1 and user_id = $2 returning plan_date::text as date', [req.params.id, userId]);
+    if (!j) return fail(reply, 404, 'not_found');
+    return ok(reply, await after(userId, j.date, await planId(userId, j.date)));
   });
 
   // ---------------------------------------------------------------- the trader's rules

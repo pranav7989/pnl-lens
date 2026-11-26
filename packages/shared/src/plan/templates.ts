@@ -90,6 +90,7 @@ export const TEXT = {
   addStopLoss: 'Add a stop-loss to check your daily loss limit.',
   noLotSize: 'Lot size unknown for this instrument: write the quantity to check size rules.',
   tradeOfDay: (n: number) => `this is trade ${n} of the day`,
+  lossesToday: (n: number) => `${plural(n, 'loss', 'losses')} so far today`,
   plannedLoss: (amount: string) => `planned loss at stop-loss ${amount}`,
   sizeNow: (s: string) => `this line is ${s}`,
   checkedAgainst: (to: string) => `Checked against your trades up to ${to}`,

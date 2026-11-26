@@ -15,12 +15,11 @@ export interface Prepared { currency: string; trades: PreparedTrade[]; reportIds
 export const usualKey = (underlying: string | null | undefined, instrument: string) => `${String(underlying ?? '').trim().toUpperCase()}|${instrument}`;
 const isDay = (s: unknown): s is string => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
-export function prepare(rows: SourceRow[]): Prepared {
+/** The trader's main currency, and each trade once even when it is in several reports (same rule as Lifetime). */
+export function uniqueRows(rows: SourceRow[]): { currency: string; picked: SourceRow[] } {
   const counts = new Map<string, number>();
   for (const r of rows) counts.set(r.currency, (counts.get(r.currency) ?? 0) + 1);
   const currency = [...counts.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]?.[0] ?? 'INR';
-
-  // a trade that appears in several reports (same statement twice, overlapping periods) counts once
   const kept = new Map<string, number>(), picked: SourceRow[] = [], seenIn = new Map<string, Map<string, number>>();
   for (const r of rows.filter((x) => x.currency === currency && Number.isFinite(Number(x.trade?.pnl)))) {
     const seen = seenIn.get(r.reportId) ?? new Map<string, number>(); seenIn.set(r.reportId, seen);
@@ -28,6 +27,11 @@ export function prepare(rows: SourceRow[]): Prepared {
     seen.set(k, c);
     if (c > (kept.get(k) ?? 0)) { kept.set(k, c); picked.push(r); }
   }
+  return { currency, picked };
+}
+
+export function prepare(rows: SourceRow[]): Prepared {
+  const { currency, picked } = uniqueRows(rows);
 
   const facts = picked.map((r) => factsFromTrade(r.trade));
   // usual size per underlying + instrument

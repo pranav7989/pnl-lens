@@ -56,5 +56,6 @@ Every derived row carries `engine_version` = `e1-` plus the first 12 hex charact
 | `src/maintenance.ts` | Nightly purge and storage sweep |
 | `src/research.ts` | Research dataset builder and its 90-day sweep |
 | `src/profile.ts` | Trade Check profile rebuild (features, baselines, patterns; new version switched in one transaction) and the nightly catch-up |
+| `src/actuals.ts` | After each profile rebuild: plan lines matched to the trader's tradebook trades, results stored, matched days scored (stale matches cleared) |
 | `src/storage.ts`, `src/config.ts`, `src/engine-version.ts` | Storage adapter, env checks, version hash |
 | `scripts/build.mjs` | esbuild: `dist/main.js` + `dist/engine-child.js`. Engine libraries (SheetJS, pdf.js, cfb) stay external, installed in the image |

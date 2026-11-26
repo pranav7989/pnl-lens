@@ -37,6 +37,8 @@ export interface CheckContext {
   profile: CheckProfile | null;
   rules: TraderRule[];
   others: DayLine[];
+  /** the day so far, from the trader's journal (phase 3): trades not in the plan and losses before this line; null = unknown */
+  journal?: { trades: number; losses: number } | null;
   now?: Date;
 }
 export type ChipLevel = 'block' | 'caution' | 'strength' | 'info';
@@ -123,7 +125,7 @@ export function check(p: ParsedLine, ctx: CheckContext): CheckResult {
     const block = (detail?: string) => chips.push({ kind: 'rule', level: 'block', key, rule_id: r.id, text: ruleChip(label, detail) });
     switch (r.kind) {
       case 'max_trades_day': {
-        const n = ctx.others.length + 1;
+        const n = ctx.others.length + 1 + (ctx.journal?.trades ?? 0);
         if (n > Number(r.params?.n)) block(TEXT.tradeOfDay(n));
         break;
       }
@@ -134,7 +136,8 @@ export function check(p: ParsedLine, ctx: CheckContext): CheckResult {
         break;
       }
       case 'stop_after_losses':
-        unavailable.add('losses_today');                // needs the Journal "taken / result" step (doc phase 3)
+        if (ctx.journal == null) unavailable.add('losses_today');                     // no journal for the day
+        else if (ctx.journal.losses >= Number(r.params?.n)) block(TEXT.lossesToday(ctx.journal.losses));
         break;
       case 'max_lots': {
         if (r.params?.lots != null && p.lots != null && p.lots > Number(r.params.lots)) block(TEXT.sizeNow(`${p.lots} lots`));
@@ -189,12 +192,14 @@ export interface CheckContextData {
   costs: Partial<Record<DeskSegment, Partial<Record<'NSE' | 'BSE', { rates: ChargeRates; brokerage: BrokeragePlan }>>>>;
   profile: CheckProfile | null;
   rules: TraderRule[];
+  /** the trader's journal of the day: trades not in the plan, with when they were logged (phase 3) */
+  journal?: { createdAt: string; pnl: number | null }[];
 }
 const SEGMENT_OF: Record<LineKind, DeskSegment> = { CE: 'options', PE: 'options', FUT: 'futures', EQ: 'eq_intraday' };
 
-export function contextFrom(d: CheckContextData, others: DayLine[] = [], now?: Date): CheckContext {
+export function contextFrom(d: CheckContextData, others: DayLine[] = [], now?: Date, journal: CheckContext['journal'] = null): CheckContext {
   return {
-    date: d.date, time: d.time, expiries: d.expiries, profile: d.profile, rules: d.rules, others, now,
+    date: d.date, time: d.time, expiries: d.expiries, profile: d.profile, rules: d.rules, others, now, journal,
     lotSize: (u) => d.lots[u] ?? null,
     costs: (kind, u) => {
       const segment = SEGMENT_OF[kind], c = d.costs[segment]?.[BSE.has(u) ? 'BSE' : 'NSE'];
@@ -203,13 +208,22 @@ export function contextFrom(d: CheckContextData, others: DayLine[] = [], now?: D
   };
 }
 
-/** Check every line of a day in order: each line sees the lines before it that weren't removed (trades of the day, planned losses). */
-export function checkDay<L extends { parsed: ParsedLine; removed: boolean }>(lines: L[], d: CheckContextData, now?: Date): (CheckResult | null)[] {
+export interface DayLineInput { parsed: ParsedLine; removed: boolean; createdAt?: string; lost?: boolean }
+/**
+ * Check every line of a day in order. Each line sees the lines before it that weren't removed (trades of the day,
+ * planned losses), the earlier lines that were taken and lost, and the journal entries logged before it (a line being
+ * typed now sees all of them).
+ */
+export function checkDay<L extends DayLineInput>(lines: L[], d: CheckContextData, now?: Date): (CheckResult | null)[] {
   const before: DayLine[] = [];
+  let lostBefore = 0;
   return lines.map((l) => {
     if (l.removed) return null;
-    const r = check(l.parsed, contextFrom(d, [...before], now));
+    const j = d.journal ? d.journal.filter((e) => !l.createdAt || e.createdAt < l.createdAt) : null;
+    const journal = j ? { trades: j.length, losses: lostBefore + j.filter((e) => (e.pnl ?? 0) < 0).length } : null;
+    const r = check(l.parsed, contextFrom(d, [...before], now, journal));
     before.push({ lossAtSl: r.loss_at_sl });
+    if (l.lost) lostBefore++;
     return r;
   });
 }

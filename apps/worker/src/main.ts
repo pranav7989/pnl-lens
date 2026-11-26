@@ -1,7 +1,7 @@
 /**
  * @file  apps/worker/src/main.ts
  * @area  Worker
- * @what  Worker process: BullMQ consumer for analysis jobs (retries, dead-letter on final failure), data exports and research datasets, Trade Check profile rebuilds, schedules (nightly purge, storage sweep, research dataset on the 1st and 16th, peer benchmarks and profile catch-up nightly), local health endpoint.
+ * @what  Worker process: BullMQ consumer for analysis jobs (retries, dead-letter on final failure), data exports and research datasets, Trade Check profile rebuilds and plan-vs-tradebook matching, schedules (nightly purge, storage sweep, research dataset on the 1st and 16th, peer benchmarks and profile catch-up nightly), local health endpoint.
  */
 /**
  * Runs on the internal network only (no internet) as lens_worker. Health is served on 127.0.0.1 inside the container
@@ -22,6 +22,7 @@ import { processExport, failExport, sweepExports } from './export.js';
 import { nightly, sweepStorage } from './maintenance.js';
 import { buildBenchmarks } from './benchmarks.js';
 import { rebuildProfile, rebuildDueProfiles } from './profile.js';
+import { matchPlans } from './actuals.js';
 
 const MAINTENANCE_QUEUE = 'maintenance';
 const log = (event: string, extra: object = {}) => console.log(JSON.stringify({ time: new Date().toISOString(), service: 'worker', event, ...extra }));
@@ -60,7 +61,9 @@ exportsWorker.on('failed', async (job, err) => {
 const profilesWorker = new Worker<ProfileJobData>(PROFILE_QUEUE, async (job) => {
   const r = await rebuildProfile(pool, job.data.userId);
   log('profile_rebuilt', { version: r.version, trades: r.trades, patterns: r.patterns, shown: r.shown });
-  return r;
+  const m = await matchPlans(pool, job.data.userId);                 // plan lines vs the tradebook (Trade Check phase 3)
+  if (m.days) log('plans_matched', m);
+  return { ...r, actuals: m };
 }, { connection, concurrency: 2, lockDuration: 120_000 });
 
 // Schedules (02:00 IST nightly purge; storage sweep every 15 minutes). Upserting is idempotent across restarts.
