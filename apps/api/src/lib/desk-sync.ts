@@ -222,8 +222,9 @@ export function startDeskSync(d: DeskSyncDeps, env: NodeJS.ProcessEnv = process.
     if (busy) return; busy = true;
     try {
       const now = new Date(), { day, minutes } = istParts(now);
-      if (minutes >= 7 * 60 + 35 && daily.calendar_check !== day) { daily.calendar_check = day; await run('calendar_check', now); }
+      // the expiry copy first: when both are due in the same minute (start-up after 07:40), the check must see today's copy
       if (minutes >= 7 * 60 + 40 && daily.expiries !== day) { daily.expiries = day; await run('expiries', now); await run('generated', now); }
+      if (minutes >= 7 * 60 + 35 && daily.calendar_check !== day) { daily.calendar_check = day; await run('calendar_check', now); }
       if (due('headlines', now, 5)) await run('headlines', now);
       if (first || (minutes >= 6 * 60 && minutes < 22 * 60 && due('events', now, 30))) { await run('events', now); await run('generated', now); }
       first = false;
