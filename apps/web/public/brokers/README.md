@@ -1,6 +1,8 @@
-# Broker logos for the landing page strip
+# Broker logos (not used)
 
-Drop official logo files here and they appear automatically; until then the broker's name is shown.
+Since 15 Oct 2026 (owner request REQ-4) the landing page shows broker names as plain text, with no logos, so files here
+are no longer read. The slugs below stay as the reference list. If logos are ever brought back, use only official files
+from each company's brand kit with permission.
 
 - File name = the slug below, `.svg` preferred (`.png` also works), ideally a single-colour/white version that reads on black.
 - Get logos only from each company's official brand or media kit, and follow their usage guidelines —
