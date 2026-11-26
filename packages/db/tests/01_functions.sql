@@ -17,10 +17,18 @@ do $$ begin
   end;
 end $$;
 do $$ begin
+  -- since 0012 the app role cannot insert reports directly at all (only through the SQL functions)
+  begin insert into reports(user_id,file_names,file_hashes,expires_at) values ('00000000-0000-0000-0000-000000000001', array['1'], array['a'], now());
+  raise exception 'expected permission denied';
+  exception when insufficient_privilege then raise notice 'PASS app role cannot insert reports directly'; end;
+end $$;
+reset role;
+do $$ begin
   begin insert into reports(user_id,file_names,file_hashes,expires_at) values ('00000000-0000-0000-0000-000000000001', array['1','2','3','4'], array['a'], now());
   raise exception 'expected check violation';
   exception when check_violation then raise notice 'PASS max-3-files constraint'; end;
 end $$;
+set role lens_app;
 select public.delete_report('00000000-0000-0000-0000-000000000001', :'rid') as deleted_first_time;
 select public.delete_report('00000000-0000-0000-0000-000000000001', :'rid') as deleted_second_time;
 do $$ begin

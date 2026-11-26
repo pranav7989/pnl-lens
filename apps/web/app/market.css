@@ -1,0 +1,17 @@
+/* @file  apps/web/app/market.css
+   @area  Styles
+   @what  Market page (live sheets): header with the data-freshness dot, sheet tabs, status list and disclaimer, on the site tokens. */
+.mk { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; }
+.mk-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.mk-head .muted { margin: 0; font-size: 14px; }
+.mk-tabs { margin-bottom: 0; }
+.mk-dot { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--s1); }
+.mk-dot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
+.mk-dot.on::before { background: var(--gain); }
+.mk-dot.off::before { background: var(--loss); }
+.mk-soon p { margin: 0; font-size: 14px; max-width: 70ch; }
+.mk-status { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0; font-size: 14px; }
+.mk-status dt { color: var(--ink-3); }
+.mk-status dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.mk-note { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-3); }
+@media (max-width: 560px) { .mk-status { grid-template-columns: 1fr; gap: 2px; } .mk-status dd { margin-bottom: 8px; } }
