@@ -1,7 +1,7 @@
 /**
  * @file  tests/e2e-web/desk.spec.ts
  * @area  Tests
- * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console; watch-outs go from "needs a plan" to "upload a statement" to the worker-built profile of a real tradebook; the trade plan: unclear line highlighted, a line checked as you type and saved with its chips, Keep anyway needs a reason, Remove, checklist kept; actuals: taken with a result, not taken, a trade not in the plan, the Plan vs actual tiles.
+ * @what  Desk: a visitor sees the calculator with the spec B2.6 golden numbers (charges only and with slippage), segments and exchanges switch, the disclaimer is shown; a signed-in trader saves risk and slippage, sees today's events (timeline, tags) and overnight headlines (new tab, unavailable state); an admin adds and hides an event in the console; watch-outs go from "needs a plan" to "upload a statement" to the worker-built profile of a real tradebook; the trade plan: unclear line highlighted, a line checked as you type and saved with its chips, Keep anyway needs a reason, Remove, checklist kept; actuals: taken with a result, not taken, a trade not in the plan, the Plan vs actual tiles; the report's Progress tab shows the Desk's plan vs actual for its period.
  */
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
@@ -206,4 +206,25 @@ test('actuals: taken with a result, not taken, a trade not in the plan, plan vs 
   await expect(pva.locator('.pva-tiles > div').nth(3).locator('b')).toHaveText('−₹3,250');
   await expect(pva.locator('.pva-tiles > div').nth(4).locator('b')).toHaveText('+₹900');
   await expect(pva.locator('.pva-tiles > div').nth(5).locator('b')).toHaveText('1/1');
+});
+
+test('report Progress tab: the Desk\'s plan vs actual for the statement\'s period', async ({ page }) => {
+  test.setTimeout(240_000);
+  const email = `desk-prog-${Date.now()}@e2e.local`;
+  await signIn(page, email, '/upload');
+  givePlan(email);
+  sql(`insert into plan_day_scores (user_id, plan_date, planned, taken, not_taken, unmarked, off_plan, on_plan_pnl, off_plan_pnl, rules_kept, rules_total, source)
+       select id, d::date, 2, 2, 0, 0, case when d = '2025-02-04' then 1 else 0 end, 1500, case when d = '2025-02-04' then -700 else 0 end, 1, 2, 'journal'
+         from users, unnest(array['2025-02-03', '2025-02-04']) d where email = '${email}'`);
+  await page.goto('/upload');
+  await page.setInputFiles('#file', path.join(FIX, 'zerodha_tradebook.csv'));
+  await page.check('input[name=consent]');
+  await page.getByRole('button', { name: 'Analyse' }).click();
+  await page.waitForURL(/\/report\//, { timeout: 90_000 });
+  await page.locator('#reportRoot .tabs').getByRole('tab', { name: 'Progress' }).click();
+  const p = page.locator('[data-plan-actual]');
+  await expect(p).toContainText('2 days planned on the Desk, 6 Jan – 26 Mar');
+  await expect(p.locator('.pva-r-tiles')).toContainText('Lines planned4');
+  await expect(p.locator('.pva-r-tiles')).toContainText('Rules kept2/4');
+  await expect(p.locator('tbody tr')).toHaveCount(2);
 });

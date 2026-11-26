@@ -199,6 +199,18 @@ Doc phase 3. The owner decided (25 Nov) that actuals are entered **on the Desk**
 
    As before, the browser and the API check on exactly the same inputs.
 
+## Trade Check in the report (PR 6)
+Plan vs actual also reaches the report, as the doc asks ("feeds the 30-day plan check-up and the Progress tab"); `plan/desk-checkup.ts`.
+- **Progress tab → "Your plan vs actual":**
+  - the Desk days inside the statement's period (`m.from`–`m.to`), with tiles (lines planned, taken, not in the plan, on-plan and off-plan P&L, rules kept) and the last 10 days;
+  - how many days were matched to the tradebook;
+  - shown only when the Desk was used in that period.
+- **30-day plan check-up:** two rules a statement can't show are scored from the Desk once it was used on **5 or more days** since the plan:
+  - "Write the day's plan before the market opens": days with a Desk plan out of the NSE trading days since the plan (market calendar, else weekdays), met at **80%**;
+  - "Don't take a trade you didn't plan yourself": trades logged as not in the plan, met at **none**.
+
+  They are marked "from your Desk", and the met/measured count includes them.
+
 ## Build (web P0)
 | PR | Contents | State |
 |---|---|---|
@@ -207,7 +219,8 @@ Doc phase 3. The owner decided (25 Nov) that actuals are entered **on the Desk**
 | 3 | Trade Check phase 1: features, profile builder and rebuild job, watch-outs card | built |
 | 4 | Trade Check phase 2: typed plan lines, parser, `check()` in browser + API, rules (incl. suggested from your trades), chips, decision log, checklist | built |
 | 5 | Trade Check phase 3: taken / not taken with results, trades not in the plan, tradebook auto-match, plan vs actual tiles | built |
-| later | Plan vs actual in the report's Progress tab and the 30-day check-up; doc phase 4 (voice, cohort opt-in 50+), phase 5 (learn) | |
+| 6 | Plan vs actual in the report's Progress tab; the 30-day check-up scores "written plan" and "no unplanned trades" from the Desk | built |
+| later | Doc phase 4 (voice, cohort opt-in 50+), phase 5 (learn) | |
 
 Tests:
 - `packages/shared/test/desk-charges.test.ts`;

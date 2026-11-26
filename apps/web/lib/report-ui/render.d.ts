@@ -13,5 +13,7 @@ export function mountReport(
     /** REQ-2 "What's next" card (website): the journey's next action */
     next?: { kind: 'upgrade' | 'checkup'; text: string; cta: string; href: string };
     /** 30-day plan check-up (website): the last plan scored on this report, shown first in Progress */
-    planCheck?: import('../../components/workspace/model').PlanCheckView | null }
+    planCheck?: import('../../components/workspace/model').PlanCheckView | null;
+    /** Trade Check (website): the Desk's plan vs actual for this report's period, shown in Progress */
+    planActual?: import('../../components/workspace/model').PlanActualView | null }
 ): { show: (tab: string) => void; destroy: () => void };

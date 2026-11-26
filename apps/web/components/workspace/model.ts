@@ -17,9 +17,15 @@ export interface FileTab { id: string; name: string; position: number; stored: b
 export interface PlanCheckView {
   generatedOn: string; checkupOn: string; scope: 'since' | 'all'; trades: number; met: number; measured: number;
   fromReportId: string | null; fromReportName: string | null;
-  items: { id: string; kind: 'do' | 'dont'; title: string; habit: string; before: string; target: string; now: string | null; met: boolean | null }[];
+  items: { id: string; kind: 'do' | 'dont'; title: string; habit: string; before: string; target: string; now: string | null; met: boolean | null; source?: 'desk' }[];
 }
-export interface CurrentReport { id: string; createdAt: string; title: string | null; report: any; files: FileTab[]; places: { total: number; used: number }; planCheck?: PlanCheckView | null; capital?: number | null }
+/** Trade Check: the Desk's plan vs actual summed for a report's period (packages/shared/src/plan/desk-checkup.ts) */
+export interface PlanActualView {
+  from: string; to: string; days: number; planned: number; taken: number; notTaken: number; offPlan: number;
+  onPlanPnl: number; offPlanPnl: number; rulesKept: number; rulesTotal: number; tradebookDays: number;
+  list: { date: string; planned: number; taken: number; off_plan: number; on_plan_pnl: number; off_plan_pnl: number; rules_kept: number; rules_total: number }[];
+}
+export interface CurrentReport { id: string; createdAt: string; title: string | null; report: any; files: FileTab[]; places: { total: number; used: number }; planCheck?: PlanCheckView | null; planActual?: PlanActualView | null; capital?: number | null }
 
 const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 export const monthTag = (d: string) => { const x = new Date(d); return MON[x.getMonth()] + '-' + String(x.getFullYear()).slice(2); };

@@ -243,7 +243,8 @@ function ReportView({ plan, plans, prices, reports, current, setLock }: { plan: 
     if (!root.current || !r) return;
     const checkups = reports.filter((x) => x.progressScore != null).map((x) => ({ savedAt: x.createdAt, to: x.to, score: x.progressScore as number, label: x.fileNames.join(', ') }));
     const j = journey({ plans, reports, prices: prices as Partial<Record<PlanId, string>> });
-    const h = mountReport(root.current, r, { ...formatterFor(r), history: checkups, historyWhere: 'in your account', next: j.next, planCheck: view === 'all' || files.length < 2 ? current.planCheck ?? null : null });
+    const h = mountReport(root.current, r, { ...formatterFor(r), history: checkups, historyWhere: 'in your account', next: j.next, planCheck: view === 'all' || files.length < 2 ? current.planCheck ?? null : null,
+      planActual: view === 'all' || files.length < 2 ? current.planActual ?? null : null });
     if (tab !== 'overview') h.show(tab);
     const el = root.current, nav = el.querySelector('.tabs');
     const onTab = (e: Event) => { const b = (e.target as HTMLElement).closest('[data-tab]') as HTMLElement | null; if (b) setTab(b.dataset.tab!); };

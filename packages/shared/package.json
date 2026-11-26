@@ -51,7 +51,8 @@
     "./plan/parse": "./src/plan/parse.ts",
     "./plan/check": "./src/plan/check.ts",
     "./plan/suggest": "./src/plan/suggest.ts",
-    "./plan/actuals": "./src/plan/actuals.ts"
+    "./plan/actuals": "./src/plan/actuals.ts",
+    "./plan/desk-checkup": "./src/plan/desk-checkup.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

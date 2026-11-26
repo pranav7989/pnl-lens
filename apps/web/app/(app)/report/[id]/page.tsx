@@ -31,6 +31,6 @@ export default async function ReportPage(props: { params: Promise<{ id: string }
   const d = r.data;
   return (
     <Workspace mode="report" plans={plans} reports={reports} prices={prices}
-      current={{ id, createdAt: d.summary.createdAt, title: d.summary.title, report: d.report, files: d.files, places: d.places, planCheck: d.planCheck ?? null, capital: d.capital ?? null }} />
+      current={{ id, createdAt: d.summary.createdAt, title: d.summary.title, report: d.report, files: d.files, places: d.places, planCheck: d.planCheck ?? null, planActual: d.planActual ?? null, capital: d.capital ?? null }} />
   );
 }

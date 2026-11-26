@@ -1,7 +1,7 @@
 /**
  * @file  apps/api/test/desk-profile.test.ts
  * @area  Tests
- * @what  GET /desk/profile: sign-in, then an active plan and a live report are needed; "building" until the first profile; watch-outs from the active version only (weak first, a strength, sample size and period in every line, no advice wording), the profile date line and the tradebook hint; each trader sees only their own; report changes ask for a rebuild.
+ * @what  GET /desk/profile: sign-in, then an active plan and a live report are needed; "building" until the first profile; watch-outs from the active version only (weak first, a strength, sample size and period in every line, no advice wording), the profile date line and the tradebook hint; each trader sees only their own; report changes ask for a rebuild; GET /reports/:id carries the Desk's plan vs actual for the report's period.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { testDbAvailable, makeUser, givePlan, readyAnalysis, golden } from '@pnl-lens/db/testing';
@@ -65,5 +65,19 @@ describe.skipIf(!ok)('desk profile', () => {
     const { analysisId: a2 } = await readyAnalysis(x.t, other, { report: golden('dhan_tradebook_csv') });
     await createReportFromAnalysis(x.t.app, other, a2, null);
     expect((await get(other)).json()).toEqual({ access: 'ok', profile: null, building: true });
+  });
+
+  it('a report carries the Desk\'s plan vs actual for its own period only', async () => {
+    const u = await makeUser(x.t);
+    await givePlan(x.t, u, { reports: 2 });
+    const { analysisId } = await readyAnalysis(x.t, u, { report: golden('zerodha_tradebook_csv') });     // 6 Jan – 26 Mar 2025
+    const id = await createReportFromAnalysis(x.t.app, u, analysisId, null);
+    const score = (d: string, taken: number, on: number, off: number) => x.t.admin.query(`insert into plan_day_scores (user_id, plan_date, planned, taken, not_taken, unmarked, off_plan,
+      on_plan_pnl, off_plan_pnl, rules_kept, rules_total, source) values ($1, $2, 2, $3, 0, 0, $4, $5, 0, $3, $3, 'journal')`, [u, d, taken, off, on]);
+    const empty = (await x.app.inject({ method: 'GET', url: `/api/v1/reports/${id}`, headers: await as(u) })).json();
+    expect(empty.planActual).toBeNull();
+    await score('2025-02-03', 2, 1500, 0); await score('2025-02-04', 1, -700, 1); await score('2025-05-01', 2, 9999, 0);   // the last is after the period
+    const r = (await x.app.inject({ method: 'GET', url: `/api/v1/reports/${id}`, headers: await as(u) })).json();
+    expect(r.planActual).toMatchObject({ from: '2025-01-06', to: '2025-03-26', days: 2, planned: 4, taken: 3, offPlan: 1, onPlanPnl: 800, rulesKept: 3, rulesTotal: 3 });
   });
 });

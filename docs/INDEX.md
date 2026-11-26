@@ -86,7 +86,7 @@ npm workspaces monorepo (backend-v2). Run every command from the repo root.
 ## 5. Every file
 
 <!-- FILES:START -->
-_Generated from file headers by `npm run docs:index` — 421 files._
+_Generated from file headers by `npm run docs:index` — 423 files._
 
 ### Pages
 
@@ -216,7 +216,7 @@ _Generated from file headers by `npm run docs:index` — 421 files._
 | File | What it does |
 |---|---|
 | `apps/web/lib/report-ui/loader.js` | "Analysing…" overlay shown while a report is built. |
-| `apps/web/lib/report-ui/render.js` | Report renderer shared by website and offline tool: Overview, Progress, Insights, Clusters, Positions + hover cards. |
+| `apps/web/lib/report-ui/render.js` | Report renderer shared by website and offline tool: Overview, Progress (with the website's 30-day check-up and Desk plan vs actual), Insights, Clusters, Positions + hover cards. |
 
 ### Payments
 
@@ -446,7 +446,7 @@ _Generated from file headers by `npm run docs:index` — 421 files._
 | `apps/api/test/benchmarks.test.ts` | How you compare: the report's segment, "not enough traders yet" without quantiles, the share it beats from stored quantiles (own segment first, else all traders, lower-is-better flipped), owner only. |
 | `apps/api/test/blog.test.ts` | REQ-7 blog API: roles (403 for support/finance/analyst/user), CRUD, publish visibility, Markdown sanitising, slug redirects, image upload checks (WebP + 1200×630), cache headers, sign-up/upload attribution. |
 | `apps/api/test/desk-feeds.test.ts` | Desk PR 2 on a real database: headlines (dedupe by link and by title within 6 h, 7-day retention, failing feed -> "unavailable"), events (create/update/hide/show with history, manual rows never overwritten), generated open/holiday/expiry rows, the expiry + lot-size copy from Market IQ, the calendar check alert, GET /desk/today and the admin events endpoints. |
-| `apps/api/test/desk-profile.test.ts` | GET /desk/profile: sign-in, then an active plan and a live report are needed; "building" until the first profile; watch-outs from the active version only (weak first, a strength, sample size and period in every line, no advice wording), the profile date line and the tradebook hint; each trader sees only their own; report changes ask for a rebuild. |
+| `apps/api/test/desk-profile.test.ts` | GET /desk/profile: sign-in, then an active plan and a live report are needed; "building" until the first profile; watch-outs from the active version only (weak first, a strength, sample size and period in every line, no advice wording), the profile date line and the tradebook hint; each trader sees only their own; report changes ask for a rebuild; GET /reports/:id carries the Desk's plan vs actual for the report's period. |
 | `apps/api/test/desk.test.ts` | Desk API on the real seeded rates (migration 0033): public config and calculator (spec B2.6 golden to the paisa, rate set by date, position size), the trader's settings, owner/admin editing of rates, brokerage plans and the calendar (permission + audit). |
 | `apps/api/test/digest.test.ts` | Weekly summary: prefs on/off, unsubscribe link (good and bad token), sender: only opted-in active users with a report, from Monday 09:00 IST, once a week, with focus rules, report link and a working unsubscribe link. |
 | `apps/api/test/events.test.ts` | POST /events: allow-listed names only; visitors may send only the landing events (REQ-4); journey events from signed-in users (REQ-2). |
@@ -502,6 +502,7 @@ _Generated from file headers by `npm run docs:index` — 421 files._
 | `packages/shared/test/capital.test.ts` | Capital %: return, a year at this pace (only for 30+ days), average/largest loss, worst day, drawdown and the 1% / 2% loss counts on a hand-made case; null without capital; finite on every golden report. |
 | `packages/shared/test/deep.test.ts` | Deep dive statistics: consistency/risk by day, R-multiples, weekday × hour heatmap and days to expiry: correct on small hand-made cases, finite and complete on every golden report, null when the statement cannot show them. |
 | `packages/shared/test/desk-charges.test.ts` | Desk calculator: the spec B2.6 golden example to the paisa (charges only and with slippage), one case per segment, delivery STT on both sides, the brokerage cap, STT rounding flag, rate set by date, position size (lots, zero-lot message, costs included), session state. |
+| `packages/shared/test/desk-checkup.test.ts` | Trade Check in the report: the Desk's days summed for a report's period (only days with a plan or a logged trade), and the 30-day check-up's "written plan" and "no unplanned trades" rules scored from the Desk only after 5 Desk days, measured counts updated. |
 | `packages/shared/test/desk-providers.test.ts` | Desk providers: headlines keep only title/source/link/time/category (HTML stripped, bad links and future times refused), title keys for dedupe in any script; impact mapping; generated market-open/close, holiday and expiry rows follow the calendars (including the Sept 2025 Thursday -> Tuesday change), fakes are labelled. |
 | `packages/shared/test/drill.test.ts` | Drill-down parity: for every golden report and every drillable cluster view, the trades the renderer's DRILL rules pick are exactly the engine's bucket (same count, same P&L). |
 | `packages/shared/test/edge.test.ts` | Edge verdict and projection: deterministic, sensible on clear cases (always winning, coin flip, always losing, too few), finite and ordered on every golden report. |
@@ -593,6 +594,7 @@ _Generated from file headers by `npm run docs:index` — 421 files._
 | `packages/shared/src/features/build.ts` | Trade Check features (architecture doc §4): one pure function describes a stored trade and, later, a typed plan line in the same words (underlying, instrument, side, expiry kind, days to expiry, weekday, time of day, size vs usual, place in the day, losses before it, premium), so history and plans can be matched. |
 | `packages/shared/src/plan/actuals.ts` | Trade Check phase 3 (doc §8.6–8.7): a plan line's outcome (taken or not, result; a tradebook match wins over what the trader typed), matching a tradebook's trades to the day's lines by instrument, date and side, and the day's plan-vs-actual score (planned, taken, off-plan, on-plan and off-plan P&L, rules kept). |
 | `packages/shared/src/plan/check.ts` | Trade Check matcher + rules engine (architecture doc §8): check(line, context) describes a parsed plan line with the same features as the trader's history, matches it to their shown weak/strong habits (at most 2) and to every one of their own rules it breaks, and returns the doc's JSON contract; the same pure function runs in the browser (instant preview) and in the API (stored with check_version). |
+| `packages/shared/src/plan/desk-checkup.ts` | Trade Check feeding the report (doc §8.7): the Desk's plan-vs-actual days summed for a report's period (Progress tab), and two 30-day plan rules a statement can't show, "Write the day's plan before the market opens" and "Don't take a trade you didn't plan yourself", scored from the Desk when it was used enough. |
 | `packages/shared/src/plan/parse.ts` | Trade Check plan-line parser (architecture doc §8): a strict grammar for Indian F&O and equity lines ("NIFTY 24300 CE buy 120, SL 90, target 170, 1 lot"): underlying, strike, CE / PE / FUT, buy / sell, entry, stop-loss, target, lots or quantity, optional time; anything unclear is returned as a field error to fix, never guessed. |
 | `packages/shared/src/plan/suggest.ts` | "Suggested from your trades" (owner decision, 25 Nov): rules the trader may accept or ignore, from their weak habits (no_segment), from the 30-day plan rules a machine can check (stop after a loss, daily loss limit, an instrument to leave out, trades a day) and from their Desk settings; never one already accepted or dismissed. |
 | `packages/shared/src/plan/templates.ts` | The only wording Trade Check uses (architecture doc §8): how a segment is described ("NIFTY option buys on expiry day"), the history chip / watch-out lines with sample size and period, "(older data)", empty and upload states, and the advice-wording check the tests run on every output. |

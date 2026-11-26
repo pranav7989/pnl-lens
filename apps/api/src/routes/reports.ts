@@ -11,6 +11,7 @@
 import { z } from 'zod';
 import { trackWith } from '@pnl-lens/shared/admin/telemetry';
 import { createReportFromAnalysis, addAnalysisToReport, listReports, getReport, renameReport, deleteReport, progressHistory, reportFiles, planToCheck, setReportCapital, isDbError, type DbErrorCode } from '@pnl-lens/db';
+import { planActualFor, withDesk, type DeskDay } from '@pnl-lens/shared/plan/desk-checkup';
 import { scorePlan } from '@pnl-lens/shared/plan/score';
 import type { App, Deps } from '../app.js';
 import { fail, ok, requireUser, UUID } from '../lib/http.js';
@@ -48,6 +49,21 @@ const summary = (r: { id: string; created_at: Date; expires_at?: Date | number |
   title: r.title ?? null,
   monthLabel: r.month_label ?? null,
 });
+
+/** The Desk's scored days of a user in a period (plan vs actual). */
+async function deskDaysBetween(pool: { query: (t: string, v?: unknown[]) => Promise<{ rows: any[] }> }, userId: string, from: string, to: string): Promise<DeskDay[]> {
+  const { rows } = await pool.query(`select plan_date::text as date, planned, taken, not_taken, unmarked, off_plan, on_plan_pnl::float8 as on_plan_pnl, off_plan_pnl::float8 as off_plan_pnl,
+                                            rules_kept, rules_total, source from public.plan_day_scores where user_id = $1 and plan_date between $2 and $3 order by plan_date`, [userId, from, to]);
+  return rows;
+}
+/** NSE trading days in a period: from the market calendar where it has the days, else weekdays. */
+async function tradingDays(pool: { query: (t: string, v?: unknown[]) => Promise<{ rows: any[] }> }, from: string, to: string): Promise<number> {
+  const { rows: [r] } = await pool.query(`select count(*) filter (where extract(isodow from d) < 6)::int as weekdays,
+      (select count(*)::int from public.market_calendar where segment = 'equity' and exchange = 'NSE' and day between $1 and $2) as known,
+      (select count(*)::int from public.market_calendar where segment = 'equity' and exchange = 'NSE' and day between $1 and $2 and not is_holiday) as open
+      from generate_series($1::date, $2::date, interval '1 day') d`, [from, to]);
+  return r.known >= r.weekdays ? r.open : r.weekdays;
+}
 
 export async function reportRoutes(app: App, deps: Deps) {
   const s = { security: [{ session: [] }], tags: ['reports'] };
@@ -108,8 +124,16 @@ export async function reportRoutes(app: App, deps: Deps) {
     const places = { total: sub?.files_per_report ?? files.length, used: r.used_fingerprints?.length ?? files.length };
     // 30-day plan check-up: the newest plan downloaded before this report, scored on it (Met / Missed per rule)
     const prev = await planToCheck(deps.db, user.id, r.id, new Date(r.created_at));
-    const planCheck = prev ? { ...scorePlan(prev.plan, r.report), fromReportId: prev.reportId, fromReportName: prev.reportName } : null;
-    return ok(reply, { summary: sm, report: r.report, history, files, places, planCheck, capital: r.capital === null || r.capital === undefined ? null : Number(r.capital) });
+    // Trade Check (doc §8.7): the Desk's plan vs actual for this statement's period, and the check-up rules it can answer
+    let planCheck = prev ? { ...scorePlan(prev.plan, r.report), fromReportId: prev.reportId, fromReportName: prev.reportName } : null;
+    const day = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null);
+    const m = (r.report as { m?: { from?: unknown; to?: unknown } } | null)?.m;
+    const from = day(m?.from), to = day(m?.to);
+    const deskFrom = [from, planCheck?.generatedOn ?? null].filter((x): x is string => !!x).sort()[0] ?? null;
+    const deskDays = to && deskFrom ? await deskDaysBetween(deps.pool, user.id, deskFrom, to) : [];
+    const planActual = from && to ? planActualFor(deskDays, from, to) : null;
+    if (planCheck && to && deskDays.length) planCheck = { ...planCheck, ...withDesk(planCheck, deskDays, await tradingDays(deps.pool, planCheck.generatedOn, to), to) };
+    return ok(reply, { summary: sm, report: r.report, history, files, places, planCheck, planActual, capital: r.capital === null || r.capital === undefined ? null : Number(r.capital) });
   });
 
   /**

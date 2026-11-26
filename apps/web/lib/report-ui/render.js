@@ -1,7 +1,7 @@
 /**
  * @file  apps/web/lib/report-ui/render.js
  * @area  Report UI
- * @what  Report renderer shared by website and offline tool: Overview, Progress, Insights, Clusters, Positions + hover cards.
+ * @what  Report renderer shared by website and offline tool: Overview, Progress (with the website's 30-day check-up and Desk plan vs actual), Insights, Clusters, Positions + hover cards.
  */
 // @ts-nocheck
 /**
@@ -270,7 +270,7 @@ export function mountReport(root, R, fmt) {
       const st = i.met === true ? 'met' : i.met === false ? 'missed' : 'self';
       const tag = i.met === true ? 'Met' : i.met === false ? 'Missed' : 'Self-check';
       return `<li class="pc-row ${st}"><span class="pc-st" aria-label="${tag}">${tag}</span><div class="pc-body"><b>${esc(i.title)}</b>
-        <span class="pc-nums">${i.now ? `Then ${esc(i.before)} <i>→</i> now <b>${esc(i.now)}</b> · target ${esc(i.target)}` : 'Not visible in a statement: tick it yourself on your plan.'}</span></div></li>`;
+        <span class="pc-nums">${i.now ? `Then ${esc(i.before)} <i>→</i> now <b>${esc(i.now)}</b> · target ${esc(i.target)}` : 'Not visible in a statement: tick it yourself on your plan.'}${i.source === 'desk' ? ' <span class="pc-src">from your Desk</span>' : ''}</span></div></li>`;
     };
     const dos = c.items.filter((i) => i.kind === 'do'), donts = c.items.filter((i) => i.kind === 'dont');
     return `<div class="rv-panel s12 pc" data-plan-check><div class="rv-ph"><h3>Your 30-day plan check-up</h3><small>plan from ${esc(dm(c.generatedOn))}${c.fromReportName ? ` (${esc(c.fromReportName)})` : ''} · ${esc(scope)}</small></div>
@@ -280,9 +280,24 @@ export function mountReport(root, R, fmt) {
       <div class="pc-cols"><div><h4>Do</h4><ul class="pc-list">${dos.map(row).join('')}</ul></div><div><h4>Don’t</h4><ul class="pc-list">${donts.map(row).join('')}</ul></div></div></div>`;
   }
 
+  /** Trade Check (website): what the trader planned on the Desk vs what they did, over this report's period. */
+  function planActualPanel() {
+    const a = fmt.planActual; if (!a || !a.days) return '';
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dm = (iso) => { const [, m, d] = String(iso).split('-'); return `${Number(d)} ${MON[Number(m) - 1]}`; };
+    const money = (v) => `<b class="${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${v > 0 ? '+' : ''}${esc(fmt.inr(v))}</b>`;
+    const kept = a.rulesTotal ? `${a.rulesKept}/${a.rulesTotal}` : '—';
+    const rows = a.list.slice(-10).reverse().map((d) => `<tr><td>${esc(dm(d.date))}</td><td class="n">${d.planned}</td><td class="n">${d.taken}</td><td class="n">${d.off_plan}</td>
+      <td class="n">${money(d.on_plan_pnl)}</td><td class="n">${money(d.off_plan_pnl)}</td><td class="n">${d.rules_total ? `${d.rules_kept}/${d.rules_total}` : '—'}</td></tr>`).join('');
+    return `<div class="rv-panel s12 pva-r" data-plan-actual><div class="rv-ph"><h3>Your plan vs actual</h3><small>${a.days} day${a.days === 1 ? '' : 's'} planned on the Desk, ${esc(dm(a.from))} – ${esc(dm(a.to))}${a.tradebookDays ? ` · ${a.tradebookDays} matched to your tradebook` : ''}</small></div>
+      <div class="pva-r-tiles"><div><span>Lines planned</span><b>${a.planned}</b></div><div><span>Taken</span><b>${a.taken}</b></div><div><span>Not in the plan</span><b>${a.offPlan}</b></div>
+        <div><span>On-plan P&amp;L</span>${money(a.onPlanPnl)}</div><div><span>Off-plan P&amp;L</span>${money(a.offPlanPnl)}</div><div><span>Rules kept</span><b>${kept}</b></div></div>
+      <div class="rv-tw"><table class="rv-t"><thead><tr><th>Day</th><th class="n">Planned</th><th class="n">Taken</th><th class="n">Not in plan</th><th class="n">On-plan</th><th class="n">Off-plan</th><th class="n">Rules kept</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+
   function progressTab() {
     const el = $('#progress'); if (!el) return;
-    if (!P) { el.innerHTML = `<div class="rv-grid">${planCheckPanel()}<div class="rv-panel s12"><p class="rv-empty">Progress tracking is available for reports created with the latest version.</p></div></div>`; return; }
+    if (!P) { el.innerHTML = `<div class="rv-grid">${planCheckPanel()}${planActualPanel()}<div class="rv-panel s12"><p class="rv-empty">Progress tracking is available for reports created with the latest version.</p></div></div>`; return; }
     const ms = P.months, cur = ms[ms.length - 1] || null, prev = ms[ms.length - 2] || null, first = ms[0] || null;
     const headScore = cur ? cur.score : P.overall.score;
     const lab = (k) => { const [y, mo] = k.split('-'); return new Date(Date.UTC(+y, +mo - 1, 1)).toLocaleString('en', { month: 'short', timeZone: 'UTC' }) + ' ' + y.slice(2); };
@@ -298,6 +313,7 @@ export function mountReport(root, R, fmt) {
         ${(P.badges || []).length ? `<div class="pg-badges">${P.badges.map((b) => `<span class="pg-badge" title="${esc(b.desc)}"><i></i>${esc(b.name)}</span>`).join('')}</div>` : ''}</div></div>`;
     // 30-day plan check-up, right under the score
     h += planCheckPanel();
+    h += planActualPanel();
     // 2 — radar + goals
     h += `<div class="rv-panel s7" data-behav="radar"><div class="rv-ph"><h3>Your six habits</h3><small>0–100, higher is better</small>${info('radar')}</div>${radar(cur ? cur.d : P.overall.d, prev ? prev.d : null)}</div>`;
     const gfmt = (g, v) => (g.fmt === 'x' ? Number(v).toFixed(2) : g.fmt === '%' ? Math.round(v) + '%' : Number(v).toFixed(1));
