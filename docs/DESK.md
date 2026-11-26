@@ -220,6 +220,7 @@ Plan vs actual also reaches the report, as the doc asks ("feeds the 30-day plan 
 | 4 | Trade Check phase 2: typed plan lines, parser, `check()` in browser + API, rules (incl. suggested from your trades), chips, decision log, checklist | built |
 | 5 | Trade Check phase 3: taken / not taken with results, trades not in the plan, tradebook auto-match, plan vs actual tiles | built |
 | 6 | Plan vs actual in the report's Progress tab; the 30-day check-up scores "written plan" and "no unplanned trades" from the Desk | built |
+| 7 | User manual: "The Desk" section (both editions), plan vs actual and the Desk-scored check-up rules in the Progress section, glossary and FAQ | built |
 | later | Doc phase 4 (voice, cohort opt-in 50+), phase 5 (learn) | |
 
 Tests:

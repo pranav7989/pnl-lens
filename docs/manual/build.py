@@ -148,7 +148,8 @@ def build(key):
 <tr><th>Cost efficiency</th><td>How much of your profit goes to charges.</td></tr></tbody></table></div>
 <h3>Also on this tab</h3>
 <ul>
-<li><b>Your 30-day plan check-up</b>: when you downloaded a 30-day plan from an earlier report, the next report starts with how many of its rules you met. Each rule shows <b>Met</b>, <b>Missed</b> or <b>Self-check</b> (habits a statement can't show, like “write the day's plan”), with “then → now · target”. It uses only the trades after the plan date when there are at least 5 of them.</li>
+<li><b>Your 30-day plan check-up</b>: when you downloaded a 30-day plan from an earlier report, the next report starts with how many of its rules you met. Each rule shows <b>Met</b>, <b>Missed</b> or <b>Self-check</b> (habits a statement can't show, like “write the day's plan”), with “then → now · target”. It uses only the trades after the plan date when there are at least 5 of them. If you used the <a href="#desk">Desk</a> on 5 or more days since the plan, two of those habits are scored for you and marked “from your Desk”: <b>writing the day's plan</b> (met when you planned on at least 80% of trading days) and <b>not taking unplanned trades</b> (met when you logged none).</li>
+<li><b>Your plan vs actual</b>: when you used the Desk during the statement's dates, what you planned against what you did: lines planned, taken, trades not in the plan, P&amp;L on and off the plan, and how often you kept your own rules, with the last 10 days.</li>
 <li><b>Goals for next month</b> from your weakest habits, with now and target.</li>
 <li><b>Score trend</b>, <b>Then vs now</b>, a <b>habit heatmap</b> month by month, a <b>mistake tracker</b> and <b>what your habits cost</b>: these fill in as you add a report each month.</li>
 <li><b>Check-up history</b> and when your next check-up is due.</li>
@@ -255,6 +256,24 @@ def build(key):
 <li><b>Edge</b>, <b>Rewind</b> and <b>Journal</b> work on all your trades together.</li>
 <li>Reports in different currencies are never mixed; switch between them at the top.</li></ul>''')
 
+  S('desk', 'The Desk', f'''
+<p><b>Desk</b>, the first link at the top, is your screen for the trading day: your own watch-outs, today's scheduled events and headlines, a plan you write before you trade, and a charges calculator. {'It is built for Indian markets (NSE, BSE and MCX).' if india else 'It is built for Indian markets (NSE, BSE and MCX): on the Global site the watch-outs, the plan and plan vs actual work with your own trades, while the calculator, events and plan lines use Indian instruments.'} Prices are always typed by you; the Desk never shows live prices, tips or views.</p>
+<h3>Charges, breakeven and position size</h3>
+<p>Open to everyone, even without an account. Pick the segment (intraday, delivery, futures, options, currency, commodity) and the exchange, type a buy price, a sell price and the quantity, and see every charge (brokerage, STT or CTT, exchange charges, GST, SEBI fee, stamp duty), the <b>points to breakeven</b> and the <b>net P&amp;L</b>. Add your average slippage to see both numbers again “with your slippage”. Type a stop-loss and your risk per trade for the <b>largest position</b> that stays within it, in whole lots for F&amp;O (“Your risk rule allows less than 1 lot at this stop-loss” when even one lot is too much). Charge rates follow the official ones in force on the day; signed in, you can save your risk and slippage as defaults.</p>
+<h3>Scheduled events and overnight headlines</h3>
+<p>When signed in: today's events in time order (market open and close, holidays, index expiries from the exchange calendar, and economic events) tagged HIGH, MED or EXPIRY on a timeline of the session; and up to six headlines since the last close, as titles with their source and time that open the publisher's page in a new tab. Headlines are news only: no summaries or opinions.</p>
+<h3>Your watch-outs</h3>
+<p>With an active plan and a report, the Desk reads all your reports and shows up to three habits from your own trades: weak ones first (<b>!</b>) and one strength (<b>✓</b>), each with the number of trades and the period, for example “Your history: option buys on expiry day · 12 expiries · 3 profitable · {r['ex_loss']} (Apr–Sep 2026)”. A habit is only shown with at least 8 trades on 4 different days. The header says which trades it is checked against (“Checked against your trades up to …”); upload a newer statement to update it. Habits in older data are marked “(older data)”.</p>
+<h3>Trade plan for the day</h3>
+<p>Write each trade you plan as one line, for example <code>NIFTY 24300 CE buy 120, SL 90, target 170, 1 lot</code> (instrument, strike and CE/PE or FUT, buy or sell, entry, SL, target, lots or qty, and an optional time like <code>at 10:30</code>). The Desk reads it back and checks it as you type:</p>
+<ul><li><b>✕ Breaks your rule</b>: the line breaks one of your own rules, for example “No option buys on expiry day” or “No more than 3 trades a day”.</li>
+<li><b>! / ✓ Your history</b>: how lines like this went for you before, with trades and period.</li>
+<li>Anything unclear is pointed out so you can fix it; nothing is guessed.</li></ul>
+<p>For each line: <b>Edit line</b>, <b>Remove</b>, or <b>Keep anyway</b> with one line on why (kept for your own review). <b>Your rules</b> sit above the plan; <b>Suggested from your trades</b> offers rules from your weak habits, your 30-day plan and your Desk settings, to accept or ignore. Rules you can set: trades a day, a daily loss limit (checked against each line's loss at its stop-loss, charges included), stop for the day after a number of losses, lots or size, an instrument or habit to leave out, and the hours you trade. A four-item <b>Before the open</b> checklist is kept for the day.</p>
+<h3>Taken, not taken, and plan vs actual</h3>
+<p>During the day mark each line <b>Taken</b> (with the result) or <b>Not taken</b>, and log <b>trades not in the plan</b>. When your next tradebook arrives, lines are matched to its trades by instrument, date and buy/sell, the results are filled in “from your tradebook”, and its other trades of that day count as not in the plan. <b>Plan vs actual</b> shows lines planned, taken, trades not in the plan, P&amp;L on and off the plan, and how often you kept your own rules, today and over the last 30 days; the same picture appears in your report's Progress tab.</p>
+<div class="mn-note"><b>Your own history, not advice.</b> The Desk describes your own past trades and your own rules. It never tells you to buy, sell or avoid anything and never suggests an instrument, strike, level or size. You always decide.</div>''')
+
   S('dashboard', 'Dashboard and Your data', f'''
 <h3>Your reports</h3>
 <p>All your reports as cards (name or date, files, trades, net P&amp;L). <b>Search</b> by name, file name, month or market, <b>sort</b> by newest, oldest or name, and <b>Rename</b> any report. The plan card shows your plan, reports left and when it ends.</p>
@@ -291,7 +310,10 @@ def build(key):
         ('Drawdown', 'The fall from a high point to the low that followed.'), ('Expectancy / average trade', 'What one trade makes on average.'),
         ('R', 'A unit of risk. Here 1R is your average losing trade, so a 2R win is twice your average loss.'),
         ('Sharpe-style / Sortino-style ratio', 'Daily return per unit of daily risk, scaled to a year. Sortino counts only the downside.'),
-        ('Green day', 'A day your trades ended in profit.'), ('Days to expiry', 'Calendar days from opening an option to its expiry date.')]
+        ('Green day', 'A day your trades ended in profit.'), ('Days to expiry', 'Calendar days from opening an option to its expiry date.'),
+        ('Points to breakeven', 'How far the price must move in your favour just to pay the charges (and your slippage, when given).'),
+        ('Watch-out', 'A habit from your own trades on the Desk: weak (!) or strong (✓), with how many trades and when.'),
+        ('Trade not in the plan', 'A trade you took that was not one of the day\'s plan lines.')]
   if india: gl += [('India VIX', 'The market\'s expected volatility for the next month. Higher means a more nervous market.')]
   S('glossary', 'Glossary', '<dl class="mn-gloss">' + ''.join(f'<dt>{esc(a)}</dt><dd>{esc(b)}</dd>' for a, b in gl) + '</dl>')
 
@@ -303,6 +325,8 @@ def build(key):
 <dt>I can't add a statement with +.</dt><dd>Either the report already holds all the statements your plan allows, your plan has ended, or the report's original files were deleted after 30 days. Start a new report instead.</dd>
 <dt>How you compare says “appears once 50 traders…”.</dt><dd>Comparisons start when enough traders in your group share their data. Until then the panel shows how many there are.</dd>
 {mk_faq}
+<dt>The Desk says “Upload a tradebook to see how lines like this went for you”.</dt><dd>Your watch-outs and history checks are being prepared after a new report (they appear within a minute), or your statements have no trade dates. A tradebook gives the most checks.</dd>
+<dt>The Desk says “Headlines are not connected yet”.</dt><dd>The news source is being set up. Scheduled events and everything else on the Desk work meanwhile.</dd>
 <dt>Can I download my report?</dt><dd>Reports are view-only. You can download your 30-day plan and your share card, and export all your data from Your data.</dd>
 <dt>Does PnL Lens give tips?</dt><dd>No. It only looks at trades you have already made. Nothing in it is investment advice.</dd>
 </dl>''')

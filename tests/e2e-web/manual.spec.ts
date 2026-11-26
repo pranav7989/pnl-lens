@@ -1,7 +1,7 @@
 /**
  * @file  tests/e2e-web/manual.spec.ts
  * @area  Tests
- * @what  User manual: India and Global editions at /manual (Market context only in India), the edition switch, the contents links, and a "User manual" link on the landing page, for visitors and in the signed-in header; pricing cards promise only built features.
+ * @what  User manual: India and Global editions at /manual (Market context only in India; the Desk section in both, with the Global note), the edition switch, the contents links, and a "User manual" link on the landing page, for visitors and in the signed-in header; pricing cards promise only built features.
  */
 import { test, expect } from '@playwright/test';
 import { signIn } from './helpers';
@@ -13,11 +13,15 @@ test('manual: India and Global editions, contents, edition switch, no sideways s
   await expect(page.locator('.mn-pill')).toHaveText('India edition · ₹');
   await expect(page.locator('#edge')).toContainText('Market context');
   await expect(page.locator('#plans')).toContainText('₹499');
+  await expect(page.locator('#desk')).toContainText('Trade plan for the day');
+  await expect(page.locator('#desk')).toContainText('Your own history, not advice.');
+  await expect(page.locator('#progress')).toContainText('Your plan vs actual');
   await page.locator('.mn-toc').getByRole('link', { name: 'Rewind tab' }).click();
   await expect(page).toHaveURL(/#rewind$/);
   await page.getByRole('link', { name: 'Read the Global edition ($)' }).click();
   await expect(page.locator('[data-manual="global"]')).toBeVisible();
   await expect(page.locator('#plans')).toContainText('$19');
+  await expect(page.locator('#desk')).toContainText('on the Global site the watch-outs');
   await expect(page.locator('#edge')).not.toContainText('Market context');
   await page.setViewportSize({ width: 390, height: 860 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
