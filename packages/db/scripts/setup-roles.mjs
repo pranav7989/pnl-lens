@@ -9,7 +9,8 @@
  * (.env locally, server env in production) and are re-applied on every run, so rotating a password
  * is: change .env, re-run the migrate job. Grants stay in the numbered migrations.
  *   lens_app    — the API / web app (grants in 0002, 0005–0007)
- *   lens_worker — the worker (grants arrive with migration 0008 in Phase 3; until then it can only connect)
+ *   lens_worker — the worker (role created in 0008; table grants in 0008–0013)
+ *   lens_research is deliberately NOT here: it stays NOLOGIN (0008) until a separately approved phase.
  * Also locks the database down: PUBLIC loses CONNECT, only these roles (and the superuser) can connect.
  */
 import fs from 'node:fs';
