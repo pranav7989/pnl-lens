@@ -1,0 +1,65 @@
+/* @file  apps/web/app/desk.css
+   @area  Styles
+   @what  Desk page: session line, calculator card (segment tabs, exchange pills, inputs, charges table, result tiles) and the disclaimer, on the site tokens. */
+.desk { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; }
+.desk-line { margin: 0; font-size: 14px; }
+.desk-state { font-weight: 600; color: var(--ink-2); }
+.desk-state.open { color: var(--gain); }
+.desk-state.pre_open { color: var(--y); }
+.desk-tabs { position: relative; top: auto; z-index: auto; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; margin-bottom: 14px; }
+.desk-ex { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.desk-pill { background: var(--s2); color: var(--ink-2); border: 1px solid var(--line-strong); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer; transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.desk-pill:hover { border-color: var(--line-hover); color: var(--ink); }
+.desk-pill.on { border-color: var(--y-line); background: var(--y-tint); color: var(--ink); }
+.desk-body { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px; align-items: start; }
+.desk-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.desk-field small { color: var(--ink-3); font-weight: 400; }
+.desk-field .field { font-variant-numeric: tabular-nums; }
+.desk-sub { font-size: 13px; font-weight: 600; color: var(--ink); margin: 8px 0 10px; }
+.desk-save { display: flex; align-items: center; gap: 12px; margin: 4px 0 0; flex-wrap: wrap; }
+.desk-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.desk-table th { text-align: left; font-size: 14px; font-weight: 400; color: var(--ink-2); padding: 7px 0; border-bottom: 0; white-space: normal; }
+.desk-table td { text-align: right; color: var(--ink); padding: 7px 0; border-bottom: 0; }
+.desk-table tr + tr { border-top: 1px solid var(--line); }
+.desk-total th, .desk-total td { font-weight: 600; color: var(--ink); }
+.desk-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+.desk-tile { display: flex; flex-direction: column; gap: 4px; background: var(--s2); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; min-width: 0; }
+.desk-tile > b { font-size: 24px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.desk-k { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.desk-s { font-size: 13px; color: var(--ink-3); }
+.desk-s b { color: var(--ink-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.desk .gain { color: var(--gain); }
+.desk .loss { color: var(--loss); }
+.desk-foot { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+@media (max-width: 860px) {
+  .desk-body, .desk-tiles { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .desk-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* today: scheduled events and overnight headlines */
+.desk-today { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.desk-guest { margin: 0; }
+.desk-tl { margin: 0 0 14px; }
+.desk-tl-bar { position: relative; height: 6px; border-radius: 999px; background: var(--s3); }
+.desk-tl-dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--ink-3); border: 2px solid var(--s1); }
+.desk-tl-dot.high, .desk-tl-dot.expiry { background: var(--y); }
+.desk-tl-now { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
+.desk-tl-ends { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.desk-tl-note { margin: 0 0 12px; }
+.desk-ev, .desk-hl { list-style: none; margin: 0; padding: 0; }
+.desk-ev li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 8px 0; font-size: 14px; }
+.desk-ev li + li, .desk-hl li + li { border-top: 1px solid var(--line); }
+.desk-ev-t { color: var(--ink-3); font-variant-numeric: tabular-nums; font-size: 13px; }
+.desk-ev-title { color: var(--ink); }
+.desk-ev-title small { color: var(--ink-3); }
+.desk-ev li[data-impact="info"] .desk-ev-title { color: var(--ink-2); }
+.desk-tag { font-size: 11px; font-weight: 600; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-2); }
+.desk-tag.high { background: var(--y); border-color: var(--y); color: var(--on-y); }
+.desk-tag.expiry { border-color: var(--y-line); color: var(--y); }
+.desk-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-3); }
+.desk-hl li { display: grid; gap: 2px; padding: 9px 0; }
+.desk-hl a { color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.4; }
+.desk-hl a:hover { color: var(--y); }
+.desk-hl-meta { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 860px) { .desk-today { grid-template-columns: 1fr; } }
