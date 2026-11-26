@@ -23,7 +23,7 @@ Questions about privacy: **support@pnllens.com**. Our Grievance Officer is liste
 ## 2. The short version
 
 - You upload your broker statements. We read them on our servers and build your report.
-- Your uploaded files are **encrypted** and **deleted automatically after 30 days**. **BUILD CHECK** (encryption and 30-day deletion arrive in backend-v2 Phases 4–5.)
+- Your uploaded files are **encrypted** and **deleted automatically after 30 days**. **BUILT ✓** (Phases 4–5: per-file AES-256-GCM; nightly purge + sweep)
 - Your reports, and the trades in them, stay in your account **until you delete them or close your account**.
 - We do **not** sell your data, show ads, give trading tips, or connect to your broker account.
 - Using your data to improve PnL Lens (research) is **off unless you switch it on**, and you can switch it off at any time.
@@ -68,7 +68,7 @@ Before your first analysis, the upload page asks you to tick:
 1. **Required:** *"I agree to PnL Lens processing these files to build my report."* Without this, we cannot read your files.
 2. **Optional, unticked by default:** *"Also let PnL Lens use my data, anonymised, to improve its analysis. Optional — you can change this anytime."*
 
-**BUILD CHECK:** both checkboxes, and the consent record, are built in backend-v2 Phases 4 and 6. The setting to change the research choice later is built in Phase 7.
+**BUILT ✓:** both checkboxes and the consent record (Phases 4 and 6); research choice changeable on Dashboard → Your data (Phase 7).
 
 **If you opt in to research:**
 - We use your trades and reports to improve PnL Lens's analysis. In future this may include building and testing new features, such as statistical or machine-learning models. We will update this policy before any such use.
@@ -93,8 +93,8 @@ Some of our service providers (section 8) process limited data outside India, fo
 
 **Encryption.**
 - **In transit:** all traffic between your browser and PnL Lens uses HTTPS.
-- **Uploaded files:** each file is encrypted with its own key (AES-256-GCM) before it is stored. The storage system only ever holds the encrypted version. **BUILD CHECK**
-- **Backups:** encrypted. **BUILD CHECK**
+- **Uploaded files:** each file is encrypted with its own key (AES-256-GCM) before it is stored. The storage system only ever holds the encrypted version. **BUILT ✓**
+- **Backups:** encrypted. **BUILD CHECK** (restic encryption in Phase 8 `backup.sh`; true once backups run in production)
 - **Database:** private network only, with separate least-privilege accounts for each part of the system.
   **BUILD CHECK:** say "stored on an encrypted disk" only if disk encryption is enabled on the production server.
 
@@ -104,7 +104,7 @@ Some of our service providers (section 8) process limited data outside India, fo
   - The upload service can store files but cannot read them back.
   - Only the analysis worker can read your files, and only to build your report.
   - The worker runs on an isolated network with no internet access.
-  - Every access to an uploaded file is logged. **BUILD CHECK** (access log in Phases 3–5)
+  - Every access to an uploaded file is logged. **BUILT ✓** (`file_access_log`)
 - **Our staff:**
   - Staff use role-based access, checked on every request: owner, admin, support, finance, analyst.
   - Support staff can see your account details, plan and an activity timeline to help you. Finance staff see payment records.
@@ -123,11 +123,11 @@ Some of our service providers (section 8) process limited data outside India, fo
 | **Reports and their trades** | **Until you delete the report or close your account.** Reports do not expire when your plan ends. A plan's validity only controls creating *new* reports. |
 | **Account** | Until you close it. After closure we delete your reports and trades, and anonymise your account record (email, name and Google ID removed). |
 | **Payment and invoice records** | **[8 years]** after the financial year of the payment, as Indian tax and accounting law requires, even if you close your account. **LAWYER CHECK** (confirm the period under the Companies Act, 2013 s. 128, the CGST Act, 2017 s. 36 and the Income-tax Act) |
-| **Sign-in codes** | Deleted 7 days after they are created. **BUILD CHECK** |
-| **Usage and error logs** | **[12 months]**, then deleted or aggregated. **LAWYER CHECK / BUILD CHECK** (no automatic limit exists yet) |
-| **Audit log and file-access log** | **[24 months]**, for security and to show who accessed what. **LAWYER CHECK / BUILD CHECK** |
+| **Sign-in codes** | Deleted 7 days after they are created. **BUILT ✓** |
+| **Usage and error logs** | **[12 months]**, then deleted or aggregated. **LAWYER CHECK** (BUILT ✓: automatic 12-month purge, `purge_logs`; period configurable) |
+| **Audit log and file-access log** | **[24 months]**, for security and to show who accessed what. **LAWYER CHECK** (BUILT ✓: automatic 24-month purge) |
 | **Consent records** | As long as your account exists, plus **[3 years]**, to prove consent was given. **LAWYER CHECK** |
-| **Backups** | Deleted data can remain in encrypted backups for up to **[6 months]** until those backups expire. Backups are only used to restore the service after a failure. **BUILD CHECK** |
+| **Backups** | Deleted data can remain in encrypted backups for up to **[6 months]** until those backups expire. Backups are only used to restore the service after a failure. **LAWYER CHECK:** the owner chose 14 daily / 8 weekly / 12 monthly snapshots, so this must say **12 months**. |
 
 **LAWYER CHECK:** DPDP s. 8(7) and the DPDP Rules require erasure once the purpose is served, and may require notice before erasure for inactive accounts. Confirm whether "keep reports until the user deletes them" needs an inactivity limit (for example, erase after [3] years without sign-in, with [48 hours'] notice).
 
@@ -157,10 +157,10 @@ You can exercise these rights yourself in the app where shown, or by writing to 
 | Right | How |
 |---|---|
 | **Access:** a summary of your data and how we use it, and the providers we share it with (DPDP s. 11; GDPR Art. 15) | Write to us. Your reports are always visible in your dashboard. |
-| **Export / portability** (GDPR Art. 20) | Download each report's trades as CSV from the report page. A full account export (JSON) is built in **BUILD CHECK** [phase TBD — not in the current plan]. |
+| **Export / portability** (GDPR Art. 20) | Download each report's trades as CSV from the report page. A full account export is available on Dashboard → Your data → Export my data (ZIP: JSON + original statements still stored; link valid 7 days). **BUILT ✓** (Phase 7). |
 | **Correction and updating** (DPDP s. 12; GDPR Art. 16) | Write to us. If a report misreads your file, delete it and re-upload a corrected file. |
-| **Erasure** (DPDP s. 12; GDPR Art. 17) | Delete a report: Report page → **Delete**. Close your account: **[Settings → Delete account]** **BUILD CHECK** (Phase 7). We then delete your data as described in section 7. Payment records we must keep by law remain. |
-| **Withdraw consent** (DPDP s. 6(4); GDPR Art. 7(3)) | Research: switch it off at **[Settings → Research]** **BUILD CHECK** (Phase 7). Processing: delete your reports or account. |
+| **Erasure** (DPDP s. 12; GDPR Art. 17) | Delete a report: Report page → **Delete**. Close your account: **Dashboard → Your data → Delete my account** **BUILT ✓** (Phase 7). We then delete your data as described in section 7. Payment records we must keep by law remain. |
+| **Withdraw consent** (DPDP s. 6(4); GDPR Art. 7(3)) | Research: switch it off at **Dashboard → Your data** **BUILT ✓** (Phase 7). Processing: delete your reports or account. |
 | **Nominate** someone to exercise your rights if you die or become incapacitated (DPDP s. 14) | Write to us with the nominee's name and email. **LAWYER CHECK** (form and verification process) |
 | **Object or restrict** (GDPR Art. 18, 21) | Write to us. |
 | **Grievance** (DPDP s. 13) | Contact our Grievance Officer (section 11). If you are not satisfied, you may complain to the **Data Protection Board of India**. GDPR users may complain to their local data protection authority. |

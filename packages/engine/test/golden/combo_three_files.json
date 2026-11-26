@@ -7,7 +7,7 @@
    "dhan_tradebook.csv"
   ]
  },
- "rawSha256": "8bb24920557a4bfe2c9e657de3c9de306961a7b704d2af4bb1d7ca2741d54c30",
+ "rawSha256": "8004e0e77cb69e5428e35fb4b2f729bca359a47366d508c42cb93e3eded40161",
  "report": {
   "version": 1,
   "generatedAt": "<normalised>",
@@ -6375,7 +6375,7 @@
    "entryDow": "Tuesday",
    "exitDow": "Tuesday",
    "entryHour": 10,
-   "exitHour": 11,
+   "exitHour": 12,
    "nLegs": 2,
    "holdDays": 0,
    "direction": "Long",
